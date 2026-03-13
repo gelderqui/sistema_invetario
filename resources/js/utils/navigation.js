@@ -33,4 +33,28 @@ export const navigationItems = [
         permissions: ['reports.view'],
         disabled: true,
     },
+    {
+        name: 'categorias',
+        label: 'Categorias',
+        icon: 'fa-solid fa-tags',
+        permissions: ['inventory.manage'],
+    },
+    {
+        name: 'productos',
+        label: 'Productos',
+        icon: 'fa-solid fa-box',
+        permissions: ['inventory.manage'],
+    },
+    {
+        name: 'users',
+        label: 'Usuarios',
+        icon: 'fa-solid fa-users',
+        permissions: ['users.manage'],
+    },
+    {
+        name: 'roles',
+        label: 'Roles',
+        icon: 'fa-solid fa-user-shield',
+        permissions: ['roles.manage'],
+    },
 ];

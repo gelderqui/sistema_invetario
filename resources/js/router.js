@@ -1,9 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
 import { useAuthStore } from '@/stores/auth';
+import CategoriasView from '@/views/CategoriasView.vue';
 import DashboardView from '@/views/DashboardView.vue';
 import LoginView from '@/views/LoginView.vue';
+import ProductosView from '@/views/ProductosView.vue';
+import RolesView from '@/views/RolesView.vue';
 import UnauthorizedView from '@/views/UnauthorizedView.vue';
+import UsersView from '@/views/UsersView.vue';
 
 const routes = [
     {
@@ -21,6 +25,42 @@ const routes = [
         component: LoginView,
         meta: {
             guestOnly: true,
+        },
+    },
+    {
+        path: '/usuarios',
+        name: 'users',
+        component: UsersView,
+        meta: {
+            requiresAuth: true,
+            permissions: ['users.manage'],
+        },
+    },
+    {
+        path: '/roles',
+        name: 'roles',
+        component: RolesView,
+        meta: {
+            requiresAuth: true,
+            permissions: ['roles.manage'],
+        },
+    },
+    {
+        path: '/categorias',
+        name: 'categorias',
+        component: CategoriasView,
+        meta: {
+            requiresAuth: true,
+            permissions: ['inventory.manage'],
+        },
+    },
+    {
+        path: '/productos',
+        name: 'productos',
+        component: ProductosView,
+        meta: {
+            requiresAuth: true,
+            permissions: ['inventory.manage'],
         },
     },
     {

@@ -1,6 +1,10 @@
 <template>
-    <div v-if="showShell" class="d-flex min-vh-100">
-        <aside class="bg-dark text-white p-3" style="width: 280px;">
+    <div v-if="showShell" class="d-flex min-vh-100 bg-light">
+        <aside
+            v-if="sidebarVisible"
+            class="bg-dark text-white p-3"
+            style="width: 280px;"
+        >
             <div class="mb-4">
                 <h1 class="h5 mb-0">{{ nombreSistema }}</h1>
             </div>
@@ -22,20 +26,26 @@
             </nav>
         </aside>
 
-        <div class="flex-grow-1 d-flex flex-column">
-            <header class="bg-white border-bottom px-4 py-3 d-flex justify-content-between align-items-center shadow-sm">
-                <div>
-                    <p class="small text-body-secondary mb-1">Sesión activa</p>
-                    <strong>{{ authStore.user?.name }}</strong>
+        <div class="flex-grow-1 d-flex flex-column" :class="sidebarVisible ? '' : 'w-100'">
+            <header class="bg-white border-bottom px-3 px-md-4 py-3 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-3">
+                    <button type="button" class="btn btn-outline-secondary" @click="toggleSidebar">
+                        <FontAwesomeIcon :icon="sidebarVisible ? 'fa-solid fa-bars-staggered' : 'fa-solid fa-bars'" />
+                    </button>
+
+                    <div>
+                        <p class="small text-body-secondary mb-1">Sesion activa</p>
+                        <strong>{{ authStore.user?.name }}</strong>
+                    </div>
                 </div>
 
                 <button type="button" class="btn btn-outline-danger" @click="logout">
                     <FontAwesomeIcon icon="fa-solid fa-right-from-bracket" class="me-2" />
-                    Cerrar sesión
+                    Cerrar sesion
                 </button>
             </header>
 
-            <main class="flex-grow-1 p-4">
+            <main class="flex-grow-1 p-3 p-md-4">
                 <router-view />
             </main>
         </div>
@@ -61,6 +71,7 @@ const route = useRoute();
 const router = useRouter();
 const nombreSistema = ref('Sistema POS e Inventario');
 const configuracionCargada = ref(false);
+const sidebarVisible = ref(true);
 
 const showShell = computed(() => authStore.isAuthenticated && route.name !== 'login');
 
@@ -82,6 +93,10 @@ watch(
         }
     }
 );
+
+function toggleSidebar() {
+    sidebarVisible.value = !sidebarVisible.value;
+}
 
 async function logout() {
     await authStore.logout();

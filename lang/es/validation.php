@@ -159,5 +159,12 @@ return [
         'code'             => 'código',
         'value'            => 'valor',
         'module'           => 'módulo',
+        'nombre'           => 'nombre',
+        'descripcion'      => 'descripción',
+        'codigo'           => 'código',
+        'codigo_barra'     => 'código de barras',
+        'palabras_clave'   => 'palabras clave',
+        'categoria_id'     => 'categoría',
+        'detalle'          => 'detalle',
     ],
 ];

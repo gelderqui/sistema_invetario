@@ -84,6 +84,10 @@ class CheckPermission
             return ['proveedores'];
         }
 
+        if (preg_match('/^catalogos\/clientes\//', $path)) {
+            return ['cliente'];
+        }
+
         if (preg_match('/^compras\//', $path)) {
             return ['compras'];
         }

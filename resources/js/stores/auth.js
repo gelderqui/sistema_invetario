@@ -62,6 +62,12 @@ export const useAuthStore = defineStore('auth', {
             this.user = null;
         },
 
+        async changePassword(payload) {
+            const { data } = await axios.put('/auth/password', payload);
+
+            return data;
+        },
+
         hasAnyPermission(requiredPermissions = []) {
             return hasAnyPermission(this.user, requiredPermissions);
         },

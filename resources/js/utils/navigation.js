@@ -18,16 +18,16 @@ export const navigationItems = [
                 permissions: ['categorias'],
             },
             {
-                name: 'productos',
-                label: 'Productos',
-                icon: 'fa-solid fa-box',
-                permissions: ['productos'],
-            },
-            {
                 name: 'proveedores',
                 label: 'Proveedores',
                 icon: 'fa-solid fa-truck-field',
                 permissions: ['proveedores'],
+            },
+            {
+                name: 'productos',
+                label: 'Productos',
+                icon: 'fa-solid fa-box',
+                permissions: ['productos'],
             },
         ],
     },

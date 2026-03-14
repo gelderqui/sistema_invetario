@@ -19,13 +19,9 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="thead-brand">
                         <tr>
-                            <th>Codigo</th>
                             <th>Nombre</th>
                             <th>Categoria</th>
                             <th>Proveedor</th>
-                            <th>Costo Prom.</th>
-                            <th>Precio Venta</th>
-                            <th>Stock Min.</th>
                             <th>Estado</th>
                             <th>Creado</th>
                             <th></th>
@@ -33,10 +29,9 @@
                     </thead>
                     <tbody>
                         <tr v-if="!productos.length">
-                            <td colspan="10" class="text-center text-body-secondary py-4">Sin registros</td>
+                            <td colspan="6" class="text-center text-body-secondary py-4">Sin registros</td>
                         </tr>
                         <tr v-for="prod in productos" :key="prod.id">
-                            <td><code>{{ prod.codigo }}</code></td>
                             <td class="fw-semibold">{{ prod.nombre }}</td>
                             <td>
                                 <span v-if="prod.categoria" class="badge text-bg-light border">
@@ -45,9 +40,6 @@
                                 <span v-else class="text-body-secondary small">—</span>
                             </td>
                             <td>{{ prod.proveedor?.nombre ?? '—' }}</td>
-                            <td>Q {{ Number(prod.costo_promedio ?? 0).toFixed(2) }}</td>
-                            <td>Q {{ Number(prod.precio_venta ?? 0).toFixed(2) }}</td>
-                            <td>{{ Number(prod.stock_minimo ?? 0).toFixed(2) }}</td>
                             <td>
                                 <span
                                     class="badge"
@@ -153,18 +145,6 @@
                                 </div>
 
                                 <div class="col-12 col-sm-6">
-                                    <label class="form-label fw-semibold" for="p-codigo">Codigo *</label>
-                                    <input
-                                        id="p-codigo"
-                                        v-model="form.codigo"
-                                        type="text"
-                                        class="form-control"
-                                        required
-                                        autocomplete="off"
-                                    >
-                                </div>
-
-                                <div class="col-12 col-sm-6">
                                     <label class="form-label fw-semibold" for="p-barra">Codigo de barra</label>
                                     <input
                                         id="p-barra"
@@ -172,42 +152,6 @@
                                         type="text"
                                         class="form-control"
                                         autocomplete="off"
-                                    >
-                                </div>
-
-                                <div class="col-12 col-sm-4">
-                                    <label class="form-label fw-semibold" for="p-precio-venta">Precio venta</label>
-                                    <input
-                                        id="p-precio-venta"
-                                        v-model.number="form.precio_venta"
-                                        type="number"
-                                        step="0.0001"
-                                        min="0"
-                                        class="form-control"
-                                    >
-                                </div>
-
-                                <div class="col-12 col-sm-4">
-                                    <label class="form-label fw-semibold" for="p-costo-prom">Costo promedio</label>
-                                    <input
-                                        id="p-costo-prom"
-                                        v-model.number="form.costo_promedio"
-                                        type="number"
-                                        step="0.0001"
-                                        min="0"
-                                        class="form-control"
-                                    >
-                                </div>
-
-                                <div class="col-12 col-sm-4">
-                                    <label class="form-label fw-semibold" for="p-stock-min">Stock minimo</label>
-                                    <input
-                                        id="p-stock-min"
-                                        v-model.number="form.stock_minimo"
-                                        type="number"
-                                        step="0.0001"
-                                        min="0"
-                                        class="form-control"
                                     >
                                 </div>
 
@@ -362,13 +306,9 @@ const emptyForm = () => ({
     categoria_id: null,
     proveedor_id: null,
     nombre: '',
-    codigo: '',
     codigo_barra: '',
     detalle: '',
     palabras_clave: '',
-    precio_venta: 0,
-    costo_promedio: 0,
-    stock_minimo: 0,
     activo: true,
 });
 
@@ -414,13 +354,9 @@ function openEdit(prod) {
         categoria_id: prod.categoria_id ?? null,
         proveedor_id: prod.proveedor_id ?? null,
         nombre: prod.nombre,
-        codigo: prod.codigo,
         codigo_barra: prod.codigo_barra ?? '',
         detalle: prod.detalle ?? '',
         palabras_clave: prod.palabras_clave ?? '',
-        precio_venta: Number(prod.precio_venta ?? 0),
-        costo_promedio: Number(prod.costo_promedio ?? 0),
-        stock_minimo: Number(prod.stock_minimo ?? 0),
         activo: prod.activo,
     };
     formErrors.value = [];
@@ -445,9 +381,6 @@ async function save() {
             ...form.value,
             codigo_barra: form.value.codigo_barra || null,
             proveedor_id: form.value.proveedor_id || null,
-            precio_venta: Number(form.value.precio_venta || 0),
-            costo_promedio: Number(form.value.costo_promedio || 0),
-            stock_minimo: Number(form.value.stock_minimo || 0),
         };
 
         if (editingId.value) {

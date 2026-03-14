@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Carbon\Carbon;
+use App\Models\User;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Auth;
 
@@ -62,5 +63,35 @@ if (! function_exists('weightedAverageCost')) {
         $weighted = (($stockBase * $costoActual) + ($cantidadEntrada * $costoEntrada)) / $totalQty;
 
         return toMoney($weighted, 4);
+    }
+}
+
+if (! function_exists('getUserPermissions')) {
+    function getUserPermissions(User|int|null $user = null): array
+    {
+        $resolvedUser = match (true) {
+            $user instanceof User => $user,
+            is_int($user) => User::query()->find($user),
+            default => getUser(),
+        };
+
+        if (! $resolvedUser instanceof User) {
+            return [];
+        }
+
+        return $resolvedUser
+            ->loadMissing('role.permissions')
+            ->allPermissions()
+            ->map(fn ($permission) => [
+                'id' => $permission->id,
+                'name' => $permission->name,
+                'code' => $permission->code,
+                'module' => $permission->module,
+                'ruta' => $permission->ruta,
+                'icono' => $permission->icono,
+                'orden' => $permission->orden,
+            ])
+            ->values()
+            ->all();
     }
 }

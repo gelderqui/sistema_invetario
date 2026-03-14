@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Middleware\CheckPermission;
-use App\Http\Middleware\CheckRole;
+use App\Http\Middleware\EnsureAjaxRequest;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -15,7 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'permission' => CheckPermission::class,
-            'role' => CheckRole::class,
+            'ajax'       => EnsureAjaxRequest::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

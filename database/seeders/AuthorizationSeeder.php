@@ -13,14 +13,15 @@ class AuthorizationSeeder extends Seeder
     public function run(): void
     {
         $permissions = [
-            ['name' => 'Dashboard', 'code' => 'dashboard', 'module' => 'dashboard'],
-            ['name' => 'Usuarios', 'code' => 'users', 'module' => 'admin'],
-            ['name' => 'Roles', 'code' => 'roles', 'module' => 'admin'],
-            ['name' => 'Categorias', 'code' => 'categorias', 'module' => 'catalogos'],
-            ['name' => 'Productos', 'code' => 'productos', 'module' => 'catalogos'],
-            ['name' => 'Proveedores', 'code' => 'proveedores', 'module' => 'catalogos'],
-            ['name' => 'Compras', 'code' => 'compras', 'module' => 'compras'],
-            ['name' => 'Inventario', 'code' => 'inventario', 'module' => 'inventario'],
+            ['name' => 'Dashboard',    'code' => 'dashboard',  'module' => 'dashboard',  'ruta' => '/',           'icono' => 'fa-solid fa-chart-line',     'orden' => 1],
+            ['name' => 'Categorias',   'code' => 'categorias', 'module' => 'catalogos',  'ruta' => '/categorias', 'icono' => 'fa-solid fa-tags',           'orden' => 3],
+            ['name' => 'Proveedores',  'code' => 'proveedores','module' => 'catalogos',  'ruta' => '/proveedores','icono' => 'fa-solid fa-truck-field',    'orden' => 4],
+            ['name' => 'Productos',    'code' => 'productos',  'module' => 'catalogos',  'ruta' => '/productos',  'icono' => 'fa-solid fa-box',            'orden' => 5],
+            ['name' => 'Clientes',     'code' => 'cliente',    'module' => 'catalogos',  'ruta' => '/cliente',    'icono' => 'fa-solid fa-address-card',   'orden' => 6],
+            ['name' => 'Compras',      'code' => 'compras',    'module' => 'compras',    'ruta' => '/compras',    'icono' => 'fa-solid fa-truck-ramp-box', 'orden' => 7],
+            ['name' => 'Inventario',   'code' => 'inventario', 'module' => 'inventario', 'ruta' => '/inventario', 'icono' => 'fa-solid fa-warehouse',      'orden' => 8],
+            ['name' => 'Usuarios',     'code' => 'users',      'module' => 'admin',      'ruta' => '/usuarios',   'icono' => 'fa-solid fa-users',          'orden' => 9],
+            ['name' => 'Roles',        'code' => 'roles',      'module' => 'admin',      'ruta' => '/roles',      'icono' => 'fa-solid fa-user-shield',    'orden' => 10],
         ];
 
         foreach ($permissions as $permissionData) {
@@ -45,8 +46,9 @@ class AuthorizationSeeder extends Seeder
                 'permissions' => [
                     'dashboard',
                     'categorias',
-                    'productos',
                     'proveedores',
+                    'productos',
+                    'cliente',
                     'compras',
                     'inventario',
                 ],
@@ -57,8 +59,9 @@ class AuthorizationSeeder extends Seeder
                 'permissions' => [
                     'dashboard',
                     'categorias',
-                    'productos',
                     'proveedores',
+                    'productos',
+                    'cliente',
                     'compras',
                     'inventario',
                 ],

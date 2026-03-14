@@ -7,7 +7,7 @@
                     v-model="search"
                     type="search"
                     class="form-control"
-                    placeholder="Buscar por codigo, barra o nombre"
+                    placeholder="Buscar por barra o nombre"
                     style="min-width: 280px;"
                     @keyup.enter="loadExistencias"
                 >
@@ -26,7 +26,6 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="thead-brand">
                         <tr>
-                            <th>Codigo</th>
                             <th>Producto</th>
                             <th>Categoria</th>
                             <th>Proveedor</th>
@@ -39,10 +38,9 @@
                     </thead>
                     <tbody>
                         <tr v-if="!existencias.length">
-                            <td colspan="9" class="text-center text-body-secondary py-4">Sin datos de inventario.</td>
+                            <td colspan="8" class="text-center text-body-secondary py-4">Sin datos de inventario.</td>
                         </tr>
                         <tr v-for="item in existencias" :key="item.id">
-                            <td><code>{{ item.codigo }}</code></td>
                             <td>
                                 <div class="fw-semibold">{{ item.nombre }}</div>
                                 <div class="small text-body-secondary">{{ item.codigo_barra || 'Sin cod. barra' }}</div>

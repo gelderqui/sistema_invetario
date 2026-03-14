@@ -13,6 +13,7 @@ class AuthenticatedUserResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'username' => $this->username,
             'name' => $this->name,
             'email' => $this->email,
             'role' => $this->role ? [
@@ -26,6 +27,9 @@ class AuthenticatedUserResource extends JsonResource
                 'name' => $permission->name,
                 'code' => $permission->code,
                 'module' => $permission->module,
+                'ruta' => $permission->ruta,
+                'icono' => $permission->icono,
+                'orden' => $permission->orden,
             ])->values(),
         ];
     }

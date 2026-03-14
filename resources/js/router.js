@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 
 import { useAuthStore } from '@/stores/auth';
 import CategoriasView from '@/views/CategoriasView.vue';
+import ClientesView from '@/views/ClientesView.vue';
 import ComprasView from '@/views/ComprasView.vue';
 import DashboardView from '@/views/DashboardView.vue';
 import InventarioView from '@/views/InventarioView.vue';
@@ -17,6 +18,7 @@ const permissionByPath = [
     { pattern: /^\/usuarios(\/|$)/, permission: 'users' },
     { pattern: /^\/roles(\/|$)/, permission: 'roles' },
     { pattern: /^\/categorias(\/|$)/, permission: 'categorias' },
+    { pattern: /^\/cliente(\/|$)/, permission: 'cliente' },
     { pattern: /^\/productos(\/|$)/, permission: 'productos' },
     { pattern: /^\/proveedores(\/|$)/, permission: 'proveedores' },
     { pattern: /^\/compras(\/|$)/, permission: 'compras' },
@@ -66,6 +68,14 @@ const routes = [
         path: '/categorias',
         name: 'categorias',
         component: CategoriasView,
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
+        path: '/cliente',
+        name: 'cliente',
+        component: ClientesView,
         meta: {
             requiresAuth: true,
         },

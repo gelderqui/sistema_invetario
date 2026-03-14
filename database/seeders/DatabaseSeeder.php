@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             ConfiguracionSeeder::class,
             AuthorizationSeeder::class,
+            CatalogDefaultsSeeder::class,
         ]);
     }
 }

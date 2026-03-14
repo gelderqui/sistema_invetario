@@ -53,7 +53,6 @@ class CompraController extends Controller
                 'id',
                 'categoria_id',
                 'nombre',
-                'codigo',
                 'codigo_barra',
                 'costo_promedio',
                 'precio_venta',
@@ -178,7 +177,7 @@ class CompraController extends Controller
             ]);
 
             return [
-                'compra' => $compra->load(['proveedor:id,nombre', 'detalles.producto:id,nombre,codigo']),
+                'compra' => $compra->load(['proveedor:id,nombre', 'detalles.producto:id,nombre']),
                 'alerts' => $alerts,
             ];
         });

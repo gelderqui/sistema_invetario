@@ -14,7 +14,6 @@ class Producto extends Model
         'categoria_id',
         'proveedor_id',
         'nombre',
-        'codigo',
         'codigo_barra',
         'detalle',
         'palabras_clave',

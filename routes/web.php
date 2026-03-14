@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\RoleManagementController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Catalogos\CategoriaController;
+use App\Http\Controllers\Catalogos\ClienteController;
 use App\Http\Controllers\Catalogos\ProveedorController;
 use App\Http\Controllers\Catalogos\ProductoController;
 use App\Http\Controllers\Compras\CompraController;
@@ -20,12 +21,13 @@ Route::prefix('api')->group(function (): void {
         Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('/me', [AuthController::class, 'show']);
             Route::post('/logout', [AuthController::class, 'destroy']);
+            Route::put('/password', [AuthController::class, 'updatePassword'])->middleware('ajax');
         });
     });
 
     Route::middleware('guest')->get('/configuraciones/get/login', [ConfiguracionController::class, 'login']);
 
-    Route::middleware(['auth:sanctum', 'permission'])->group(function (): void {
+    Route::middleware(['auth:sanctum', 'permission', 'ajax'])->group(function (): void {
         Route::get('/configuraciones/get/publicas', [ConfiguracionController::class, 'publicas']);
 
         Route::get('/dashboard/get', function () {
@@ -75,6 +77,14 @@ Route::prefix('api')->group(function (): void {
                 Route::put('/update/{proveedor}', [ProveedorController::class, 'update']);
                 Route::patch('/toggle/{proveedor}', [ProveedorController::class, 'toggle']);
                 Route::delete('/destroy/{proveedor}', [ProveedorController::class, 'destroy']);
+            });
+
+            Route::prefix('clientes')->group(function (): void {
+                Route::get('/get', [ClienteController::class, 'index']);
+                Route::post('/store', [ClienteController::class, 'store']);
+                Route::put('/update/{cliente}', [ClienteController::class, 'update']);
+                Route::patch('/toggle/{cliente}', [ClienteController::class, 'toggle']);
+                Route::delete('/destroy/{cliente}', [ClienteController::class, 'destroy']);
             });
         });
 

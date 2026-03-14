@@ -105,7 +105,7 @@
                                                 <select v-model="item.producto_id" class="form-select form-select-sm">
                                                     <option :value="null">Seleccione</option>
                                                     <option v-for="prod in catalogs.productos" :key="prod.id" :value="prod.id">
-                                                        {{ prod.codigo }} - {{ prod.nombre }}
+                                                        {{ prod.nombre }}
                                                     </option>
                                                 </select>
                                             </td>

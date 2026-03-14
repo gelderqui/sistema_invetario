@@ -24,7 +24,6 @@ class InventarioController extends Controller
             $search = trim((string) $request->input('search'));
             $query->where(function ($q) use ($search): void {
                 $q->where('nombre', 'like', "%{$search}%")
-                    ->orWhere('codigo', 'like', "%{$search}%")
                     ->orWhere('codigo_barra', 'like', "%{$search}%");
             });
         }
@@ -34,7 +33,6 @@ class InventarioController extends Controller
             'categoria_id',
             'proveedor_id',
             'nombre',
-            'codigo',
             'codigo_barra',
             'stock_actual',
             'stock_minimo',
@@ -54,7 +52,7 @@ class InventarioController extends Controller
     {
         $query = InventarioMovimiento::query()
             ->with([
-                'producto:id,nombre,codigo',
+                'producto:id,nombre',
                 'compra:id,numero',
             ])
             ->orderByDesc('id');

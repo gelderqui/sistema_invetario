@@ -1,0 +1,12 @@
+.catalogo-chip {
+    font-size: 0.75rem;
+    border: 1px solid #dee2e6;
+    border-radius: 9999px;
+    padding: 0.1rem 0.6rem;
+    background: #fff;
+}
+
+.catalogo-muted {
+    color: #6c757d;
+    font-size: 0.875rem;
+}

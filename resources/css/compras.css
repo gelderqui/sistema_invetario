@@ -1,0 +1,16 @@
+.compra-items-table td,
+.compra-items-table th {
+    vertical-align: middle;
+}
+
+.compra-total-box {
+    background: #eef3ff;
+    border: 1px solid #d6e2ff;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+}
+
+.compra-alert-list {
+    margin: 0;
+    padding-left: 1rem;
+}

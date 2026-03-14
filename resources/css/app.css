@@ -22,3 +22,6 @@ body {
 
 /* Estilos de componentes (botones, modales, tablas, sidebar) */
 @import './components.css';
+@import './catalogos.css';
+@import './compras.css';
+@import './inventario.css';

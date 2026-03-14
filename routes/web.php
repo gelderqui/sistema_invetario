@@ -5,8 +5,11 @@ use App\Http\Controllers\Admin\RoleManagementController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Catalogos\CategoriaController;
+use App\Http\Controllers\Catalogos\ProveedorController;
 use App\Http\Controllers\Catalogos\ProductoController;
+use App\Http\Controllers\Compras\CompraController;
 use App\Http\Controllers\ConfiguracionController;
+use App\Http\Controllers\Inventario\InventarioController;
 use Illuminate\Support\Facades\Route;
 
 // Authentication endpoints
@@ -62,9 +65,29 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::put('/productos/{producto}', [ProductoController::class, 'update']);
         Route::patch('/productos/{producto}/toggle', [ProductoController::class, 'toggle']);
         Route::delete('/productos/{producto}', [ProductoController::class, 'destroy']);
+
+        // Proveedores
+        Route::get('/proveedores', [ProveedorController::class, 'index']);
+        Route::post('/proveedores', [ProveedorController::class, 'store']);
+        Route::put('/proveedores/{proveedor}', [ProveedorController::class, 'update']);
+        Route::patch('/proveedores/{proveedor}/toggle', [ProveedorController::class, 'toggle']);
+        Route::delete('/proveedores/{proveedor}', [ProveedorController::class, 'destroy']);
+    });
+
+    // Rutas de compras
+    Route::prefix('compras')->middleware('permission:purchases.view|purchases.create')->group(function (): void {
+        Route::get('/', [CompraController::class, 'index'])->middleware('permission:purchases.view');
+        Route::get('/catalogs', [CompraController::class, 'catalogs'])->middleware('permission:purchases.create');
+        Route::post('/', [CompraController::class, 'store'])->middleware('permission:purchases.create');
+    });
+
+    // Rutas de inventario
+    Route::prefix('inventario')->middleware('permission:inventory.view|inventory.manage')->group(function (): void {
+        Route::get('/existencias', [InventarioController::class, 'existencias'])->middleware('permission:inventory.view');
+        Route::get('/movimientos', [InventarioController::class, 'movimientos'])->middleware('permission:inventory.view');
     });
 });
 
 // SPA entry point (exclude backend endpoints)
 Route::view('/{path?}', 'app')
-    ->where('path', '^(?!auth|configuraciones|dashboard-data|admin|catalogos|sanctum).*$');
+    ->where('path', '^(?!auth|configuraciones|dashboard-data|admin|catalogos|compras|inventario|sanctum).*$');

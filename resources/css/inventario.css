@@ -1,0 +1,9 @@
+.stock-low {
+    color: #b42318;
+    font-weight: 700;
+}
+
+.stock-ok {
+    color: #027a48;
+    font-weight: 700;
+}

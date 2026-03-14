@@ -20,9 +20,12 @@
                     <thead class="thead-brand">
                         <tr>
                             <th>Codigo</th>
-                            <th>Cod. Barra</th>
                             <th>Nombre</th>
                             <th>Categoria</th>
+                            <th>Proveedor</th>
+                            <th>Costo Prom.</th>
+                            <th>Precio Venta</th>
+                            <th>Stock Min.</th>
                             <th>Estado</th>
                             <th>Creado</th>
                             <th></th>
@@ -30,11 +33,10 @@
                     </thead>
                     <tbody>
                         <tr v-if="!productos.length">
-                            <td colspan="7" class="text-center text-body-secondary py-4">Sin registros</td>
+                            <td colspan="10" class="text-center text-body-secondary py-4">Sin registros</td>
                         </tr>
                         <tr v-for="prod in productos" :key="prod.id">
                             <td><code>{{ prod.codigo }}</code></td>
-                            <td class="small text-body-secondary">{{ prod.codigo_barra ?? '—' }}</td>
                             <td class="fw-semibold">{{ prod.nombre }}</td>
                             <td>
                                 <span v-if="prod.categoria" class="badge text-bg-light border">
@@ -42,6 +44,10 @@
                                 </span>
                                 <span v-else class="text-body-secondary small">—</span>
                             </td>
+                            <td>{{ prod.proveedor?.nombre ?? '—' }}</td>
+                            <td>Q {{ Number(prod.costo_promedio ?? 0).toFixed(2) }}</td>
+                            <td>Q {{ Number(prod.precio_venta ?? 0).toFixed(2) }}</td>
+                            <td>{{ Number(prod.stock_minimo ?? 0).toFixed(2) }}</td>
                             <td>
                                 <span
                                     class="badge"
@@ -133,6 +139,20 @@
                                 </div>
 
                                 <div class="col-12 col-sm-6">
+                                    <label class="form-label fw-semibold" for="p-proveedor">Proveedor referencial</label>
+                                    <select id="p-proveedor" v-model="form.proveedor_id" class="form-select">
+                                        <option :value="null">Sin proveedor</option>
+                                        <option
+                                            v-for="prov in proveedoresActivos"
+                                            :key="prov.id"
+                                            :value="prov.id"
+                                        >
+                                            {{ prov.nombre }}
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div class="col-12 col-sm-6">
                                     <label class="form-label fw-semibold" for="p-codigo">Codigo *</label>
                                     <input
                                         id="p-codigo"
@@ -152,6 +172,42 @@
                                         type="text"
                                         class="form-control"
                                         autocomplete="off"
+                                    >
+                                </div>
+
+                                <div class="col-12 col-sm-4">
+                                    <label class="form-label fw-semibold" for="p-precio-venta">Precio venta</label>
+                                    <input
+                                        id="p-precio-venta"
+                                        v-model.number="form.precio_venta"
+                                        type="number"
+                                        step="0.0001"
+                                        min="0"
+                                        class="form-control"
+                                    >
+                                </div>
+
+                                <div class="col-12 col-sm-4">
+                                    <label class="form-label fw-semibold" for="p-costo-prom">Costo promedio</label>
+                                    <input
+                                        id="p-costo-prom"
+                                        v-model.number="form.costo_promedio"
+                                        type="number"
+                                        step="0.0001"
+                                        min="0"
+                                        class="form-control"
+                                    >
+                                </div>
+
+                                <div class="col-12 col-sm-4">
+                                    <label class="form-label fw-semibold" for="p-stock-min">Stock minimo</label>
+                                    <input
+                                        id="p-stock-min"
+                                        v-model.number="form.stock_minimo"
+                                        type="number"
+                                        step="0.0001"
+                                        min="0"
+                                        class="form-control"
                                     >
                                 </div>
 
@@ -285,6 +341,7 @@ import axios from '@/bootstrap';
 
 const productos = ref([]);
 const categoriasActivas = ref([]);
+const proveedoresActivos = ref([]);
 const loading = ref(true);
 const saving = ref(false);
 const toggling = ref(false);
@@ -303,11 +360,15 @@ let deleteModal = null;
 
 const emptyForm = () => ({
     categoria_id: null,
+    proveedor_id: null,
     nombre: '',
     codigo: '',
     codigo_barra: '',
     detalle: '',
     palabras_clave: '',
+    precio_venta: 0,
+    costo_promedio: 0,
+    stock_minimo: 0,
     activo: true,
 });
 
@@ -317,7 +378,7 @@ onMounted(async () => {
     formModal = new Modal(formModalRef.value);
     toggleModal = new Modal(toggleModalRef.value);
     deleteModal = new Modal(deleteModalRef.value);
-    await Promise.all([loadProductos(), loadCategorias()]);
+    await Promise.all([loadProductos(), loadCategorias(), loadProveedores()]);
 });
 
 async function loadProductos() {
@@ -335,6 +396,11 @@ async function loadCategorias() {
     categoriasActivas.value = data.data;
 }
 
+async function loadProveedores() {
+    const { data } = await axios.get('/catalogos/proveedores');
+    proveedoresActivos.value = (data.data ?? []).filter((item) => item.activo);
+}
+
 function openCreate() {
     editingId.value = null;
     form.value = emptyForm();
@@ -346,11 +412,15 @@ function openEdit(prod) {
     editingId.value = prod.id;
     form.value = {
         categoria_id: prod.categoria_id ?? null,
+        proveedor_id: prod.proveedor_id ?? null,
         nombre: prod.nombre,
         codigo: prod.codigo,
         codigo_barra: prod.codigo_barra ?? '',
         detalle: prod.detalle ?? '',
         palabras_clave: prod.palabras_clave ?? '',
+        precio_venta: Number(prod.precio_venta ?? 0),
+        costo_promedio: Number(prod.costo_promedio ?? 0),
+        stock_minimo: Number(prod.stock_minimo ?? 0),
         activo: prod.activo,
     };
     formErrors.value = [];
@@ -374,6 +444,10 @@ async function save() {
         const payload = {
             ...form.value,
             codigo_barra: form.value.codigo_barra || null,
+            proveedor_id: form.value.proveedor_id || null,
+            precio_venta: Number(form.value.precio_venta || 0),
+            costo_promedio: Number(form.value.costo_promedio || 0),
+            stock_minimo: Number(form.value.stock_minimo || 0),
         };
 
         if (editingId.value) {

@@ -7,7 +7,7 @@ export const navigationItems = [
     },
     {
         name: 'productos-grupo',
-        label: 'Productos',
+        label: 'Catalogo',
         icon: 'fa-solid fa-boxes-stacked',
         permissions: ['inventory.manage'],
         children: [
@@ -23,14 +23,25 @@ export const navigationItems = [
                 icon: 'fa-solid fa-box',
                 permissions: ['inventory.manage'],
             },
+            {
+                name: 'proveedores',
+                label: 'Proveedores',
+                icon: 'fa-solid fa-truck-field',
+                permissions: ['inventory.manage'],
+            },
         ],
     },
     {
-        name: 'purchases',
+        name: 'compras',
         label: 'Compras',
         icon: 'fa-solid fa-truck-ramp-box',
-        permissions: ['purchases.view'],
-        disabled: true,
+        permissions: ['purchases.view', 'purchases.create'],
+    },
+    {
+        name: 'inventario',
+        label: 'Inventario',
+        icon: 'fa-solid fa-warehouse',
+        permissions: ['inventory.view'],
     },
     {
         name: 'pos',

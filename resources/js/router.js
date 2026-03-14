@@ -1,37 +1,19 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
+import axios from '@/bootstrap';
 import { useAuthStore } from '@/stores/auth';
-import CategoriasView from '@/views/CategoriasView.vue';
-import ClientesView from '@/views/ClientesView.vue';
-import ComprasView from '@/views/ComprasView.vue';
-import ConfiguracionesView from '@/views/ConfiguracionesView.vue';
-import DashboardView from '@/views/DashboardView.vue';
-import InventarioView from '@/views/InventarioView.vue';
-import LoginView from '@/views/LoginView.vue';
-import ProveedoresView from '@/views/ProveedoresView.vue';
-import ProductosView from '@/views/ProductosView.vue';
-import RolesView from '@/views/RolesView.vue';
-import UnauthorizedView from '@/views/UnauthorizedView.vue';
-import UsersView from '@/views/UsersView.vue';
-
-const permissionByPath = [
-    { pattern: /^\/$/, permission: 'dashboard' },
-    { pattern: /^\/configuracion\/usuarios(\/|$)/, permission: 'users' },
-    { pattern: /^\/configuracion\/roles(\/|$)/, permission: 'roles' },
-    { pattern: /^\/configuracion\/configuraciones(\/|$)/, permission: 'configuraciones' },
-    { pattern: /^\/categorias(\/|$)/, permission: 'categorias' },
-    { pattern: /^\/cliente(\/|$)/, permission: 'cliente' },
-    { pattern: /^\/productos(\/|$)/, permission: 'productos' },
-    { pattern: /^\/proveedores(\/|$)/, permission: 'proveedores' },
-    { pattern: /^\/compras(\/|$)/, permission: 'compras' },
-    { pattern: /^\/inventario(\/|$)/, permission: 'inventario' },
-];
-
-function requiredPermissionForPath(path) {
-    const match = permissionByPath.find((item) => item.pattern.test(path));
-
-    return match?.permission ?? null;
-}
+import CategoriasView from '@/components/CategoriasView.vue';
+import ClientesView from '@/components/ClientesView.vue';
+import ComprasView from '@/components/ComprasView.vue';
+import ConfiguracionesView from '@/components/ConfiguracionesView.vue';
+import DashboardView from '@/components/DashboardView.vue';
+import InventarioView from '@/components/InventarioView.vue';
+import LoginView from '@/components_public/LoginView.vue';
+import ProveedoresView from '@/components/ProveedoresView.vue';
+import ProductosView from '@/components/ProductosView.vue';
+import RolesView from '@/components/RolesView.vue';
+import UnauthorizedView from '@/components/UnauthorizedView.vue';
+import UsersView from '@/components/UsersView.vue';
 
 const routes = [
     {
@@ -149,7 +131,14 @@ router.beforeEach(async (to) => {
     const authStore = useAuthStore();
 
     if (!authStore.initialized) {
-        await authStore.initialize();
+        try {
+            const { data } = await axios.get('/auth/me');
+            authStore.setUser(data.data ?? data ?? null);
+        } catch {
+            authStore.clearUser();
+        } finally {
+            authStore.setInitialized(true);
+        }
     }
 
     if (to.meta.requiresAuth && !authStore.isAuthenticated) {
@@ -161,14 +150,6 @@ router.beforeEach(async (to) => {
 
     if (to.meta.guestOnly && authStore.isAuthenticated) {
         return { name: 'dashboard' };
-    }
-
-    if (!to.meta.guestOnly && authStore.isAuthenticated) {
-        const permission = requiredPermissionForPath(to.path);
-
-        if (permission && !authStore.hasAnyPermission([permission])) {
-            return { name: 'error' };
-        }
     }
 
     return true;

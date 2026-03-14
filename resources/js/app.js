@@ -12,7 +12,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 
-import AppLayout from './layouts/AppLayout.vue';
+import AppLayout from './AppLayout.vue';
 import router from './router.js';
 
 library.add(fab, far, fas);

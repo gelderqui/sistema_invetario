@@ -33,7 +33,7 @@
                     <div class="col-12 col-lg-6">
                         <h4 class="h6 text-uppercase text-body-secondary">Roles</h4>
                         <div class="d-flex flex-wrap gap-2">
-                            <span v-for="role in authStore.user?.roles ?? []" :key="role.code" class="badge text-bg-dark">
+                            <span v-for="role in roleItems" :key="role.code" class="badge text-bg-dark">
                                 {{ role.name }}
                             </span>
                         </div>
@@ -62,26 +62,29 @@ import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
 
+const permissionCodes = computed(() => new Set((authStore.user?.permissions ?? []).map((permission) => permission.code)));
+const roleItems = computed(() => (authStore.user?.role ? [authStore.user.role] : []));
+
 const modules = computed(() => [
     {
         title: 'Inventario',
         description: 'Productos, existencias, ajustes y kardex.',
-        enabled: authStore.hasAnyPermission(['inventory.view']),
+        enabled: permissionCodes.value.has('inventario'),
     },
     {
         title: 'Compras',
         description: 'Proveedores, órdenes e ingresos de stock.',
-        enabled: authStore.hasAnyPermission(['purchases.view']),
+        enabled: permissionCodes.value.has('compras'),
     },
     {
         title: 'POS',
         description: 'Caja, ventas rápidas y recibos.',
-        enabled: authStore.hasAnyPermission(['pos.access']),
+        enabled: permissionCodes.value.has('pos.access'),
     },
     {
         title: 'Reportes',
         description: 'Exportación a Excel y salidas PDF.',
-        enabled: authStore.hasAnyPermission(['reports.view']),
+        enabled: permissionCodes.value.has('reports.view'),
     },
 ]);
 </script>

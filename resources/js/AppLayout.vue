@@ -360,7 +360,7 @@ async function submitChangePassword() {
 
     passwordSaving.value = true;
     try {
-        const response = await authStore.changePassword(passwordForm.value);
+        const { data: response } = await axios.put('/auth/password', passwordForm.value);
         passwordModal?.hide();
 
         showSuccessToast(response?.message ?? 'Contrasena actualizada correctamente.');
@@ -368,11 +368,11 @@ async function submitChangePassword() {
         if (response?.force_logout) {
             setTimeout(async () => {
                 try {
-                    await authStore.logout();
+                    await axios.post('/auth/logout');
                 } catch {
                     // La sesion puede ya estar invalidada en servidor.
                 } finally {
-                    authStore.user = null;
+                    authStore.clearUser();
                     await router.push({ name: 'login' });
                 }
             }, 1100);
@@ -388,7 +388,8 @@ async function submitChangePassword() {
 }
 
 async function logout() {
-    await authStore.logout();
+    await axios.post('/auth/logout');
+    authStore.clearUser();
     await router.push({ name: 'login' });
 }
 </script>

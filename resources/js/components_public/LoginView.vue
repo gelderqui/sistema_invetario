@@ -68,8 +68,8 @@
                             <label class="form-check-label" for="remember">Mantener sesión iniciada</label>
                         </div>
 
-                        <button type="submit" class="btn btn-dark btn-lg w-100 mt-1" :disabled="authStore.loading">
-                            <span v-if="authStore.loading" class="spinner-border spinner-border-sm me-2" aria-hidden="true" />
+                        <button type="submit" class="btn btn-dark btn-lg w-100 mt-1" :disabled="loading">
+                            <span v-if="loading" class="spinner-border spinner-border-sm me-2" aria-hidden="true" />
                             <FontAwesomeIcon v-else icon="fa-solid fa-right-to-bracket" class="me-2" />
                             Ingresar
                         </button>
@@ -101,6 +101,7 @@ const form = ref({
 const errorMessages = ref([]);
 const showPassword = ref(false);
 const nombreSistema = ref('Sistema POS e Inventario');
+const loading = ref(false);
 
 onMounted(async () => {
     try {
@@ -113,9 +114,13 @@ onMounted(async () => {
 
 async function submit() {
     errorMessages.value = [];
+    loading.value = true;
 
     try {
-        await authStore.login(form.value);
+        await axios.get('/sanctum/csrf-cookie', { baseURL: '' });
+        const { data } = await axios.post('/auth/login', form.value);
+        authStore.setUser(data.user?.data ?? data.user ?? null);
+        authStore.setInitialized(true);
         await router.push(route.query.redirect ?? { name: 'dashboard' });
     } catch (error) {
         const serverErrors = error.response?.data?.errors;
@@ -131,6 +136,8 @@ async function submit() {
                 error.response?.data?.message ?? 'No fue posible iniciar sesión.',
             ];
         }
+    } finally {
+        loading.value = false;
     }
 }
 </script>

@@ -6,15 +6,16 @@ Documento de contexto rapido para cualquier agente IA que entre a este repositor
 
 SPA para inventario/POS sobre Laravel + Vue.
 
-Estado actual principal:
+Estado funcional actual:
 
-- Autenticacion con Sanctum (cookie/session para SPA)
-- RBAC personalizado (roles/permisos propios)
-- Modulos base implementados:
+- Autenticacion SPA con Sanctum (cookie + sesion)
+- RBAC personalizado por rol/permisos (tabla propia)
+- Modulos activos:
   - Dashboard
-  - Usuarios
-  - Roles
-  - Catalogos: Categorias y Productos
+  - Configuracion: Usuarios, Roles, Configuraciones
+  - Catalogos: Categorias, Productos, Proveedores, Clientes
+  - Compras
+  - Inventario
 
 ## 2) Stack y herramientas
 
@@ -23,8 +24,8 @@ Backend:
 - Laravel 12
 - PHP >= 8.2
 - Sanctum
-- MariaDB (via Sail)
-- Redis, Mailpit (via Sail)
+- MariaDB (Sail)
+- Redis, Mailpit (Sail)
 
 Frontend:
 
@@ -34,7 +35,7 @@ Frontend:
 - Axios
 - Bootstrap 5
 - Font Awesome
-- CoreUI CSS (principalmente estilos)
+- CoreUI CSS
 - Vite
 
 Infra local:
@@ -43,98 +44,123 @@ Infra local:
 - Docker Desktop
 - Laravel Sail
 
-Paquetes relevantes adicionales:
-
-- barryvdh/laravel-dompdf
-- maatwebsite/excel
-
-## 3) Arquitectura general
+## 3) Arquitectura actual
 
 ### Backend
 
-- Rutas en routes/web.php (API y SPA entrypoint conviven aqui)
-- Controladores por dominio:
-  - app/Http/Controllers/AuthController.php
-  - app/Http/Controllers/ConfiguracionController.php
-  - app/Http/Controllers/Admin/*
-  - app/Http/Controllers/Catalogos/*
-- Modelos Eloquent en app/Models/*
-- Migraciones en database/migrations/*
-- Seeders clave:
-  - AuthorizationSeeder
-  - ConfiguracionSeeder
+- Rutas API + SPA entrypoint en `routes/web.php`
+- Controladores principales:
+  - `app/Http/Controllers/AuthController.php`
+  - `app/Http/Controllers/ConfiguracionController.php`
+  - `app/Http/Controllers/Admin/*`
+  - `app/Http/Controllers/Catalogos/*`
+  - `app/Http/Controllers/Compras/*`
+  - `app/Http/Controllers/Inventario/*`
+- Recurso de usuario autenticado para frontend:
+  - `app/Http/Resources/AuthenticatedUserResource.php`
+- Middleware de autorizacion:
+  - `app/Http/Middleware/CheckPermission.php`
 
 ### Frontend
 
-- Entrada en resources/js/app.js
-- Router en resources/js/router.js
-- Store auth en resources/js/stores/auth.js
-- Navegacion en resources/js/utils/navigation.js
-- Layout principal en resources/js/layouts/AppLayout.vue
-- Vistas en resources/js/views/*
+- Entrada Vue: `resources/js/app.js`
+- Componente raiz (shell): `resources/js/AppLayout.vue`
+  - contiene sidebar, header, modal de cambio de contrasena, y `<router-view />`
+- Router: `resources/js/router.js`
+  - hace bootstrap de sesion llamando `/auth/me`
+  - controla solo `requiresAuth` y `guestOnly`
+  - la autorizacion fina se deja al backend (middleware)
+- Store Pinia (minimalista): `resources/js/stores/auth.js`
+  - estado compartido: `user`, `initialized`
+  - acciones: `setUser`, `clearUser`, `setInitialized`
+- Componentes protegidos: `resources/js/components/*`
+- Componentes publicos: `resources/js/components_public/*`
+- La carpeta `resources/js/utils` fue eliminada por no uso actual.
 
-### Estilos
+### Estilos CSS
 
-- Base en resources/css/app.css
-- Componentes UI en resources/css/components.css
+Estrategia vigente (confirmada):
 
-## 4) Seguridad y autorizacion
+- No se estan usando bloques `<style>` dentro de archivos `.vue`.
+- El estilo esta centralizado en `resources/css`:
+  - `app.css`: base global e imports de CSS modulares
+  - `components.css`: estilos compartidos/reutilizables (botones, modales, thead, sidebar)
+  - `catalogos.css`: clases de catalogos
+  - `compras.css`: clases de compras
+  - `inventario.css`: clases de inventario
 
-- Login por username + password
-- Endpoints protegidos por auth:sanctum
-- Control por permisos con middleware custom permission:* y role:*
-- Guard de frontend revisa meta.permissions por ruta
+Convencion recomendada:
 
-Permisos importantes usados en UI:
+- Si una regla aplica en varias pantallas o es UI compartida, va a `components.css`.
+- Si una regla aplica a un dominio (catalogos/compras/inventario), va a su archivo de dominio.
+- Evitar CSS embebido en componentes salvo casos excepcionales.
 
-- dashboard.view
-- users.manage
-- roles.manage
-- inventory.manage
+## 4) Flujo auth/permisos/menu
 
-## 5) Rutas funcionales actuales (resumen)
+1. Al cargar app, router ejecuta guard global.
+2. Si no esta inicializado, hace `GET /auth/me`.
+3. El backend responde usuario + rol + permisos (resource autenticado).
+4. El store guarda `user` y `initialized`.
+5. `AppLayout.vue` arma el menu desde `authStore.user.permissions`.
+6. Si el usuario navega a endpoint sin permiso, backend responde 403 y axios interceptor redirige a `/error`.
+
+Notas:
+
+- El menu se pinta por permisos efectivos del usuario.
+- Actualmente existe una definicion de grupos en frontend (`catalogos`, `configuracion`) en `AppLayout.vue`.
+- Se inicio trabajo para mover metadata de grupo a BD en permisos (`module_label`, `module_icono`) via migracion/seeder.
+
+## 5) Rutas funcionales (resumen)
 
 Auth:
 
-- POST /auth/login
-- GET /auth/me
-- POST /auth/logout
+- `POST /auth/login`
+- `GET /auth/me`
+- `POST /auth/logout`
+- `PUT /auth/password`
 
-Configuraciones:
+Configuraciones publicas:
 
-- GET /configuraciones/login (guest)
-- GET /configuraciones/publicas (auth)
+- `GET /configuraciones/get/login` (guest)
+- `GET /configuraciones/get/publicas` (auth)
 
-Admin:
+Modulo configuracion (auth + permission + ajax):
 
-- /admin/users (index/store/update)
-- /admin/users/catalogs
-- /admin/roles (index/store/update)
-- /admin/permissions
+- `configuracion/usuarios/*`
+- `configuracion/roles/*`
+- `configuracion/permissions/get`
+- `configuracion/configuraciones/*`
 
-Catalogos (inventory.manage):
+Catalogos:
 
-- /catalogos/categorias (index/store/update/toggle/destroy)
-- /catalogos/productos (index/store/update/toggle/destroy)
+- `catalogos/categorias/*`
+- `catalogos/productos/*`
+- `catalogos/proveedores/*`
+- `catalogos/clientes/*`
 
-## 6) Convenciones y decisiones del proyecto
+Operativo:
 
-- Idioma de app en espanol (locale configurable desde tabla configuraciones)
-- CRUD en frontend mayormente con modales (no paginas separadas)
-- Sidebar con permisos; menu Productos tiene subitems (Categorias, Productos)
-- Estilo visual actual:
-  - headers de tabla y modales en azul marca
-  - botones de accion en tablas con fondo azul
+- `compras/*`
+- `inventario/*`
 
-## 7) Flujo de arranque para IA
+## 6) Cambios recientes importantes
 
-1. Leer README.md y readmme_reinstall.md
-2. Revisar routes/web.php y resources/js/router.js
-3. Revisar navigation.js y AppLayout.vue para impacto de UI
-4. Si toca seguridad, revisar middleware de permisos/roles
-5. Antes de cambios grandes, correr build y pruebas al final
+- Reestructura frontend:
+  - `AppLayout.vue` movido a `resources/js/AppLayout.vue`
+  - vistas movidas a `resources/js/components` y `resources/js/components_public`
+- Eliminadas carpetas/archivos obsoletos:
+  - `resources/js/views`
+  - `resources/js/layouts`
+  - `resources/js/utils`
+- Store auth simplificado (Pinia solo estado compartido)
+- Login movido a `LoginView.vue`; logout/password a `AppLayout.vue`
+- Router simplificado sin chequeo de permisos por path en frontend
+- Configuraciones:
+  - removido `locale` del seeder y del endpoint publico
+  - defaults actuales: `nombre_empresa=weltixh`, `tiempo_sesion=120`
+- Carpeta de traducciones movida a `resources/lang`
 
-## 8) Comandos recomendados
+## 7) Comandos recomendados
 
 Instalar:
 
@@ -150,6 +176,12 @@ Levantar entorno:
 ./vendor/bin/sail artisan migrate --seed
 ```
 
+Aplicar solo configuraciones:
+
+```bash
+./vendor/bin/sail artisan db:seed --class=ConfiguracionSeeder
+```
+
 Build:
 
 ```bash
@@ -162,9 +194,10 @@ Tests:
 ./vendor/bin/sail artisan test
 ```
 
-## 9) Riesgos comunes
+## 8) Riesgos comunes
 
-- Cambios en rutas sin actualizar guard de frontend
-- Cambios en permisos sin actualizar seeders
-- Estilos de Bootstrap/CoreUI sobreescribiendo clases custom
-- Archivos con permisos root por uso de sudo
+- Cambiar rutas backend sin ajustar router/frontend
+- Cambiar permisos/seeders sin refrescar datos (`migrate --seed` o seeder puntual)
+- Confiar solo en frontend para autorizacion (la verdad esta en backend)
+- Mezclar estilos por componente en vez de mantener CSS centralizado
+- Archivos con permisos root por uso de sudo en WSL

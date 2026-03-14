@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
 import axios from '@/bootstrap';
+import { beginLoading, endLoading } from '@/components/components_ui/loadingState';
 import { useAuthStore } from '@/stores/auth';
 import CategoriasView from '@/components/CategoriasView.vue';
 import ClientesView from '@/components/ClientesView.vue';
@@ -128,6 +129,8 @@ const router = createRouter({
 });
 
 router.beforeEach(async (to) => {
+    beginLoading();
+
     const authStore = useAuthStore();
 
     if (!authStore.initialized) {
@@ -153,6 +156,14 @@ router.beforeEach(async (to) => {
     }
 
     return true;
+});
+
+router.afterEach(() => {
+    endLoading();
+});
+
+router.onError(() => {
+    endLoading();
 });
 
 export default router;

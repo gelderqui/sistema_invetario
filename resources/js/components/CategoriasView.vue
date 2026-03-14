@@ -3,7 +3,7 @@
         <!-- Encabezado -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="h4 mb-0">Categorías</h2>
-            <button class="btn btn-brand" @click="openCreate">
+            <button class="btn btn-brand" :disabled="actionLocked" @click="openCreate">
                 <FontAwesomeIcon icon="fa-solid fa-plus" class="me-2" />
                 Nueva
             </button>
@@ -11,7 +11,7 @@
 
         <!-- Tabla -->
         <div v-if="loading" class="text-center py-5">
-            <span class="spinner-border" />
+            <p class="text-body-secondary mb-0">Cargando información...</p>
         </div>
 
         <div v-else class="card border-0 shadow-sm">
@@ -51,6 +51,7 @@
                                     <button
                                         class="btn btn-sm btn-action-brand"
                                         title="Editar"
+                                        :disabled="actionLocked"
                                         @click="openEdit(cat)"
                                     >
                                         <FontAwesomeIcon icon="fa-solid fa-pencil" class="icon-action-edit" />
@@ -58,6 +59,7 @@
                                     <button
                                         class="btn btn-sm btn-action-brand"
                                         :title="cat.activo ? 'Desactivar' : 'Activar'"
+                                        :disabled="actionLocked"
                                         @click="openToggle(cat)"
                                     >
                                         <FontAwesomeIcon
@@ -68,6 +70,7 @@
                                     <button
                                         class="btn btn-sm btn-action-brand"
                                         title="Eliminar"
+                                        :disabled="actionLocked"
                                         @click="openDelete(cat)"
                                     >
                                         <FontAwesomeIcon icon="fa-solid fa-trash" class="icon-action-delete" />
@@ -136,9 +139,8 @@
                         <div class="modal-footer">
                             <button type="button" class="btn btn-outline-brand" data-bs-dismiss="modal">Cancelar</button>
                             <button type="submit" class="btn btn-brand" :disabled="saving">
-                                <span v-if="saving" class="spinner-border spinner-border-sm me-2" aria-hidden="true" />
-                                <FontAwesomeIcon v-else icon="fa-solid fa-floppy-disk" class="me-2" />
-                                Guardar
+                                <FontAwesomeIcon icon="fa-solid fa-floppy-disk" class="me-2" />
+                                {{ saving ? 'Guardando...' : 'Guardar' }}
                             </button>
                         </div>
                     </form>
@@ -146,86 +148,25 @@
             </div>
         </div>
 
-        <!-- Modal activar / desactivar -->
-        <div ref="toggleModalRef" class="modal fade" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header modal-header-brand">
-                        <h5 class="modal-title">
-                            <FontAwesomeIcon
-                                :icon="selected?.activo ? 'fa-solid fa-ban' : 'fa-solid fa-check'"
-                                class="me-2"
-                            />
-                            {{ selected?.activo ? 'Desactivar' : 'Activar' }} categoría
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" />
-                    </div>
-                    <div class="modal-body">
-                        <p class="mb-0">
-                            ¿Desea {{ selected?.activo ? 'desactivar' : 'activar' }} la categoría
-                            <strong>{{ selected?.nombre }}</strong>?
-                        </p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-brand" data-bs-dismiss="modal">Cancelar</button>
-                        <button
-                            type="button"
-                            class="btn btn-brand"
-                            :disabled="toggling"
-                            @click="confirmToggle"
-                        >
-                            <span v-if="toggling" class="spinner-border spinner-border-sm me-2" aria-hidden="true" />
-                            Confirmar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal eliminar -->
-        <div ref="deleteModalRef" class="modal fade" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header modal-header-brand">
-                        <h5 class="modal-title">
-                            <FontAwesomeIcon icon="fa-solid fa-triangle-exclamation" class="me-2" />
-                            Eliminar categoría
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" />
-                    </div>
-                    <div class="modal-body">
-                        <p class="mb-1">
-                            ¿Eliminar la categoría <strong>{{ selected?.nombre }}</strong>?
-                        </p>
-                        <p class="small text-body-secondary mb-0">Esta acción no se puede deshacer.</p>
-
-                        <div v-if="deleteError" class="alert alert-danger mt-3 py-2 mb-0 small">
-                            {{ deleteError }}
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-brand" data-bs-dismiss="modal">Cancelar</button>
-                        <button
-                            type="button"
-                            class="btn btn-brand"
-                            :disabled="deleting"
-                            @click="confirmDelete"
-                        >
-                            <span v-if="deleting" class="spinner-border spinner-border-sm me-2" aria-hidden="true" />
-                            Eliminar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <ModalConfirm
+            ref="confirmModalRef"
+            :title="confirmTitle"
+            :message="confirmMessage"
+            :hint="confirmHint"
+            :confirm-text="confirmConfirmText"
+            :loading="confirmLoading"
+            :error-message="confirmMode === 'delete' ? deleteError : ''"
+            @confirm="confirmAction"
+        />
     </div>
 </template>
 
 <script setup>
 import { Modal } from 'bootstrap';
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 
 import axios from '@/bootstrap';
+import ModalConfirm from '@/components/components_ui/ModalConfirm.vue';
 
 const categorias = ref([]);
 const loading = ref(true);
@@ -236,24 +177,38 @@ const editingId = ref(null);
 const selected = ref(null);
 const formErrors = ref([]);
 const deleteError = ref('');
+const confirmMode = ref('toggle');
 
 const formModalRef = ref(null);
-const toggleModalRef = ref(null);
-const deleteModalRef = ref(null);
+const confirmModalRef = ref(null);
 
 let formModal = null;
-let toggleModal = null;
-let deleteModal = null;
 
 const emptyForm = () => ({ nombre: '', descripcion: '', activo: true });
 const form = ref(emptyForm());
 
 onMounted(async () => {
     formModal = new Modal(formModalRef.value);
-    toggleModal = new Modal(toggleModalRef.value);
-    deleteModal = new Modal(deleteModalRef.value);
     await loadCategorias();
 });
+
+const confirmTitle = computed(() => {
+    if (confirmMode.value === 'delete') return 'Eliminar categoría';
+    return `${selected.value?.activo ? 'Desactivar' : 'Activar'} categoría`;
+});
+
+const confirmMessage = computed(() => {
+    if (confirmMode.value === 'delete') {
+        return `¿Eliminar la categoría <strong>${selected.value?.nombre ?? ''}</strong>?`;
+    }
+
+    return `¿Desea ${selected.value?.activo ? 'desactivar' : 'activar'} la categoría <strong>${selected.value?.nombre ?? ''}</strong>?`;
+});
+
+const confirmHint = computed(() => (confirmMode.value === 'delete' ? 'Esta acción no se puede deshacer.' : ''));
+const confirmConfirmText = computed(() => (confirmMode.value === 'delete' ? 'Eliminar' : 'Confirmar'));
+const confirmLoading = computed(() => (confirmMode.value === 'delete' ? deleting.value : toggling.value));
+const actionLocked = computed(() => loading.value || saving.value || toggling.value || deleting.value);
 
 async function loadCategorias() {
     loading.value = true;
@@ -281,13 +236,25 @@ function openEdit(cat) {
 
 function openToggle(cat) {
     selected.value = cat;
-    toggleModal.show();
+    confirmMode.value = 'toggle';
+    deleteError.value = '';
+    confirmModalRef.value?.open();
 }
 
 function openDelete(cat) {
     selected.value = cat;
+    confirmMode.value = 'delete';
     deleteError.value = '';
-    deleteModal.show();
+    confirmModalRef.value?.open();
+}
+
+async function confirmAction() {
+    if (confirmMode.value === 'delete') {
+        await confirmDelete();
+        return;
+    }
+
+    await confirmToggle();
 }
 
 async function save() {
@@ -320,7 +287,7 @@ async function confirmToggle() {
         const { data } = await axios.patch(`/catalogos/categorias/toggle/${selected.value.id}`);
         const idx = categorias.value.findIndex((c) => c.id === selected.value.id);
         if (idx !== -1) categorias.value[idx] = { ...categorias.value[idx], activo: data.data.activo };
-        toggleModal.hide();
+        confirmModalRef.value?.close();
     } finally {
         toggling.value = false;
     }
@@ -332,7 +299,7 @@ async function confirmDelete() {
     try {
         await axios.delete(`/catalogos/categorias/destroy/${selected.value.id}`);
         categorias.value = categorias.value.filter((c) => c.id !== selected.value.id);
-        deleteModal.hide();
+        confirmModalRef.value?.close();
     } catch (error) {
         deleteError.value = error.response?.data?.message ?? 'Error al eliminar.';
     } finally {

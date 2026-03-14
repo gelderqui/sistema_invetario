@@ -2,14 +2,14 @@
     <div>
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="h4 mb-0">Usuarios</h2>
-            <button class="btn btn-brand" @click="openCreate">
+            <button class="btn btn-brand" :disabled="actionLocked" @click="openCreate">
                 <FontAwesomeIcon icon="fa-solid fa-plus" class="me-2" />
                 Nuevo
             </button>
         </div>
 
         <div v-if="loading" class="text-center py-5">
-            <span class="spinner-border" />
+            <p class="text-body-secondary mb-0">Cargando información...</p>
         </div>
 
         <div v-else class="card border-0 shadow-sm">
@@ -45,7 +45,7 @@
                                 </span>
                             </td>
                             <td>
-                                <button class="btn btn-sm btn-action-brand" @click="openEdit(user)">
+                                <button class="btn btn-sm btn-action-brand" :disabled="actionLocked" @click="openEdit(user)">
                                     <FontAwesomeIcon icon="fa-solid fa-pencil" class="icon-action-edit" />
                                 </button>
                             </td>
@@ -161,9 +161,8 @@
                         <div class="modal-footer">
                             <button type="button" class="btn btn-outline-brand" data-bs-dismiss="modal">Cancelar</button>
                             <button type="submit" class="btn btn-brand" :disabled="saving">
-                                <span v-if="saving" class="spinner-border spinner-border-sm me-2" aria-hidden="true" />
-                                <FontAwesomeIcon v-else icon="fa-solid fa-floppy-disk" class="me-2" />
-                                Guardar
+                                <FontAwesomeIcon icon="fa-solid fa-floppy-disk" class="me-2" />
+                                {{ saving ? 'Guardando...' : 'Guardar' }}
                             </button>
                         </div>
                     </form>
@@ -175,7 +174,7 @@
 
 <script setup>
 import { Modal } from 'bootstrap';
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 
 import axios from '@/bootstrap';
 
@@ -200,6 +199,7 @@ const emptyForm = () => ({
 });
 
 const form = ref(emptyForm());
+const actionLocked = computed(() => loading.value || saving.value);
 
 onMounted(async () => {
     bsModal = new Modal(modalRef.value);

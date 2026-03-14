@@ -2,14 +2,14 @@
     <div>
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="h4 mb-0">Roles</h2>
-            <button class="btn btn-brand" @click="openCreate">
+            <button class="btn btn-brand" :disabled="actionLocked" @click="openCreate">
                 <FontAwesomeIcon icon="fa-solid fa-plus" class="me-2" />
                 Nuevo
             </button>
         </div>
 
         <div v-if="loading" class="text-center py-5">
-            <span class="spinner-border" />
+            <p class="text-body-secondary mb-0">Cargando información...</p>
         </div>
 
         <div v-else class="card border-0 shadow-sm">
@@ -54,13 +54,14 @@
                                     <button
                                         class="btn btn-sm btn-action-brand"
                                         title="Editar"
+                                        :disabled="actionLocked"
                                         @click="openEdit(role)"
                                     >
                                         <FontAwesomeIcon icon="fa-solid fa-pencil" class="icon-action-edit" />
                                     </button>
                                     <button
                                         class="btn btn-sm btn-action-brand"
-                                        :disabled="role.code === 'admin'"
+                                        :disabled="actionLocked || role.code === 'admin'"
                                         :title="role.code === 'admin' ? 'El rol admin no se puede eliminar' : 'Eliminar'"
                                         @click="role.code !== 'admin' && openDelete(role)"
                                     >
@@ -182,9 +183,8 @@
                         <div class="modal-footer">
                             <button type="button" class="btn btn-outline-brand" data-bs-dismiss="modal">Cancelar</button>
                             <button type="submit" class="btn btn-brand" :disabled="saving">
-                                <span v-if="saving" class="spinner-border spinner-border-sm me-2" aria-hidden="true" />
-                                <FontAwesomeIcon v-else icon="fa-solid fa-floppy-disk" class="me-2" />
-                                Guardar
+                                <FontAwesomeIcon icon="fa-solid fa-floppy-disk" class="me-2" />
+                                {{ saving ? 'Guardando...' : 'Guardar' }}
                             </button>
                         </div>
                     </form>
@@ -192,23 +192,15 @@
             </div>
         </div>
 
-        <div ref="deleteModalRef" class="modal fade" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header modal-header-brand">
-                        <h5 class="modal-title">Eliminar rol</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" />
-                    </div>
-                    <div class="modal-body">
-                        ¿Eliminar el rol <strong>{{ selected?.name }}</strong>?
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-brand" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="button" class="btn btn-brand" :disabled="deleting" @click="confirmDelete">Eliminar</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <ModalConfirm
+            ref="confirmModalRef"
+            title="Eliminar rol"
+            :message="confirmMessage"
+            confirm-text="Eliminar"
+            :loading="deleting"
+            :error-message="confirmError"
+            @confirm="confirmDelete"
+        />
     </div>
 </template>
 
@@ -217,6 +209,7 @@ import { Modal } from 'bootstrap';
 import { computed, onMounted, ref } from 'vue';
 
 import axios from '@/bootstrap';
+import ModalConfirm from '@/components/components_ui/ModalConfirm.vue';
 
 const roles = ref([]);
 const allPermissions = ref([]);
@@ -226,11 +219,11 @@ const deleting = ref(false);
 const modalErrors = ref([]);
 const editingId = ref(null);
 const selected = ref(null);
+const confirmError = ref('');
 const modalRef = ref(null);
-const deleteModalRef = ref(null);
+const confirmModalRef = ref(null);
 
 let bsModal = null;
-let deleteModal = null;
 
 const emptyForm = () => ({
     name: '',
@@ -250,12 +243,14 @@ const permissionsByModule = computed(() =>
         return acc;
     }, {})
 );
+const actionLocked = computed(() => loading.value || saving.value || deleting.value);
 
 onMounted(async () => {
     bsModal = new Modal(modalRef.value);
-    deleteModal = new Modal(deleteModalRef.value);
     await Promise.all([loadRoles(), loadPermissions()]);
 });
+
+const confirmMessage = computed(() => `¿Eliminar el rol <strong>${selected.value?.name ?? ''}</strong>?`);
 
 async function loadRoles() {
     loading.value = true;
@@ -295,7 +290,8 @@ function openEdit(role) {
 
 function openDelete(role) {
     selected.value = role;
-    deleteModal.show();
+    confirmError.value = '';
+    confirmModalRef.value?.open();
 }
 
 async function save() {
@@ -333,12 +329,12 @@ async function confirmDelete() {
     try {
         await axios.delete(`/configuracion/roles/destroy/${selected.value.id}`);
         roles.value = roles.value.filter((r) => r.id !== selected.value.id);
-        deleteModal.hide();
+        confirmModalRef.value?.close();
     } catch (error) {
         const serverErrors = error.response?.data?.errors;
-        modalErrors.value = serverErrors
-            ? Object.values(serverErrors).flat()
-            : [error.response?.data?.message ?? 'No se pudo eliminar el rol.'];
+        confirmError.value = serverErrors
+            ? Object.values(serverErrors).flat().join(' ')
+            : (error.response?.data?.message ?? 'No se pudo eliminar el rol.');
     } finally {
         deleting.value = false;
     }

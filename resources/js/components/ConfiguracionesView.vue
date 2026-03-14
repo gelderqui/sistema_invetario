@@ -5,7 +5,7 @@
         </div>
 
         <div v-if="loading" class="text-center py-5">
-            <span class="spinner-border" />
+            <p class="text-body-secondary mb-0">Cargando información...</p>
         </div>
 
         <div v-else class="card border-0 shadow-sm">
@@ -37,12 +37,13 @@
                             <td class="text-body-secondary small">{{ formatDate(item.created_at) }}</td>
                             <td>
                                 <div class="d-flex gap-1">
-                                    <button class="btn btn-sm btn-action-brand" title="Editar" @click="openEdit(item)">
+                                    <button class="btn btn-sm btn-action-brand" title="Editar" :disabled="actionLocked" @click="openEdit(item)">
                                         <FontAwesomeIcon icon="fa-solid fa-pencil" class="icon-action-edit" />
                                     </button>
                                     <button
                                         class="btn btn-sm btn-action-brand"
                                         :title="item.activo ? 'Desactivar' : 'Activar'"
+                                        :disabled="actionLocked"
                                         @click="openToggle(item)"
                                     >
                                         <FontAwesomeIcon
@@ -50,7 +51,7 @@
                                             :class="item.activo ? 'icon-action-disable' : 'icon-action-enable'"
                                         />
                                     </button>
-                                    <button class="btn btn-sm btn-action-brand" title="Eliminar" @click="openDelete(item)">
+                                    <button class="btn btn-sm btn-action-brand" title="Eliminar" :disabled="actionLocked" @click="openDelete(item)">
                                         <FontAwesomeIcon icon="fa-solid fa-trash" class="icon-action-delete" />
                                     </button>
                                 </div>
@@ -102,8 +103,7 @@
                         <div class="modal-footer">
                             <button type="button" class="btn btn-outline-brand" data-bs-dismiss="modal">Cancelar</button>
                             <button type="submit" class="btn btn-brand" :disabled="saving">
-                                <span v-if="saving" class="spinner-border spinner-border-sm me-2" aria-hidden="true" />
-                                Guardar
+                                {{ saving ? 'Guardando...' : 'Guardar' }}
                             </button>
                         </div>
                     </form>
@@ -111,47 +111,23 @@
             </div>
         </div>
 
-        <div ref="toggleModalRef" class="modal fade" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header modal-header-brand">
-                        <h5 class="modal-title">Confirmar estado</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" />
-                    </div>
-                    <div class="modal-body">
-                        ¿Cambiar estado de <strong>{{ selected?.codigo }}</strong>?
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-brand" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="button" class="btn btn-brand" :disabled="toggling" @click="confirmToggle">Confirmar</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div ref="deleteModalRef" class="modal fade" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header modal-header-brand">
-                        <h5 class="modal-title">Eliminar configuracion</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" />
-                    </div>
-                    <div class="modal-body">¿Eliminar <strong>{{ selected?.codigo }}</strong>?</div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-brand" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="button" class="btn btn-brand" :disabled="deleting" @click="confirmDelete">Eliminar</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <ModalConfirm
+            ref="confirmModalRef"
+            :title="confirmTitle"
+            :message="confirmMessage"
+            :confirm-text="confirmConfirmText"
+            :loading="confirmLoading"
+            @confirm="confirmAction"
+        />
     </div>
 </template>
 
 <script setup>
 import { Modal } from 'bootstrap';
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 
 import axios from '@/bootstrap';
+import ModalConfirm from '@/components/components_ui/ModalConfirm.vue';
 
 const items = ref([]);
 const loading = ref(true);
@@ -161,14 +137,12 @@ const deleting = ref(false);
 const editingId = ref(null);
 const selected = ref(null);
 const modalErrors = ref([]);
+const confirmMode = ref('toggle');
 
 const modalRef = ref(null);
-const toggleModalRef = ref(null);
-const deleteModalRef = ref(null);
+const confirmModalRef = ref(null);
 
 let bsModal = null;
-let toggleModal = null;
-let deleteModal = null;
 
 const emptyForm = () => ({
     codigo: '',
@@ -181,10 +155,17 @@ const form = ref(emptyForm());
 
 onMounted(async () => {
     bsModal = new Modal(modalRef.value);
-    toggleModal = new Modal(toggleModalRef.value);
-    deleteModal = new Modal(deleteModalRef.value);
     await loadItems();
 });
+
+const confirmTitle = computed(() => (confirmMode.value === 'delete' ? 'Eliminar configuracion' : 'Confirmar estado'));
+const confirmMessage = computed(() => {
+    if (confirmMode.value === 'delete') return `¿Eliminar <strong>${selected.value?.codigo ?? ''}</strong>?`;
+    return `¿Cambiar estado de <strong>${selected.value?.codigo ?? ''}</strong>?`;
+});
+const confirmConfirmText = computed(() => (confirmMode.value === 'delete' ? 'Eliminar' : 'Confirmar'));
+const confirmLoading = computed(() => (confirmMode.value === 'delete' ? deleting.value : toggling.value));
+const actionLocked = computed(() => loading.value || saving.value || toggling.value || deleting.value);
 
 async function loadItems() {
     loading.value = true;
@@ -210,12 +191,23 @@ function openEdit(item) {
 
 function openToggle(item) {
     selected.value = item;
-    toggleModal.show();
+    confirmMode.value = 'toggle';
+    confirmModalRef.value?.open();
 }
 
 function openDelete(item) {
     selected.value = item;
-    deleteModal.show();
+    confirmMode.value = 'delete';
+    confirmModalRef.value?.open();
+}
+
+async function confirmAction() {
+    if (confirmMode.value === 'delete') {
+        await confirmDelete();
+        return;
+    }
+
+    await confirmToggle();
 }
 
 async function save() {
@@ -252,7 +244,7 @@ async function confirmToggle() {
         const { data } = await axios.patch(`/configuracion/configuraciones/toggle/${selected.value.id}`);
         const index = items.value.findIndex((x) => x.id === selected.value.id);
         if (index !== -1) items.value[index].activo = data.data.activo;
-        toggleModal.hide();
+        confirmModalRef.value?.close();
     } finally {
         toggling.value = false;
     }
@@ -263,7 +255,7 @@ async function confirmDelete() {
     try {
         await axios.delete(`/configuracion/configuraciones/destroy/${selected.value.id}`);
         items.value = items.value.filter((x) => x.id !== selected.value.id);
-        deleteModal.hide();
+        confirmModalRef.value?.close();
     } finally {
         deleting.value = false;
     }

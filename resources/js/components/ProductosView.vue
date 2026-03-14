@@ -3,7 +3,7 @@
         <!-- Encabezado -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="h4 mb-0">Productos</h2>
-            <button class="btn btn-brand" @click="openCreate">
+            <button class="btn btn-brand" :disabled="actionLocked" @click="openCreate">
                 <FontAwesomeIcon icon="fa-solid fa-plus" class="me-2" />
                 Nuevo
             </button>
@@ -11,7 +11,7 @@
 
         <!-- Tabla -->
         <div v-if="loading" class="text-center py-5">
-            <span class="spinner-border" />
+            <p class="text-body-secondary mb-0">Cargando información...</p>
         </div>
 
         <div v-else class="card border-0 shadow-sm">
@@ -54,6 +54,7 @@
                                     <button
                                         class="btn btn-sm btn-action-brand"
                                         title="Editar"
+                                        :disabled="actionLocked"
                                         @click="openEdit(prod)"
                                     >
                                         <FontAwesomeIcon icon="fa-solid fa-pencil" class="icon-action-edit" />
@@ -61,6 +62,7 @@
                                     <button
                                         class="btn btn-sm btn-action-brand"
                                         :title="prod.activo ? 'Desactivar' : 'Activar'"
+                                        :disabled="actionLocked"
                                         @click="openToggle(prod)"
                                     >
                                         <FontAwesomeIcon
@@ -71,6 +73,7 @@
                                     <button
                                         class="btn btn-sm btn-action-brand"
                                         title="Eliminar"
+                                        :disabled="actionLocked"
                                         @click="openDelete(prod)"
                                     >
                                         <FontAwesomeIcon icon="fa-solid fa-trash" class="icon-action-delete" />
@@ -196,9 +199,8 @@
                         <div class="modal-footer">
                             <button type="button" class="btn btn-outline-brand" data-bs-dismiss="modal">Cancelar</button>
                             <button type="submit" class="btn btn-brand" :disabled="saving">
-                                <span v-if="saving" class="spinner-border spinner-border-sm me-2" aria-hidden="true" />
-                                <FontAwesomeIcon v-else icon="fa-solid fa-floppy-disk" class="me-2" />
-                                Guardar
+                                <FontAwesomeIcon icon="fa-solid fa-floppy-disk" class="me-2" />
+                                {{ saving ? 'Guardando...' : 'Guardar' }}
                             </button>
                         </div>
                     </form>
@@ -206,82 +208,24 @@
             </div>
         </div>
 
-        <!-- Modal activar / desactivar -->
-        <div ref="toggleModalRef" class="modal fade" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header modal-header-brand">
-                        <h5 class="modal-title">
-                            <FontAwesomeIcon
-                                :icon="selected?.activo ? 'fa-solid fa-ban' : 'fa-solid fa-check'"
-                                class="me-2"
-                            />
-                            {{ selected?.activo ? 'Desactivar' : 'Activar' }} producto
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" />
-                    </div>
-                    <div class="modal-body">
-                        <p class="mb-0">
-                            ¿Desea {{ selected?.activo ? 'desactivar' : 'activar' }} el producto
-                            <strong>{{ selected?.nombre }}</strong>?
-                        </p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-brand" data-bs-dismiss="modal">Cancelar</button>
-                        <button
-                            type="button"
-                            class="btn btn-brand"
-                            :disabled="toggling"
-                            @click="confirmToggle"
-                        >
-                            <span v-if="toggling" class="spinner-border spinner-border-sm me-2" aria-hidden="true" />
-                            Confirmar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal eliminar -->
-        <div ref="deleteModalRef" class="modal fade" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header modal-header-brand">
-                        <h5 class="modal-title">
-                            <FontAwesomeIcon icon="fa-solid fa-triangle-exclamation" class="me-2" />
-                            Eliminar producto
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" />
-                    </div>
-                    <div class="modal-body">
-                        <p class="mb-1">
-                            ¿Eliminar el producto <strong>{{ selected?.nombre }}</strong>?
-                        </p>
-                        <p class="small text-body-secondary mb-0">Esta accion no se puede deshacer.</p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-brand" data-bs-dismiss="modal">Cancelar</button>
-                        <button
-                            type="button"
-                            class="btn btn-brand"
-                            :disabled="deleting"
-                            @click="confirmDelete"
-                        >
-                            <span v-if="deleting" class="spinner-border spinner-border-sm me-2" aria-hidden="true" />
-                            Eliminar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <ModalConfirm
+            ref="confirmModalRef"
+            :title="confirmTitle"
+            :message="confirmMessage"
+            :hint="confirmHint"
+            :confirm-text="confirmConfirmText"
+            :loading="confirmLoading"
+            @confirm="confirmAction"
+        />
     </div>
 </template>
 
 <script setup>
 import { Modal } from 'bootstrap';
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 
 import axios from '@/bootstrap';
+import ModalConfirm from '@/components/components_ui/ModalConfirm.vue';
 
 const productos = ref([]);
 const categoriasActivas = ref([]);
@@ -293,14 +237,12 @@ const deleting = ref(false);
 const editingId = ref(null);
 const selected = ref(null);
 const formErrors = ref([]);
+const confirmMode = ref('toggle');
 
 const formModalRef = ref(null);
-const toggleModalRef = ref(null);
-const deleteModalRef = ref(null);
+const confirmModalRef = ref(null);
 
 let formModal = null;
-let toggleModal = null;
-let deleteModal = null;
 
 const emptyForm = () => ({
     categoria_id: null,
@@ -316,10 +258,21 @@ const form = ref(emptyForm());
 
 onMounted(async () => {
     formModal = new Modal(formModalRef.value);
-    toggleModal = new Modal(toggleModalRef.value);
-    deleteModal = new Modal(deleteModalRef.value);
     await Promise.all([loadProductos(), loadCategorias(), loadProveedores()]);
 });
+
+const confirmTitle = computed(() => (confirmMode.value === 'delete' ? 'Eliminar producto' : `${selected.value?.activo ? 'Desactivar' : 'Activar'} producto`));
+const confirmMessage = computed(() => {
+    if (confirmMode.value === 'delete') {
+        return `¿Eliminar el producto <strong>${selected.value?.nombre ?? ''}</strong>?`;
+    }
+
+    return `¿Desea ${selected.value?.activo ? 'desactivar' : 'activar'} el producto <strong>${selected.value?.nombre ?? ''}</strong>?`;
+});
+const confirmHint = computed(() => (confirmMode.value === 'delete' ? 'Esta accion no se puede deshacer.' : ''));
+const confirmConfirmText = computed(() => (confirmMode.value === 'delete' ? 'Eliminar' : 'Confirmar'));
+const confirmLoading = computed(() => (confirmMode.value === 'delete' ? deleting.value : toggling.value));
+const actionLocked = computed(() => loading.value || saving.value || toggling.value || deleting.value);
 
 async function loadProductos() {
     loading.value = true;
@@ -365,12 +318,23 @@ function openEdit(prod) {
 
 function openToggle(prod) {
     selected.value = prod;
-    toggleModal.show();
+    confirmMode.value = 'toggle';
+    confirmModalRef.value?.open();
 }
 
 function openDelete(prod) {
     selected.value = prod;
-    deleteModal.show();
+    confirmMode.value = 'delete';
+    confirmModalRef.value?.open();
+}
+
+async function confirmAction() {
+    if (confirmMode.value === 'delete') {
+        await confirmDelete();
+        return;
+    }
+
+    await confirmToggle();
 }
 
 async function save() {
@@ -409,7 +373,7 @@ async function confirmToggle() {
         const { data } = await axios.patch(`/catalogos/productos/toggle/${selected.value.id}`);
         const idx = productos.value.findIndex((p) => p.id === selected.value.id);
         if (idx !== -1) productos.value[idx] = { ...productos.value[idx], activo: data.data.activo };
-        toggleModal.hide();
+        confirmModalRef.value?.close();
     } finally {
         toggling.value = false;
     }
@@ -420,7 +384,7 @@ async function confirmDelete() {
     try {
         await axios.delete(`/catalogos/productos/destroy/${selected.value.id}`);
         productos.value = productos.value.filter((p) => p.id !== selected.value.id);
-        deleteModal.hide();
+        confirmModalRef.value?.close();
     } finally {
         deleting.value = false;
     }

@@ -15,11 +15,11 @@
                     <input id="only-low" v-model="soloBajoStock" class="form-check-input" type="checkbox" @change="loadExistencias">
                     <label class="form-check-label" for="only-low">Solo bajo stock</label>
                 </div>
-                <button class="btn btn-brand" @click="loadExistencias">Actualizar</button>
+                <button class="btn btn-brand" :disabled="loading" @click="loadExistencias">Actualizar</button>
             </div>
         </div>
 
-        <div v-if="loading" class="text-center py-5"><span class="spinner-border" /></div>
+        <div v-if="loading" class="text-center py-5"><p class="text-body-secondary mb-0">Cargando información...</p></div>
 
         <div v-else class="card border-0 shadow-sm mb-4">
             <div class="table-responsive">
@@ -67,7 +67,7 @@
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
                 <h6 class="mb-0">Movimientos recientes</h6>
-                <button class="btn btn-outline-brand btn-sm" @click="loadMovimientos">Recargar</button>
+                <button class="btn btn-outline-brand btn-sm" :disabled="loading" @click="loadMovimientos">Recargar</button>
             </div>
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">

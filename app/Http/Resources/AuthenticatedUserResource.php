@@ -27,6 +27,8 @@ class AuthenticatedUserResource extends JsonResource
                 'name' => $permission->name,
                 'code' => $permission->code,
                 'module' => $permission->module,
+                'module_label' => $permission->module_label,
+                'module_icono' => $permission->module_icono,
                 'ruta' => $permission->ruta,
                 'icono' => $permission->icono,
                 'orden' => $permission->orden,

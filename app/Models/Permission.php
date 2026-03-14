@@ -14,6 +14,8 @@ class Permission extends Model
         'name',
         'code',
         'module',
+        'module_label',
+        'module_icono',
         'ruta',
         'icono',
         'orden',

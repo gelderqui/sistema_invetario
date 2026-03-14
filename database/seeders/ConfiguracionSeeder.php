@@ -9,23 +9,19 @@ class ConfiguracionSeeder extends Seeder
 {
     public function run(): void
     {
+        Configuracion::query()->where('codigo', 'locale')->delete();
+
         $items = [
             [
                 'codigo' => 'nombre_empresa',
                 'descripcion' => 'Nombre comercial mostrado en el sistema.',
-                'value' => 'Sistema POS e Inventario',
+                'value' => 'weltixh',
                 'activo' => true,
             ],
             [
                 'codigo' => 'tiempo_sesion',
                 'descripcion' => 'Tiempo de sesion inactiva en minutos.',
                 'value' => '120',
-                'activo' => true,
-            ],
-            [
-                'codigo' => 'locale',
-                'descripcion' => 'Idioma de la aplicacion (es o en).',
-                'value' => config('app.locale', 'es'),
                 'activo' => true,
             ],
         ];

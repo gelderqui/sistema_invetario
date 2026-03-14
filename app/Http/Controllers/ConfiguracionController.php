@@ -20,7 +20,6 @@ class ConfiguracionController extends Controller
         return response()->json([
             'nombre_empresa' => Configuracion::valor('nombre_empresa', config('app.name', 'Sistema POS e Inventario')),
             'tiempo_sesion' => (int) Configuracion::valor('tiempo_sesion', 120),
-            'locale' => Configuracion::valor('locale', config('app.locale', 'es')),
         ]);
     }
 

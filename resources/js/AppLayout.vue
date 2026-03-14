@@ -190,6 +190,8 @@
             <router-view />
         </div>
     </main>
+
+    <LoadingOverlay :show="isAppLoading" />
 </template>
 
 <script setup>
@@ -198,6 +200,8 @@ import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import axios from '@/bootstrap';
+import LoadingOverlay from '@/components/components_ui/LoadingOverlay.vue';
+import { isAppLoading } from '@/components/components_ui/loadingState';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();

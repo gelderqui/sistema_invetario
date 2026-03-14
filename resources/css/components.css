@@ -118,3 +118,83 @@
 .nav-group-btn:hover {
     background-color: rgba(255, 255, 255, 0.1);
 }
+
+/* =============================================================
+   Loading overlay global reutilizable
+   ============================================================= */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999 !important;
+}
+
+.loading-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+.spinner-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.spinner {
+    border-radius: 50%;
+    animation: loading-grow 1.5s infinite ease-in-out;
+}
+
+.spinner-small {
+    width: 12px;
+    height: 12px;
+    background-color: #ffffff;
+}
+
+.spinner-large {
+    width: 20px;
+    height: 20px;
+    background-color: #ffffff;
+}
+
+.spinner:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.spinner:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+.spinner:nth-child(3) {
+    animation-delay: 0s;
+}
+
+@keyframes loading-grow {
+    0%,
+    80%,
+    100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+
+    40% {
+        transform: scale(1.2);
+        opacity: 1;
+    }
+}
+
+.loading-text {
+    font-weight: 600;
+    font-size: 18px;
+    color: #ffffff;
+    margin: 0;
+}

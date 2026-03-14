@@ -2,14 +2,14 @@
     <div>
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="h4 mb-0">Compras</h2>
-            <button class="btn btn-brand" @click="openCreate">
+            <button class="btn btn-brand" :disabled="actionLocked" @click="openCreate">
                 <FontAwesomeIcon icon="fa-solid fa-cart-plus" class="me-2" />
                 Nueva compra
             </button>
         </div>
 
         <div v-if="loading" class="text-center py-5">
-            <span class="spinner-border" />
+            <p class="text-body-secondary mb-0">Cargando información...</p>
         </div>
 
         <div v-else class="card border-0 shadow-sm mb-4">
@@ -79,7 +79,7 @@
 
                             <div class="d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0">Detalle de productos</h6>
-                                <button type="button" class="btn btn-outline-brand btn-sm" @click="addItem">Agregar item</button>
+                                <button type="button" class="btn btn-outline-brand btn-sm" :disabled="saving" @click="addItem">Agregar item</button>
                             </div>
 
                             <div class="table-responsive">
@@ -116,7 +116,7 @@
                                             <td><input v-model.number="item.peso" type="number" step="0.0001" min="0" class="form-control form-control-sm"></td>
                                             <td class="fw-semibold">Q {{ itemSubtotal(item).toFixed(2) }}</td>
                                             <td>
-                                                <button type="button" class="btn btn-sm btn-action-brand" @click="removeItem(idx)">
+                                                <button type="button" class="btn btn-sm btn-action-brand" :disabled="saving" @click="removeItem(idx)">
                                                     <FontAwesomeIcon icon="fa-solid fa-trash" class="icon-action-delete" />
                                                 </button>
                                             </td>
@@ -144,7 +144,6 @@
                         <div class="modal-footer">
                             <button type="button" class="btn btn-outline-brand" data-bs-dismiss="modal">Cancelar</button>
                             <button type="submit" class="btn btn-brand" :disabled="saving">
-                                <span v-if="saving" class="spinner-border spinner-border-sm me-2" aria-hidden="true" />
                                 {{ saving ? 'Guardando...' : 'Registrar compra' }}
                             </button>
                         </div>
@@ -191,6 +190,7 @@ const emptyForm = () => ({
 const form = ref(emptyForm());
 
 const totalCompra = computed(() => form.value.items.reduce((sum, item) => sum + itemSubtotal(item), 0));
+const actionLocked = computed(() => loading.value || saving.value);
 
 onMounted(async () => {
     formModal = new Modal(formModalRef.value);

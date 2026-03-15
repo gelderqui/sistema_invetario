@@ -54,14 +54,21 @@ class DevolucionController extends Controller
 
     public function catalogs(Request $request): JsonResponse
     {
+        $user = $request->user()->loadMissing('role:id,code');
+        $limiteDiasCajero = $this->limiteDiasCajero();
+        $limiteMinutosCajero = $limiteDiasCajero * 24 * 60;
+
         $ventas = Venta::query()
             ->with([
                 'cliente:id,nombre',
                 'detalles:id,venta_id,producto_id,cantidad,precio_unitario,subtotal',
                 'detalles.producto:id,nombre,stock_actual,costo_promedio,control_vencimiento',
             ])
-            ->where('add_user', (int) $request->user()->id)
+            ->where('add_user', (int) $user->id)
             ->where('estado', 'activo')
+            ->when($user->role?->code === 'cajero', function ($query) use ($limiteMinutosCajero): void {
+                $query->where('created_at', '>=', now()->subMinutes($limiteMinutosCajero));
+            })
             ->orderByDesc('fecha_venta')
             ->orderByDesc('id')
             ->limit(120)
@@ -87,6 +94,7 @@ class DevolucionController extends Controller
         return response()->json([
             'data' => [
                 'ventas' => $ventas,
+                'limite_dias_cajero' => $limiteDiasCajero,
             ],
         ]);
     }
@@ -102,18 +110,38 @@ class DevolucionController extends Controller
             'items.*.motivo' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $userId = (int) $request->user()->id;
+        $user = $request->user()->loadMissing('role:id,code');
+        $userId = (int) $user->id;
+        $limiteDiasCajero = $this->limiteDiasCajero();
+        $limiteMinutosCajero = $limiteDiasCajero * 24 * 60;
 
-        $devolucion = DB::transaction(function () use ($validated, $userId) {
+        $devolucion = DB::transaction(function () use ($validated, $userId, $user, $limiteMinutosCajero, $limiteDiasCajero) {
             $venta = Venta::query()
                 ->with('detalles.producto:id,nombre,stock_actual,costo_promedio,control_vencimiento')
                 ->lockForUpdate()
                 ->findOrFail($validated['venta_id']);
 
+            if ((int) $venta->add_user !== $userId) {
+                throw ValidationException::withMessages([
+                    'venta_id' => ['La venta seleccionada no pertenece al usuario en sesion.'],
+                ]);
+            }
+
             if ($venta->estado !== 'activo') {
                 throw ValidationException::withMessages([
                     'venta_id' => ['Solo se permiten devoluciones sobre ventas activas.'],
                 ]);
+            }
+
+            if ($user->role?->code === 'cajero') {
+                $fechaLimite = now()->subMinutes($limiteMinutosCajero);
+                if ($venta->created_at && $venta->created_at->lt($fechaLimite)) {
+                    throw ValidationException::withMessages([
+                        'venta_id' => [
+                            "El tiempo maximo para devolucion en rol cajero es de {$limiteDiasCajero} dia(s).",
+                        ],
+                    ]);
+                }
             }
 
             $detallesVenta = $venta->detalles->keyBy('id');
@@ -217,6 +245,13 @@ class DevolucionController extends Controller
                 'detalles.producto:id,nombre',
             ]),
         ], 201);
+    }
+
+    private function limiteDiasCajero(): int
+    {
+        $valor = (int) Configuracion::valor('devolucion_limite_dias_cajero', 1);
+
+        return max(1, $valor);
     }
 
     public function anular(Request $request, Devolucion $devolucion): JsonResponse

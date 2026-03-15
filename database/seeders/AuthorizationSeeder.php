@@ -66,9 +66,9 @@ class AuthorizationSeeder extends Seeder
             ],
             'cajero' => [
                 'name' => 'Cajero',
-                'description' => 'Acceso a todo excepto reportes.',
+                'description' => 'Acceso a todo excepto configuracion y reportes.',
                 'permissions' => $allPermissionCodes
-                    ->reject(fn (string $code): bool => $code === 'reportes')
+                    ->reject(fn (string $code): bool => in_array($code, ['users', 'roles', 'configuraciones', 'reportes'], true))
                     ->values()
                     ->all(),
             ],

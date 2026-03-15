@@ -15,6 +15,7 @@ class RoleManagementController extends Controller
         $roles = Role::query()
             ->with(['permissions:id,name,code,module'])
             ->withCount('users')
+            ->orderByRaw("CASE code WHEN 'admin' THEN 1 WHEN 'operador' THEN 2 WHEN 'cajero' THEN 3 ELSE 4 END")
             ->orderBy('name')
             ->get([
                 'id',

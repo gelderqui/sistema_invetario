@@ -35,10 +35,8 @@ class AuthController extends Controller
         $guard = Auth::guard('web');
 
         if ($remember && $guard instanceof SessionGuard) {
-            $rememberDuration = max(
-                1,
-                (int) Configuracion::valor('tiempo_sesion', (int) config('session.lifetime', 120))
-            );
+            $diasSesion = max(1, (int) Configuracion::valor('tiempo_sesion', 1));
+            $rememberDuration = max(1, $diasSesion * 24 * 60);
 
             $guard->setRememberDuration($rememberDuration);
         }

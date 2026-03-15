@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Carbon\Carbon;
+use App\Models\Caja;
+use App\Models\MovimientoCaja;
 use App\Models\User;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Auth;
@@ -93,5 +95,38 @@ if (! function_exists('getUserPermissions')) {
             ])
             ->values()
             ->all();
+    }
+}
+
+if (! function_exists('registrarMovimientoCajaAutomatico')) {
+    function registrarMovimientoCajaAutomatico(
+        int $usuarioId,
+        string $tipo,
+        float|int|string $monto,
+        ?string $descripcion = null,
+        ?string $fecha = null,
+        ?string $referenciaTipo = null,
+        ?int $referenciaId = null
+    ): ?MovimientoCaja {
+        $caja = Caja::query()
+            ->where('usuario_id', $usuarioId)
+            ->where('estado', 'abierta')
+            ->latest('id')
+            ->first();
+
+        if (! $caja) {
+            return null;
+        }
+
+        return MovimientoCaja::query()->create([
+            'caja_id' => $caja->id,
+            'tipo' => $tipo,
+            'monto' => toMoney($monto, 4),
+            'descripcion' => $descripcion,
+            'referencia_tipo' => $referenciaTipo,
+            'referencia_id' => $referenciaId,
+            'fecha' => $fecha ?? now()->toDateTimeString(),
+            'usuario_id' => $usuarioId,
+        ]);
     }
 }

@@ -114,6 +114,18 @@ class GastoController extends Controller
             'usuario_id' => $request->user()->id,
         ]);
 
+        if ($gasto->metodo_pago === 'efectivo') {
+            registrarMovimientoCajaAutomatico(
+                (int) $request->user()->id,
+                'gasto',
+                -1 * (float) $gasto->monto,
+                'Salida por gasto: '.$gasto->descripcion,
+                $gasto->fecha?->toDateString(),
+                'gasto',
+                $gasto->id
+            );
+        }
+
         $gasto->load(['tipoGasto:id,nombre', 'usuario:id,name']);
 
         return response()->json([

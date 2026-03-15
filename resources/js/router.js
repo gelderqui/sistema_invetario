@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import axios from '@/bootstrap';
 import { beginLoading, endLoading } from '@/components/components_ui/loadingState';
 import { useAuthStore } from '@/stores/auth';
+import CajaView from '@/components/CajaView.vue';
 import CategoriasView from '@/components/CategoriasView.vue';
 import ClientesView from '@/components/ClientesView.vue';
 import ComprasView from '@/components/ComprasView.vue';
@@ -13,6 +14,7 @@ import InventarioView from '@/components/InventarioView.vue';
 import LoginView from '@/components_public/LoginView.vue';
 import ProveedoresView from '@/components/ProveedoresView.vue';
 import ProductosView from '@/components/ProductosView.vue';
+import ReportesView from '@/components/ReportesView.vue';
 import RolesView from '@/components/RolesView.vue';
 import UnauthorizedView from '@/components/UnauthorizedView.vue';
 import UsersView from '@/components/UsersView.vue';
@@ -104,6 +106,45 @@ const routes = [
         },
     },
     {
+        path: '/caja',
+        redirect: '/caja/apertura',
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
+        path: '/caja/apertura',
+        name: 'caja-apertura',
+        component: CajaView,
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
+        path: '/caja/movimientos',
+        name: 'caja-movimientos',
+        component: CajaView,
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
+        path: '/caja/arqueo',
+        name: 'caja-arqueo',
+        component: CajaView,
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
+        path: '/caja/cierre',
+        name: 'caja-cierre',
+        component: CajaView,
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
         path: '/ventas',
         name: 'ventas',
         component: VentasView,
@@ -123,6 +164,14 @@ const routes = [
         path: '/gastos',
         name: 'gastos',
         component: GastosView,
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
+        path: '/reportes',
+        name: 'reportes',
+        component: ReportesView,
         meta: {
             requiresAuth: true,
         },

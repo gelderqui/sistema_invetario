@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\PermissionCatalogController;
 use App\Http\Controllers\Admin\RoleManagementController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Caja\CajaController;
 use App\Http\Controllers\Catalogos\CategoriaController;
 use App\Http\Controllers\Catalogos\ClienteController;
 use App\Http\Controllers\Catalogos\MedidaController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\ConfiguracionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Gastos\GastoController;
 use App\Http\Controllers\Inventario\InventarioController;
+use App\Http\Controllers\Reportes\ReporteController;
 use App\Http\Controllers\Ventas\VentaController;
 use Illuminate\Support\Facades\Route;
 
@@ -104,6 +106,16 @@ Route::prefix('api')->group(function (): void {
             Route::post('/store', [CompraController::class, 'store']);
         });
 
+        Route::prefix('caja')->group(function (): void {
+            Route::get('/get/estado', [CajaController::class, 'estado'])->middleware('permission:caja_movimientos|caja_arqueo|caja_cierre|caja_apertura');
+            Route::get('/get/movimientos', [CajaController::class, 'movimientos'])->middleware('permission:caja_movimientos');
+            Route::post('/apertura', [CajaController::class, 'apertura'])->middleware('permission:caja_apertura');
+            Route::post('/movimientos/ajuste', [CajaController::class, 'registrarAjuste'])->middleware('permission:caja_movimientos');
+            Route::post('/arqueo', [CajaController::class, 'arqueo'])->middleware('permission:caja_arqueo');
+            Route::post('/cierre', [CajaController::class, 'cierre'])->middleware('permission:caja_cierre');
+            Route::get('/get/reporte-dia', [CajaController::class, 'reporteDia'])->middleware('permission:reportes');
+        });
+
         Route::prefix('ventas')->group(function (): void {
             Route::get('/get', [VentaController::class, 'index']);
             Route::get('/get/catalogs', [VentaController::class, 'catalogs']);
@@ -115,6 +127,10 @@ Route::prefix('api')->group(function (): void {
             Route::get('/get/catalogs', [GastoController::class, 'catalogs']);
             Route::get('/get/reportes', [GastoController::class, 'reportes']);
             Route::post('/store', [GastoController::class, 'store']);
+        });
+
+        Route::prefix('reportes')->group(function (): void {
+            Route::get('/gastos', [ReporteController::class, 'gastos']);
         });
 
         Route::prefix('inventario')->group(function (): void {

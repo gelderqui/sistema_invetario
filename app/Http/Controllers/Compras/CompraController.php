@@ -199,6 +199,18 @@ class CompraController extends Controller
                 'mod_user' => getUserId(),
             ]);
 
+            if (getUserId()) {
+                registrarMovimientoCajaAutomatico(
+                    getUserId(),
+                    'compra',
+                    -1 * (float) $compra->total,
+                    'Salida por compra '.$compra->numero,
+                    $compra->fecha_compra?->toDateString(),
+                    'compra',
+                    $compra->id
+                );
+            }
+
             return [
                 'compra' => $compra->load(['proveedor:id,nombre', 'detalles.producto:id,nombre']),
                 'alerts' => $alerts,

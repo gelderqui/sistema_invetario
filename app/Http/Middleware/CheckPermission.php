@@ -108,6 +108,14 @@ class CheckPermission
             return ['gastos'];
         }
 
+        if (preg_match('/^caja\//', $path)) {
+            return [];
+        }
+
+        if (preg_match('/^reportes\//', $path)) {
+            return ['reportes'];
+        }
+
         if (preg_match('/^configuraciones\//', $path) || preg_match('/^auth\//', $path)) {
             return [];
         }

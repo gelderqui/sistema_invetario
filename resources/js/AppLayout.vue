@@ -235,6 +235,7 @@ const menuItems = computed(() => {
         .sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999));
 
     const groupedModules = [
+        { module: 'caja', name: 'caja', label: 'Caja', icon: 'fa-solid fa-cash-register' },
         { module: 'catalogos', name: 'catalogos', label: 'Catalogo', icon: 'fa-solid fa-boxes-stacked' },
         { module: 'configuracion', name: 'configuracion', label: 'Configuracion', icon: 'fa-solid fa-gears' },
     ];
@@ -247,14 +248,15 @@ const menuItems = computed(() => {
         const children = perms.filter((p) => p.module === groupDef.module);
         if (!children.length) continue;
 
+        const minOrden = Math.min(...children.map((p) => p.orden ?? 999));
+
         const group = {
             name: groupDef.name,
             label: groupDef.label,
             icon: groupDef.icon,
+            orden: minOrden,
             children,
         };
-
-        const minOrden = Math.min(...children.map((p) => p.orden ?? 999));
         const insertAt = result.findIndex((p) => (p.orden ?? 999) > minOrden);
 
         if (insertAt === -1) {
@@ -264,7 +266,7 @@ const menuItems = computed(() => {
         }
     }
 
-    return result;
+    return result.sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999));
 });
 
 function toggleGroup(name) {

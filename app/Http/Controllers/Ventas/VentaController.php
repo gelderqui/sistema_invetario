@@ -226,6 +226,18 @@ class VentaController extends Controller
                 'mod_user' => getUserId(),
             ]);
 
+            if ($venta->metodo_pago === 'efectivo' && getUserId()) {
+                registrarMovimientoCajaAutomatico(
+                    getUserId(),
+                    'venta',
+                    $total,
+                    'Ingreso por venta '.$venta->numero,
+                    $venta->fecha_venta?->toDateString(),
+                    'venta',
+                    $venta->id
+                );
+            }
+
             return $venta->load(['cliente:id,nombre', 'detalles.producto:id,nombre']);
         });
 

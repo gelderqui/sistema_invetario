@@ -20,8 +20,14 @@ class ConfiguracionSeeder extends Seeder
             ],
             [
                 'codigo' => 'tiempo_sesion',
-                'descripcion' => 'Tiempo en sesion inactiva cuando se marca "Mantener sesion iniciada". Si no se marca, la sesion se mantiene por 120 minutos.',
+                'descripcion' => 'Tiempo en sesion inactiva cuando se marca "Mantener sesion iniciada". De lo contrario dura 120 minutos.',
                 'value' => '120',
+                'activo' => true,
+            ],
+            [
+                'codigo' => 'caja_alerta_faltante_monto',
+                'descripcion' => 'Umbral monetario para alertar faltante alto en arqueo y cierre de caja.',
+                'value' => '50',
                 'activo' => true,
             ],
         ];

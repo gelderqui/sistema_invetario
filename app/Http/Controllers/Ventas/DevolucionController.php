@@ -66,6 +66,7 @@ class DevolucionController extends Controller
             ])
             ->where('add_user', (int) $user->id)
             ->where('estado', 'activo')
+            ->whereDate('fecha_venta', '<', Carbon::today()->toDateString())
             ->when($user->role?->code === 'cajero', function ($query) use ($limiteMinutosCajero): void {
                 $query->where('created_at', '>=', now()->subMinutes($limiteMinutosCajero));
             })
@@ -130,6 +131,12 @@ class DevolucionController extends Controller
             if ($venta->estado !== 'activo') {
                 throw ValidationException::withMessages([
                     'venta_id' => ['Solo se permiten devoluciones sobre ventas activas.'],
+                ]);
+            }
+
+            if (Carbon::parse((string) $venta->fecha_venta)->isSameDay(Carbon::today())) {
+                throw ValidationException::withMessages([
+                    'venta_id' => ['Las ventas del mismo dia deben manejarse con anulacion de venta.'],
                 ]);
             }
 
@@ -249,9 +256,9 @@ class DevolucionController extends Controller
 
     private function limiteDiasCajero(): int
     {
-        $valor = (int) Configuracion::valor('devolucion_limite_dias_cajero', 1);
+        $valor = (int) Configuracion::valor('devolucion_limite_dias_cajero', 15);
 
-        return max(1, $valor);
+        return max(2, $valor);
     }
 
     public function anular(Request $request, Devolucion $devolucion): JsonResponse

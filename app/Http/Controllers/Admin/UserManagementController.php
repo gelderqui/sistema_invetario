@@ -7,6 +7,9 @@ use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class UserManagementController extends Controller
@@ -19,6 +22,7 @@ class UserManagementController extends Controller
     public function index(): JsonResponse
     {
         $users = User::query()
+            ->withTrashed()
             ->with(['role:id,name,code'])
             ->orderBy('name')
             ->get([
@@ -29,6 +33,7 @@ class UserManagementController extends Controller
                 'telefono',
                 'activo',
                 'role_id',
+                'deleted_at',
                 'created_at',
             ]);
 
@@ -69,6 +74,12 @@ class UserManagementController extends Controller
 
     public function update(Request $request, User $user): JsonResponse
     {
+        if ($user->trashed()) {
+            return response()->json([
+                'message' => 'No se puede editar un usuario eliminado.',
+            ], 422);
+        }
+
         if ($this->isProtectedAdmin($user) && ! $request->boolean('activo')) {
             return response()->json([
                 'message' => 'El usuario admin no se puede desactivar.',
@@ -108,6 +119,24 @@ class UserManagementController extends Controller
         }
 
         $user->update($payload);
+
+        if (! empty($validated['password'])) {
+            // Invalidate remember-me cookies for this specific user.
+            $user->forceFill([
+                'remember_token' => Str::random(60),
+            ])->save();
+
+            // Invalidate only this user's active sessions when using database session driver.
+            $sessionDriver = (string) config('session.driver');
+            $sessionTable = (string) config('session.table', 'sessions');
+
+            if ($sessionDriver === 'database' && Schema::hasTable($sessionTable)) {
+                DB::table($sessionTable)
+                    ->where('user_id', $user->id)
+                    ->delete();
+            }
+        }
+
         $user->load('role:id,name,code');
 
         return response()->json([
@@ -124,6 +153,13 @@ class UserManagementController extends Controller
             ], 422);
         }
 
+        if ($user->trashed()) {
+            return response()->json([
+                'message' => 'El usuario ya se encuentra eliminado.',
+            ], 422);
+        }
+
+        $user->update(['activo' => false]);
         $user->delete();
 
         return response()->json([

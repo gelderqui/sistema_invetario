@@ -40,13 +40,20 @@
                                 <span v-else class="text-body-secondary small">Sin rol</span>
                             </td>
                             <td>
-                                <span class="badge" :class="user.activo ? 'text-bg-success' : 'text-bg-secondary'">
-                                    {{ user.activo ? 'Activo' : 'Inactivo' }}
+                                <span class="badge" :class="estadoBadgeClass(user)">
+                                    {{ estadoLabel(user) }}
                                 </span>
                             </td>
                             <td>
-                                <button class="btn btn-sm btn-action-brand" :disabled="actionLocked" @click="openEdit(user)">
+                                <button class="btn btn-sm btn-action-brand" :disabled="actionLocked || user.deleted_at" @click="openEdit(user)">
                                     <FontAwesomeIcon icon="fa-solid fa-pencil" class="icon-action-edit" />
+                                </button>
+                                <button
+                                    class="btn btn-sm btn-action-brand ms-2"
+                                    :disabled="actionLocked || user.deleted_at || esAdminProtegido(user)"
+                                    @click="removeUser(user)"
+                                >
+                                    <FontAwesomeIcon icon="fa-solid fa-trash" class="icon-action-delete" />
                                 </button>
                             </td>
                         </tr>
@@ -79,17 +86,18 @@
                                 <div class="col-12 col-sm-6">
                                     <label class="form-label fw-semibold" for="u-username">Usuario *</label>
                                     <input
+                                        v-if="!isEditing"
                                         id="u-username"
                                         v-model="form.username"
                                         type="text"
                                         class="form-control"
-                                        :readonly="isEditing"
-                                        :required="!isEditing"
+                                        required
                                         autocomplete="off"
                                     >
-                                    <div v-if="isEditing" class="form-text">
-                                        El nombre de usuario no se puede editar.
+                                    <div v-else class="form-control bg-light-subtle">
+                                        {{ form.username }}
                                     </div>
+                                    <div v-if="isEditing" class="form-text">El nombre de usuario no se puede editar.</div>
                                 </div>
 
                                 <div class="col-12 col-sm-6">
@@ -277,5 +285,44 @@ async function save() {
     } finally {
         saving.value = false;
     }
+}
+
+async function removeUser(user) {
+    if (!user?.id || user.deleted_at || esAdminProtegido(user)) return;
+
+    const ok = window.confirm(`Se eliminara logicamente el usuario ${user.username}. Deseas continuar?`);
+    if (!ok) return;
+
+    saving.value = true;
+    modalErrors.value = [];
+    try {
+        await axios.delete(`/usuarios/destroy/${user.id}`);
+        await loadUsers();
+    } catch (error) {
+        const serverErrors = error.response?.data?.errors;
+        if (serverErrors && typeof serverErrors === 'object') {
+            modalErrors.value = Object.values(serverErrors).flat();
+        } else {
+            modalErrors.value = [error.response?.data?.message ?? 'No se pudo eliminar el usuario.'];
+        }
+    } finally {
+        saving.value = false;
+    }
+}
+
+function estadoLabel(user) {
+    if (user.deleted_at) return 'Eliminado';
+    return user.activo ? 'Activo' : 'Inactivo';
+}
+
+function estadoBadgeClass(user) {
+    if (user.deleted_at) return 'text-bg-danger';
+    return user.activo ? 'text-bg-success' : 'text-bg-secondary';
+}
+
+function esAdminProtegido(user) {
+    const username = String(user?.username ?? '').toLowerCase();
+    const email = String(user?.email ?? '').toLowerCase();
+    return username === 'admin' || email === 'admin@admin.local';
 }
 </script>

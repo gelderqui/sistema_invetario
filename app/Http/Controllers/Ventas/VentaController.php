@@ -274,6 +274,14 @@ class VentaController extends Controller
             ], 403);
         }
 
+        $fechaVenta = Carbon::parse((string) $venta->fecha_venta)->toDateString();
+        $hoy = Carbon::today()->toDateString();
+        if ($fechaVenta !== $hoy) {
+            return response()->json([
+                'message' => 'Solo se pueden anular ventas del mismo dia. Para fechas anteriores utilice devolucion.',
+            ], 422);
+        }
+
         if ($venta->estado !== 'activo') {
             return response()->json([
                 'message' => 'Solo se pueden anular ventas activas.',

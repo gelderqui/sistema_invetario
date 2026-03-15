@@ -34,7 +34,7 @@ class ConfiguracionSeeder extends Seeder
             [
                 'codigo' => 'devolucion_limite_dias_cajero',
                 'descripcion' => 'Dias maximos para que cajero registre devoluciones.',
-                'value' => '1',
+                'value' => '15',
                 'activo' => true,
             ],
         ];

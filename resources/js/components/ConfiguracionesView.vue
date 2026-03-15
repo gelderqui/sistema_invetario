@@ -72,8 +72,16 @@
 
                             <div>
                                 <label class="form-label fw-semibold">Valor *</label>
-                                <input v-model="form.value" type="text" class="form-control" maxlength="255" required>
-                                <div class="form-text">Este campo es obligatorio.</div>
+                                <input
+                                    v-model="form.value"
+                                    :type="inputTypePorCodigo(form.codigo)"
+                                    class="form-control"
+                                    :min="inputMinPorCodigo(form.codigo)"
+                                    step="1"
+                                    maxlength="255"
+                                    required
+                                >
+                                <div class="form-text">{{ ayudaPorCodigo(form.codigo) }}</div>
                             </div>
 
                             <p class="small text-body-secondary mb-0">
@@ -176,5 +184,25 @@ async function save() {
 function formatDateTime(value) {
     if (!value) return '—';
     return new Date(value).toLocaleString('es-GT');
+}
+
+function inputTypePorCodigo(codigo) {
+    return esCodigoEntero(codigo) ? 'number' : 'text';
+}
+
+function inputMinPorCodigo(codigo) {
+    if (!esCodigoEntero(codigo)) return undefined;
+    return codigo === 'devolucion_limite_dias_cajero' ? 2 : 0;
+}
+
+function ayudaPorCodigo(codigo) {
+    if (codigo === 'nombre_empresa') return 'Texto requerido.';
+    if (codigo === 'devolucion_limite_dias_cajero') return 'Solo entero. Minimo 2.';
+    if (esCodigoEntero(codigo)) return 'Solo entero. Minimo 0.';
+    return 'Este campo es obligatorio.';
+}
+
+function esCodigoEntero(codigo) {
+    return codigo !== 'nombre_empresa';
 }
 </script>

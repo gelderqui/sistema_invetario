@@ -68,7 +68,8 @@
                                 <button
                                     type="button"
                                     class="btn btn-sm btn-outline-danger ms-2"
-                                    :disabled="loading || venta.estado !== 'activo'"
+                                    :disabled="loading || venta.estado !== 'activo' || !esMismoDia(venta.fecha_venta)"
+                                    :title="esMismoDia(venta.fecha_venta) ? 'Anular venta' : 'Solo se anula en el mismo dia'"
                                     @click="anularVenta(venta.id, venta.numero)"
                                 >
                                     Anular
@@ -207,5 +208,16 @@ async function anularDevolucion(id) {
     } finally {
         loading.value = false;
     }
+}
+
+function esMismoDia(value) {
+    if (!value) return false;
+
+    const fecha = new Date(value);
+    const hoy = new Date();
+
+    return fecha.getFullYear() === hoy.getFullYear()
+        && fecha.getMonth() === hoy.getMonth()
+        && fecha.getDate() === hoy.getDate();
 }
 </script>

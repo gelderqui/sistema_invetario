@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Catalogos;
 
 use App\Http\Controllers\Controller;
+use App\Models\Categoria;
 use App\Models\Producto;
 use App\Models\UnidadMedida;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ProductoController extends Controller
 {
@@ -62,6 +64,19 @@ class ProductoController extends Controller
             'activo'        => ['sometimes', 'boolean'],
         ]);
 
+        if (! empty($validated['categoria_id'])) {
+            $categoriaActiva = Categoria::query()
+                ->whereKey($validated['categoria_id'])
+                ->where('activo', true)
+                ->exists();
+
+            if (! $categoriaActiva) {
+                throw ValidationException::withMessages([
+                    'categoria_id' => 'La categoria seleccionada esta inactiva y no puede asignarse al producto.',
+                ]);
+            }
+        }
+
         $producto = Producto::query()->create([
             ...$validated,
             'precio_venta'    => $validated['precio_venta'] ?? 0,
@@ -101,6 +116,23 @@ class ProductoController extends Controller
             'activo'        => ['required', 'boolean'],
         ]);
 
+        $incomingCategoriaId = $validated['categoria_id'] ?? null;
+        $currentCategoriaId = $producto->categoria_id;
+        $isCategoriaChanged = (int) ($incomingCategoriaId ?? 0) !== (int) ($currentCategoriaId ?? 0);
+
+        if (! empty($incomingCategoriaId) && $isCategoriaChanged) {
+            $categoriaActiva = Categoria::query()
+                ->whereKey($incomingCategoriaId)
+                ->where('activo', true)
+                ->exists();
+
+            if (! $categoriaActiva) {
+                throw ValidationException::withMessages([
+                    'categoria_id' => 'La categoria seleccionada esta inactiva y no puede asignarse al producto.',
+                ]);
+            }
+        }
+
         $producto->update([
             ...$validated,
             'precio_venta'    => $validated['precio_venta'] ?? $producto->precio_venta,
@@ -136,9 +168,9 @@ class ProductoController extends Controller
 
     public function destroy(Producto $producto): JsonResponse
     {
-        if ($producto->compraDetalles()->exists() || $producto->movimientosInventario()->exists()) {
+        if ($producto->compraDetalles()->exists() || $producto->ventaDetalles()->exists()) {
             return response()->json([
-                'message' => 'No puede eliminar este producto porque tiene historial de compras o inventario.',
+                'message' => 'No se puede eliminar este producto porque ya tiene compras o ventas registradas.',
             ], 422);
         }
 

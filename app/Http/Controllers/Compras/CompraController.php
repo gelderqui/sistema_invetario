@@ -98,6 +98,17 @@ class CompraController extends Controller
             'items.*.nota' => ['nullable', 'string', 'max:255'],
         ]);
 
+        $proveedorActivo = Proveedor::query()
+            ->whereKey($validated['proveedor_id'])
+            ->where('activo', true)
+            ->exists();
+
+        if (! $proveedorActivo) {
+            throw ValidationException::withMessages([
+                'proveedor_id' => 'El proveedor seleccionado esta inactivo y no puede usarse en compras.',
+            ]);
+        }
+
         $result = DB::transaction(function () use ($validated) {
             $numeroCompra = sprintf(
                 'CMP-%s-%03d',
@@ -120,6 +131,12 @@ class CompraController extends Controller
 
             foreach ($validated['items'] as $item) {
                 $producto = Producto::query()->with('unidadMedida:id,abreviatura')->lockForUpdate()->findOrFail($item['producto_id']);
+
+                if (! $producto->activo) {
+                    throw ValidationException::withMessages([
+                        'items' => ["El producto {$producto->nombre} esta inactivo y no puede usarse en compras."],
+                    ]);
+                }
 
                 $cantidad = toMoney($item['cantidad'], 4);
                 $unidadMedidaSnap = $producto->unidadMedida?->abreviatura ?? 'und';

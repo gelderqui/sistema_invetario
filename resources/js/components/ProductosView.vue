@@ -15,7 +15,37 @@
         </div>
 
         <div v-else class="card border-0 shadow-sm">
-            <div class="table-responsive">
+            <div class="px-3 pt-3">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <label class="form-label fw-semibold mb-0" for="filtro-estado-producto">Filtrar estado:</label>
+                    <select id="filtro-estado-producto" v-model="statusFilter" class="form-select form-select-sm w-auto">
+                        <option value="todos">Todos</option>
+                        <option value="activo">Activo</option>
+                        <option value="inactivo">Inactivo</option>
+                    </select>
+
+                    <label class="form-label fw-semibold mb-0 ms-sm-2" for="filtro-categoria-producto">Categoria:</label>
+                    <select id="filtro-categoria-producto" v-model="categoryFilter" class="form-select form-select-sm w-auto">
+                        <option value="todas">Todas</option>
+                        <option value="sin_categoria">Sin categoria</option>
+                        <option v-for="cat in categoryFilterOptions" :key="cat.id" :value="String(cat.id)">
+                            {{ cat.nombre }}
+                        </option>
+                    </select>
+
+                    <label class="form-label fw-semibold mb-0 ms-sm-2" for="filtro-nombre-producto">Nombre:</label>
+                    <input
+                        id="filtro-nombre-producto"
+                        v-model.trim="nameFilter"
+                        type="text"
+                        class="form-control form-control-sm"
+                        style="max-width: 260px;"
+                        placeholder="Buscar por nombre"
+                    >
+                </div>
+            </div>
+
+            <div class="table-responsive mt-3">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="thead-brand">
                         <tr>
@@ -28,10 +58,10 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-if="!productos.length">
+                        <tr v-if="!displayedProductos.length">
                             <td colspan="6" class="text-center text-body-secondary py-4">Sin registros</td>
                         </tr>
-                        <tr v-for="prod in productos" :key="prod.id">
+                        <tr v-for="prod in displayedProductos" :key="prod.id">
                             <td class="fw-semibold">{{ prod.nombre }}</td>
                             <td>
                                 <span v-if="prod.categoria" class="badge text-bg-light border">
@@ -121,30 +151,40 @@
 
                                 <div class="col-12 col-sm-6">
                                     <label class="form-label fw-semibold" for="p-categoria">Categoria</label>
-                                    <select id="p-categoria" v-model="form.categoria_id" class="form-select">
-                                        <option :value="null">Sin categoria</option>
-                                        <option
-                                            v-for="cat in categoriasActivas"
-                                            :key="cat.id"
-                                            :value="cat.id"
-                                        >
-                                            {{ cat.nombre }}
-                                        </option>
-                                    </select>
+                                    <Multiselect
+                                        id="p-categoria"
+                                        v-model="selectedCategoriaOption"
+                                        :options="categoriasActivas"
+                                        label="nombre"
+                                        track-by="id"
+                                        placeholder="Buscar categoria..."
+                                        :searchable="true"
+                                        :allow-empty="true"
+                                        :close-on-select="true"
+                                        :show-labels="false"
+                                        select-label="Seleccionar"
+                                        selected-label="Seleccionado"
+                                        deselect-label="Quitar"
+                                    />
                                 </div>
 
                                 <div class="col-12 col-sm-6">
                                     <label class="form-label fw-semibold" for="p-proveedor">Proveedor referencial</label>
-                                    <select id="p-proveedor" v-model="form.proveedor_id" class="form-select">
-                                        <option :value="null">Sin proveedor</option>
-                                        <option
-                                            v-for="prov in proveedoresActivos"
-                                            :key="prov.id"
-                                            :value="prov.id"
-                                        >
-                                            {{ prov.nombre }}
-                                        </option>
-                                    </select>
+                                    <Multiselect
+                                        id="p-proveedor"
+                                        v-model="selectedProveedorOption"
+                                        :options="proveedoresActivos"
+                                        label="nombre"
+                                        track-by="id"
+                                        placeholder="Buscar proveedor..."
+                                        :searchable="true"
+                                        :allow-empty="true"
+                                        :close-on-select="true"
+                                        :show-labels="false"
+                                        select-label="Seleccionar"
+                                        selected-label="Seleccionado"
+                                        deselect-label="Quitar"
+                                    />
                                 </div>
 
                                 <div class="col-12 col-sm-6">
@@ -282,6 +322,8 @@
 import { Modal } from 'bootstrap';
 import JsBarcode from 'jsbarcode';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import Multiselect from 'vue-multiselect';
+import 'vue-multiselect/dist/vue-multiselect.css';
 
 import axios from '@/bootstrap';
 import ModalConfirm from '@/components/components_ui/ModalConfirm.vue';
@@ -298,6 +340,9 @@ const editingId = ref(null);
 const selected = ref(null);
 const formErrors = ref([]);
 const confirmMode = ref('toggle');
+const statusFilter = ref('todos');
+const categoryFilter = ref('todas');
+const nameFilter = ref('');
 
 const formModalRef = ref(null);
 const confirmModalRef = ref(null);
@@ -323,6 +368,18 @@ const emptyForm = () => ({
 const form = ref(emptyForm());
 
 const normalizedBarcode = computed(() => String(form.value.codigo_barra || '').trim());
+const selectedCategoriaOption = computed({
+    get: () => categoriasActivas.value.find((item) => item.id === form.value.categoria_id) ?? null,
+    set: (option) => {
+        form.value.categoria_id = option?.id ?? null;
+    },
+});
+const selectedProveedorOption = computed({
+    get: () => proveedoresActivos.value.find((item) => item.id === form.value.proveedor_id) ?? null,
+    set: (option) => {
+        form.value.proveedor_id = option?.id ?? null;
+    },
+});
 
 onMounted(async () => {
     formModal = new Modal(formModalRef.value);
@@ -349,6 +406,44 @@ const confirmHint = computed(() => (confirmMode.value === 'delete' ? 'Esta accio
 const confirmConfirmText = computed(() => (confirmMode.value === 'delete' ? 'Eliminar' : 'Confirmar'));
 const confirmLoading = computed(() => (confirmMode.value === 'delete' ? deleting.value : toggling.value));
 const actionLocked = computed(() => loading.value || saving.value || toggling.value || deleting.value);
+const categoryFilterOptions = computed(() => {
+    const map = new Map();
+
+    for (const item of productos.value) {
+        if (!item?.categoria?.id) continue;
+        if (!map.has(item.categoria.id)) {
+            map.set(item.categoria.id, {
+                id: item.categoria.id,
+                nombre: item.categoria.nombre,
+            });
+        }
+    }
+
+    return Array.from(map.values()).sort((a, b) => String(a.nombre ?? '').localeCompare(String(b.nombre ?? ''), 'es', { sensitivity: 'base' }));
+});
+const displayedProductos = computed(() => {
+    const query = String(nameFilter.value ?? '').trim().toLowerCase();
+
+    return [...productos.value]
+        .filter((item) => {
+            if (statusFilter.value === 'todos') return true;
+            if (statusFilter.value === 'activo') return Boolean(item.activo);
+            if (statusFilter.value === 'inactivo') return !Boolean(item.activo);
+            return true;
+        })
+        .filter((item) => {
+            if (categoryFilter.value === 'todas') return true;
+            if (categoryFilter.value === 'sin_categoria') return !item.categoria_id;
+
+            return String(item.categoria_id ?? '') === categoryFilter.value;
+        })
+        .filter((item) => {
+            if (!query) return true;
+
+            return String(item.nombre ?? '').toLowerCase().includes(query);
+        })
+        .sort((a, b) => String(a.nombre ?? '').localeCompare(String(b.nombre ?? ''), 'es', { sensitivity: 'base' }));
+});
 
 async function loadProductos() {
     loading.value = true;

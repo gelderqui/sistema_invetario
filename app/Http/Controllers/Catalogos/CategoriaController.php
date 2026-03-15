@@ -84,7 +84,7 @@ class CategoriaController extends Controller
     {
         if ($categoria->productos()->exists()) {
             return response()->json([
-                'message' => 'No se puede eliminar: la categoría tiene productos asignados.',
+                'message' => 'No se puede eliminar la categoria porque existen productos asociados a esta categoria.',
             ], 422);
         }
 

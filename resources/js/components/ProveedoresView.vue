@@ -13,7 +13,28 @@
     </div>
 
     <div v-else class="card border-0 shadow-sm">
-      <div class="table-responsive">
+      <div class="px-3 pt-3">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <label class="form-label fw-semibold mb-0" for="filtro-estado-proveedor">Filtrar estado:</label>
+          <select id="filtro-estado-proveedor" v-model="statusFilter" class="form-select form-select-sm w-auto">
+            <option value="todos">Todos</option>
+            <option value="activo">Activo</option>
+            <option value="inactivo">Inactivo</option>
+          </select>
+
+          <label class="form-label fw-semibold mb-0 ms-sm-2" for="filtro-nombre-proveedor">Nombre:</label>
+          <input
+            id="filtro-nombre-proveedor"
+            v-model.trim="nameFilter"
+            type="text"
+            class="form-control form-control-sm"
+            style="max-width: 260px;"
+            placeholder="Buscar por nombre"
+          >
+        </div>
+      </div>
+
+      <div class="table-responsive mt-3">
         <table class="table table-hover align-middle mb-0">
           <thead class="thead-brand">
             <tr>
@@ -27,10 +48,10 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-if="!proveedores.length">
+            <tr v-if="!displayedProveedores.length">
               <td colspan="7" class="text-center text-body-secondary py-4">Sin registros</td>
             </tr>
-            <tr v-for="p in proveedores" :key="p.id">
+            <tr v-for="p in displayedProveedores" :key="p.id">
               <td class="fw-semibold">{{ p.nombre }}</td>
               <td>{{ p.contacto || '-' }}</td>
               <td>{{ p.telefono || '-' }}</td>
@@ -153,6 +174,8 @@ const selected = ref(null);
 const formErrors = ref([]);
 const confirmMode = ref('toggle');
 const confirmError = ref('');
+const statusFilter = ref('todos');
+const nameFilter = ref('');
 
 const formModalRef = ref(null);
 const confirmModalRef = ref(null);
@@ -183,6 +206,23 @@ const confirmMessage = computed(() => {
 const confirmConfirmText = computed(() => (confirmMode.value === 'delete' ? 'Eliminar' : 'Confirmar'));
 const confirmLoading = computed(() => (confirmMode.value === 'delete' ? deleting.value : toggling.value));
 const actionLocked = computed(() => loading.value || saving.value || toggling.value || deleting.value);
+const displayedProveedores = computed(() => {
+  const query = String(nameFilter.value ?? '').trim().toLowerCase();
+
+  return [...proveedores.value]
+    .filter((item) => {
+      if (statusFilter.value === 'todos') return true;
+      if (statusFilter.value === 'activo') return Boolean(item.activo);
+      if (statusFilter.value === 'inactivo') return !Boolean(item.activo);
+      return true;
+    })
+    .filter((item) => {
+      if (!query) return true;
+
+      return String(item.nombre ?? '').toLowerCase().includes(query);
+    })
+    .sort((a, b) => String(a.nombre ?? '').localeCompare(String(b.nombre ?? ''), 'es', { sensitivity: 'base' }));
+});
 
 async function loadProveedores() {
   loading.value = true;
@@ -257,7 +297,6 @@ async function save() {
     } else {
       const { data } = await axios.post('/catalogos/proveedores/store', payload);
       proveedores.value.push(data.data);
-      proveedores.value.sort((a, b) => a.nombre.localeCompare(b.nombre));
     }
 
     formModal.hide();

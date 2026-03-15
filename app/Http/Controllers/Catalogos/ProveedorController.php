@@ -94,13 +94,7 @@ class ProveedorController extends Controller
     {
         if ($proveedor->compras()->exists()) {
             return response()->json([
-                'message' => 'No puede eliminar este proveedor porque tiene compras registradas.',
-            ], 422);
-        }
-
-        if ($proveedor->productos()->exists()) {
-            return response()->json([
-                'message' => 'No puede eliminar este proveedor porque tiene productos asociados.',
+                'message' => 'No se puede eliminar este proveedor porque tiene compras registradas. Solo puede desactivarlo.',
             ], 422);
         }
 

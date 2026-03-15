@@ -138,6 +138,12 @@ class VentaController extends Controller
             foreach ($validated['items'] as $item) {
                 $producto = Producto::query()->with('unidadMedida:id,abreviatura')->lockForUpdate()->findOrFail($item['producto_id']);
 
+                if (! $producto->activo) {
+                    throw ValidationException::withMessages([
+                        'items' => ["El producto {$producto->nombre} esta inactivo y no puede venderse."],
+                    ]);
+                }
+
                 $cantidad = toMoney($item['cantidad'], 4);
                 $precio = toMoney($item['precio_unitario'], 4);
                 $lineSubtotal = toMoney($cantidad * $precio, 4);

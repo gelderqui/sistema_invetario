@@ -15,7 +15,28 @@
         </div>
 
         <div v-else class="card border-0 shadow-sm">
-            <div class="table-responsive">
+            <div class="px-3 pt-3">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <label class="form-label fw-semibold mb-0" for="filtro-estado-categoria">Filtrar estado:</label>
+                    <select id="filtro-estado-categoria" v-model="statusFilter" class="form-select form-select-sm w-auto">
+                        <option value="todos">Todos</option>
+                        <option value="activo">Activo</option>
+                        <option value="inactivo">Inactivo</option>
+                    </select>
+
+                    <label class="form-label fw-semibold mb-0 ms-sm-2" for="filtro-nombre-categoria">Nombre:</label>
+                    <input
+                        id="filtro-nombre-categoria"
+                        v-model.trim="nameFilter"
+                        type="text"
+                        class="form-control form-control-sm"
+                        style="max-width: 260px;"
+                        placeholder="Buscar por nombre"
+                    >
+                </div>
+            </div>
+
+            <div class="table-responsive mt-3">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="thead-brand">
                         <tr>
@@ -28,10 +49,10 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-if="!categorias.length">
+                        <tr v-if="!displayedCategorias.length">
                             <td colspan="6" class="text-center text-body-secondary py-4">Sin registros</td>
                         </tr>
-                        <tr v-for="cat in categorias" :key="cat.id">
+                        <tr v-for="cat in displayedCategorias" :key="cat.id">
                             <td class="fw-semibold">{{ cat.nombre }}</td>
                             <td class="text-body-secondary">{{ cat.descripcion ?? 'â€”' }}</td>
                             <td>
@@ -178,6 +199,8 @@ const selected = ref(null);
 const formErrors = ref([]);
 const deleteError = ref('');
 const confirmMode = ref('toggle');
+const statusFilter = ref('todos');
+const nameFilter = ref('');
 
 const formModalRef = ref(null);
 const confirmModalRef = ref(null);
@@ -209,6 +232,23 @@ const confirmHint = computed(() => (confirmMode.value === 'delete' ? 'Esta acciÃ
 const confirmConfirmText = computed(() => (confirmMode.value === 'delete' ? 'Eliminar' : 'Confirmar'));
 const confirmLoading = computed(() => (confirmMode.value === 'delete' ? deleting.value : toggling.value));
 const actionLocked = computed(() => loading.value || saving.value || toggling.value || deleting.value);
+const displayedCategorias = computed(() => {
+    const query = String(nameFilter.value ?? '').trim().toLowerCase();
+
+    return [...categorias.value]
+        .filter((item) => {
+            if (statusFilter.value === 'todos') return true;
+            if (statusFilter.value === 'activo') return Boolean(item.activo);
+            if (statusFilter.value === 'inactivo') return !Boolean(item.activo);
+            return true;
+        })
+        .filter((item) => {
+            if (!query) return true;
+
+            return String(item.nombre ?? '').toLowerCase().includes(query);
+        })
+        .sort((a, b) => String(a.nombre ?? '').localeCompare(String(b.nombre ?? ''), 'es', { sensitivity: 'base' }));
+});
 
 async function loadCategorias() {
     loading.value = true;

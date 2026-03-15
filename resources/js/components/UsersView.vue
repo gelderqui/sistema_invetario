@@ -13,7 +13,29 @@
         </div>
 
         <div v-else class="card border-0 shadow-sm">
-            <div class="table-responsive">
+            <div class="px-3 pt-3">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <label class="form-label fw-semibold mb-0" for="filtro-estado-usuario">Filtrar estado:</label>
+                    <select id="filtro-estado-usuario" v-model="statusFilter" class="form-select form-select-sm w-auto">
+                        <option value="todos">Todos</option>
+                        <option value="activo">Activo</option>
+                        <option value="inactivo">Inactivo</option>
+                        <option value="eliminado">Eliminado</option>
+                    </select>
+
+                    <label class="form-label fw-semibold mb-0 ms-sm-2" for="filtro-nombre-usuario">Nombre:</label>
+                    <input
+                        id="filtro-nombre-usuario"
+                        v-model.trim="nameFilter"
+                        type="text"
+                        class="form-control form-control-sm"
+                        style="max-width: 260px;"
+                        placeholder="Buscar por nombre"
+                    >
+                </div>
+            </div>
+
+            <div class="table-responsive mt-3">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="thead-brand">
                         <tr>
@@ -27,10 +49,10 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-if="!users.length">
+                        <tr v-if="!displayedUsers.length">
                             <td colspan="7" class="text-center text-body-secondary py-4">Sin registros</td>
                         </tr>
-                        <tr v-for="user in users" :key="user.id">
+                        <tr v-for="user in displayedUsers" :key="user.id">
                             <td class="fw-semibold">{{ user.username }}</td>
                             <td>{{ user.name }}</td>
                             <td>{{ user.email }}</td>
@@ -245,6 +267,8 @@ const selectedUser = ref(null);
 const selectedUserForToggle = ref(null);
 const confirmError = ref('');
 const toggleUserError = ref('');
+const statusFilter = ref('todos');
+const nameFilter = ref('');
 
 let bsModal = null;
 
@@ -283,6 +307,31 @@ const toggleUserHint = computed(() => {
     }
 
     return 'Si activas este usuario, podra iniciar sesion nuevamente.';
+});
+const displayedUsers = computed(() => {
+    const query = String(nameFilter.value ?? '').trim().toLowerCase();
+
+    return [...users.value]
+        .sort((a, b) => {
+            const estadoDiff = userStatusOrder(a) - userStatusOrder(b);
+            if (estadoDiff !== 0) return estadoDiff;
+
+            return String(a.name ?? '').localeCompare(String(b.name ?? ''), 'es', { sensitivity: 'base' });
+        })
+        .filter((user) => {
+            if (statusFilter.value === 'todos') return true;
+
+            if (statusFilter.value === 'eliminado') return Boolean(user.deleted_at);
+            if (statusFilter.value === 'activo') return !user.deleted_at && Boolean(user.activo);
+            if (statusFilter.value === 'inactivo') return !user.deleted_at && !Boolean(user.activo);
+
+            return true;
+        })
+        .filter((user) => {
+            if (!query) return true;
+
+            return String(user.name ?? '').toLowerCase().includes(query);
+        });
 });
 
 onMounted(async () => {
@@ -463,6 +512,11 @@ function estadoLabel(user) {
 function estadoBadgeClass(user) {
     if (user.deleted_at) return 'text-bg-danger';
     return user.activo ? 'text-bg-success' : 'text-bg-secondary';
+}
+
+function userStatusOrder(user) {
+    if (user.deleted_at) return 3;
+    return user.activo ? 1 : 2;
 }
 
 function esAdminProtegido(user) {

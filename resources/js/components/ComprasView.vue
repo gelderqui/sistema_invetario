@@ -48,7 +48,7 @@
                                     type="button"
                                     class="btn btn-sm btn-outline-danger"
                                     :disabled="saving || compra.estado !== 'activo'"
-                                    @click="anularCompra(compra)"
+                                    @click="openAnularCompra(compra)"
                                 >
                                     Anular
                                 </button>
@@ -109,68 +109,79 @@
                                 <table class="table table-sm compra-items-table">
                                     <thead>
                                         <tr>
-                                            <th style="min-width: 150px;">Categoria</th>
                                             <th style="min-width: 220px;">Producto</th>
-                                            <th>Cantidad</th>
-                                            <th>Medida</th>
-                                            <th>Costo unitario</th>
-                                            <th>Precio venta</th>
-                                            <th>Caducidad</th>
-                                            <th>Subtotal</th>
+                                            <th style="min-width: 110px;">Cantidad</th>
+                                            <th style="min-width: 140px;">Medida</th>
+                                            <th style="min-width: 140px;">Costo unitario</th>
+                                            <th style="min-width: 140px;">Precio venta</th>
+                                            <th style="min-width: 140px;">Caducidad</th>
+                                            <th style="min-width: 130px;">Subtotal</th>
                                             <th></th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <tr v-if="!form.items.length">
-                                            <td colspan="9" class="text-center text-body-secondary py-3">Agrega al menos un producto.</td>
+                                            <td colspan="8" class="text-center text-body-secondary py-3">Agrega al menos un producto.</td>
                                         </tr>
                                         <tr v-for="(item, idx) in form.items" :key="idx">
                                             <td>
                                                 <Multiselect
-                                                    v-model="item.categoria"
-                                                    :options="catalogs.categorias"
-                                                    label="nombre"
+                                                    v-model="item.producto"
+                                                    :options="productOptionsForItem(item)"
+                                                    :custom-label="productOptionLabel"
                                                     track-by="id"
-                                                    placeholder="Todas"
+                                                    placeholder="Buscar por nombre, codigo o palabras clave"
                                                     :searchable="true"
-                                                    :allow-empty="true"
+                                                    :allow-empty="false"
                                                     :close-on-select="true"
                                                     :show-labels="false"
+                                                    :internal-search="false"
                                                     select-label="Seleccionar"
                                                     selected-label="Seleccionado"
                                                     deselect-label="Quitar"
-                                                    @select="onCategoryChange(item)"
-                                                    @remove="onCategoryChange(item)"
-                                                    @clear="onCategoryChange(item)"
+                                                    @search-change="onProductSearchChange(item, $event)"
+                                                    @select="onProductSelect(item, $event)"
+                                                    @remove="onProductClear(item)"
+                                                    @clear="onProductClear(item)"
                                                 />
                                             </td>
                                             <td>
                                                 <input
-                                                    :id="`producto-search-${idx}`"
-                                                    v-model="item.producto_query"
-                                                    :list="`productos-list-${idx}`"
-                                                    type="text"
+                                                    v-model.number="item.cantidad"
+                                                    type="number"
+                                                    step="1"
+                                                    min="1"
                                                     class="form-control form-control-sm"
-                                                    placeholder="Nombre, codigo barra o palabra clave"
-                                                    @input="resolveProductFromQuery(item)"
-                                                    @blur="resolveProductFromQuery(item)"
+                                                    @input="normalizeQuantityInput(item)"
+                                                    @blur="normalizeQuantityInput(item)"
                                                 >
-                                                <datalist :id="`productos-list-${idx}`">
-                                                    <option
-                                                        v-for="prod in filteredProducts(item)"
-                                                        :key="prod.id"
-                                                        :value="productSearchText(prod)"
-                                                    />
-                                                </datalist>
-                                                <div v-if="selectedProductName(item)" class="form-text compra-product-hint">
-                                                    {{ selectedProductName(item) }}
-                                                </div>
                                             </td>
-                                            <td><input v-model.number="item.cantidad" type="number" step="0.0001" min="0.0001" class="form-control form-control-sm"></td>
-                                            <td><input :value="item.unidad_medida || 'unidad'" type="text" class="form-control form-control-sm" readonly></td>
-                                            <td><input v-model.number="item.costo_unitario" type="number" step="0.0001" min="0.0001" class="form-control form-control-sm"></td>
-                                            <td><input v-model.number="item.precio_venta" type="number" step="0.0001" min="0" class="form-control form-control-sm"></td>
-                                            <td><input v-model="item.fecha_caducidad" type="date" class="form-control form-control-sm"></td>
+                                            <td>
+                                                <span class="form-control-plaintext form-control-sm py-1 d-block">
+                                                    {{ item.unidad_medida || '—' }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <input
+                                                    v-model.number="item.costo_unitario"
+                                                    type="number"
+                                                    step="0.0001"
+                                                    min="0.0001"
+                                                    class="form-control form-control-sm"
+                                                    @input="handleCostInput(item)"
+                                                >
+                                            </td>
+                                            <td>
+                                                <input
+                                                    v-model.number="item.precio_venta"
+                                                    type="number"
+                                                    step="0.0001"
+                                                    min="0"
+                                                    class="form-control form-control-sm"
+                                                    @input="handleSalePriceInput(item, $event)"
+                                                >
+                                            </td>
+                                            <td><input v-model="item.fecha_caducidad" type="date" class="form-control form-control-sm" required></td>
                                             <td class="fw-semibold">Q {{ itemSubtotal(item).toFixed(2) }}</td>
                                             <td>
                                                 <button type="button" class="btn btn-sm btn-action-brand" :disabled="saving" @click="removeItem(idx)">
@@ -187,7 +198,7 @@
                                     <div class="small text-body-secondary">Total estimado</div>
                                     <div class="h5 mb-0">Q {{ totalCompra.toFixed(2) }}</div>
                                 </div>
-                                <div class="text-end small text-body-secondary">El precio de venta puede modificarse por item.</div>
+                                <div class="text-end small text-body-secondary">Precio de venta sugerido: costo + {{ porcentajeUtilidadCompra }}%. Puede modificarse por item.</div>
                             </div>
 
                             <div v-if="alerts.length" class="alert alert-warning mb-0">
@@ -208,6 +219,18 @@
                 </div>
             </div>
         </div>
+
+        <ModalConfirm
+            ref="anularModalRef"
+            title="Anular compra"
+            :message="anularMessage"
+            hint="Esta accion revierte inventario y cambia el estado a anulada."
+            confirm-text="Anular"
+            :loading="saving"
+            :error-message="anularError"
+            @confirm="confirmAnularCompra"
+            @hidden="onAnularModalHidden"
+        />
     </div>
 </template>
 
@@ -219,6 +242,7 @@ import 'vue-multiselect/dist/vue-multiselect.css';
 
 import axios from '@/bootstrap';
 import FormErrors from '@/components/FormErrors.vue';
+import ModalConfirm from '@/components/components_ui/ModalConfirm.vue';
 
 const compras = ref([]);
 const catalogs = ref({ categorias: [], proveedores: [], productos: [] });
@@ -227,19 +251,24 @@ const loading = ref(true);
 const saving = ref(false);
 const formErrors = ref([]);
 const alerts = ref([]);
+const porcentajeUtilidadCompra = ref(25);
+const anularError = ref('');
+const selectedCompra = ref(null);
 
 const formModalRef = ref(null);
+const anularModalRef = ref(null);
 let formModal = null;
 
 const emptyItem = () => ({
-    categoria: null,
+    producto: null,
     producto_id: null,
-    producto_query: '',
+    producto_search: '',
     cantidad: 1,
     unidad_medida: '',
     costo_unitario: 0,
     precio_venta: 0,
-    fecha_caducidad: null,
+    precio_venta_manual: false,
+    fecha_caducidad: new Date().toISOString().slice(0, 10),
 });
 
 const emptyForm = () => ({
@@ -253,6 +282,7 @@ const form = ref(emptyForm());
 
 const totalCompra = computed(() => form.value.items.reduce((sum, item) => sum + itemSubtotal(item), 0));
 const actionLocked = computed(() => loading.value || saving.value);
+const anularMessage = computed(() => `¿Deseas anular la compra <strong>${selectedCompra.value?.numero ?? ''}</strong>?`);
 
 onMounted(async () => {
     formModal = new Modal(formModalRef.value);
@@ -276,6 +306,7 @@ async function loadCompras() {
 async function loadCatalogs() {
     const { data } = await axios.get('/compras/get/catalogs');
     catalogs.value = data.data;
+    porcentajeUtilidadCompra.value = Number(data.data.porcentaje_utilidad_compra ?? 25);
     const generalId = data.data.proveedor_general_id;
     if (generalId) {
         const prov = data.data.proveedores.find((p) => p.id === generalId);
@@ -294,76 +325,134 @@ function addItem() {
     form.value.items.push(emptyItem());
 }
 
-function filteredProducts(item) {
-    const categoriaId = item.categoria?.id ?? null;
-    if (!categoriaId) return catalogs.value.productos;
-    return catalogs.value.productos.filter((prod) => prod.categoria_id === categoriaId);
+function productOptionLabel(producto) {
+    return producto?.nombre ?? '';
 }
 
-function productSearchText(producto) {
-    const parts = [producto.nombre];
+function productOptionsForItem(item) {
+    const base = catalogs.value.productos;
+    const query = String(item.producto_search || '').trim().toLowerCase();
+    const selectedIdsInOtherItems = new Set(
+        form.value.items
+            .filter((other) => other !== item)
+            .map((other) => Number(other.producto_id || 0))
+            .filter((id) => id > 0)
+    );
 
-    if (producto.codigo_barra) parts.push(`Barra: ${producto.codigo_barra}`);
-    if (producto.palabras_clave) parts.push(`Clave: ${producto.palabras_clave}`);
+    const available = base.filter((prod) => !selectedIdsInOtherItems.has(Number(prod.id)));
 
-    return parts.join(' | ');
-}
+    if (!query) return available;
 
-function selectedProductName(item) {
-    const producto = catalogs.value.productos.find((prod) => prod.id === item.producto_id);
-    return producto ? `Producto seleccionado: ${producto.nombre}` : '';
-}
+    return available.filter((prod) => {
+        const nombre = String(prod.nombre || '').toLowerCase();
+        const codigo = String(prod.codigo_barra || '').toLowerCase();
+        const claves = String(prod.palabras_clave || '').toLowerCase();
 
-function onCategoryChange(item) {
-    item.producto_id = null;
-    item.producto_query = '';
-    item.unidad_medida = '';
-}
-
-function resolveProductFromQuery(item) {
-    const query = String(item.producto_query || '').trim().toLowerCase();
-    const productos = filteredProducts(item);
-
-    if (!query) {
-        item.producto_id = null;
-        return;
-    }
-
-    const exactByCode = productos.find((prod) => (prod.codigo_barra || '').toLowerCase() === query);
-    if (exactByCode) {
-        item.producto_id = exactByCode.id;
-        syncItemMeasure(item);
-        return;
-    }
-
-    const matches = productos.filter((prod) => {
-        const nombre = (prod.nombre || '').toLowerCase();
-        const codigoBarra = (prod.codigo_barra || '').toLowerCase();
-        const palabrasClave = (prod.palabras_clave || '').toLowerCase();
-        const searchable = productSearchText(prod).toLowerCase();
-
-        return nombre.includes(query)
-            || codigoBarra.includes(query)
-            || palabrasClave.includes(query)
-            || searchable.includes(query);
+        return nombre.includes(query) || codigo.includes(query) || claves.includes(query);
     });
-
-    if (matches.length === 1) {
-        item.producto_id = matches[0].id;
-        syncItemMeasure(item);
-    }
 }
 
-function syncItemMeasure(item) {
-    const producto = catalogs.value.productos.find((prod) => prod.id === item.producto_id);
-    if (!producto) return;
+function onProductSearchChange(item, searchText) {
+    item.producto_search = String(searchText || '');
+}
 
-    const um = producto.unidad_medida;
-    if (um && typeof um === 'object') {
-        item.unidad_medida = `${um.nombre} (${um.abreviatura})`;
-    } else {
-        item.unidad_medida = um || '—';
+function onProductSelect(item, selectedOption) {
+    const producto = selectedOption ?? null;
+    item.producto = producto;
+
+    if (!producto) {
+        onProductClear(item);
+        return;
     }
+
+    applySelectedProduct(item, producto);
+}
+
+function onProductClear(item) {
+    item.producto = null;
+    item.producto_id = null;
+    item.producto_search = '';
+    item.unidad_medida = '';
+    item.precio_venta_manual = false;
+    item.precio_venta = 0;
+}
+
+function applySelectedProduct(item, producto) {
+    item.producto = producto;
+    item.producto_id = Number(producto.id);
+    item.producto_search = '';
+    syncItemMeasure(item, producto);
+    syncSuggestedSalePrice(item);
+}
+
+function syncItemMeasure(item, selectedProducto = null) {
+    const producto = selectedProducto
+        ?? catalogs.value.productos.find((prod) => Number(prod.id) === Number(item.producto_id));
+
+    if (!producto) {
+        item.unidad_medida = '—';
+        return;
+    }
+
+    const um = producto.unidad_medida ?? producto.unidadMedida ?? null;
+
+    if (um && typeof um === 'object') {
+        const nombre = String(um.nombre ?? '').trim();
+        const abreviatura = String(um.abreviatura ?? '').trim();
+
+        item.unidad_medida = nombre && abreviatura
+            ? `${nombre} (${abreviatura})`
+            : (nombre || abreviatura || '—');
+        return;
+    }
+
+    if (typeof um === 'string' && um.trim()) {
+        item.unidad_medida = um.trim();
+        return;
+    }
+
+    item.unidad_medida = '—';
+}
+
+function calculateSuggestedSalePrice(cost) {
+    const numericCost = Number(cost || 0);
+    if (numericCost <= 0) return 0;
+
+    const factor = 1 + (Number(porcentajeUtilidadCompra.value || 0) / 100);
+
+    return Number((numericCost * factor).toFixed(4));
+}
+
+function syncSuggestedSalePrice(item, force = false) {
+    if (item.precio_venta_manual && !force) return;
+    item.precio_venta = calculateSuggestedSalePrice(item.costo_unitario);
+}
+
+function handleCostInput(item) {
+    syncSuggestedSalePrice(item);
+}
+
+function handleSalePriceInput(item, event) {
+    const rawValue = String(event?.target?.value ?? '').trim();
+
+    if (rawValue === '') {
+        item.precio_venta_manual = false;
+        syncSuggestedSalePrice(item, true);
+        return;
+    }
+
+    item.precio_venta_manual = true;
+}
+
+function normalizeQuantityInput(item) {
+    const value = Number(item.cantidad || 0);
+
+    if (!Number.isFinite(value) || value <= 0) {
+        item.cantidad = 1;
+        return;
+    }
+
+    item.cantidad = Math.max(1, Math.trunc(value));
 }
 
 function removeItem(index) {
@@ -371,10 +460,35 @@ function removeItem(index) {
 }
 
 async function save() {
+    const validationErrors = [];
+
+    if (!form.value.fecha_compra) {
+        validationErrors.push('La fecha de compra es obligatoria.');
+    }
+
     if (!form.value.proveedor?.id) {
-        formErrors.value = ['Seleccione un proveedor válido de la lista.'];
+        validationErrors.push('Seleccione un proveedor válido de la lista.');
+    }
+
+    if (!form.value.items.length) {
+        validationErrors.push('Debe agregar al menos un item.');
+    }
+
+    form.value.items.forEach((item, index) => {
+        const row = index + 1;
+
+        if (!item.producto?.id) validationErrors.push(`Item ${row}: el producto es obligatorio.`);
+        if (!Number.isInteger(Number(item.cantidad)) || Number(item.cantidad) < 1) validationErrors.push(`Item ${row}: la cantidad debe ser un entero mayor o igual a 1.`);
+        if (Number(item.costo_unitario || 0) <= 0) validationErrors.push(`Item ${row}: el costo unitario es obligatorio y debe ser mayor a 0.`);
+        if (Number(item.precio_venta || 0) <= 0) validationErrors.push(`Item ${row}: el precio de venta es obligatorio y debe ser mayor a 0.`);
+        if (!item.fecha_caducidad) validationErrors.push(`Item ${row}: la fecha de caducidad es obligatoria.`);
+    });
+
+    if (validationErrors.length) {
+        formErrors.value = validationErrors;
         return;
     }
+
     saving.value = true;
     formErrors.value = [];
     alerts.value = [];
@@ -383,12 +497,12 @@ async function save() {
             proveedor_id: form.value.proveedor.id,
             fecha_compra: form.value.fecha_compra,
             observaciones: form.value.observaciones || null,
-            items: form.value.items.filter((item) => item.producto_id).map((item) => ({
+            items: form.value.items.map((item) => ({
                 producto_id: item.producto_id,
-                cantidad: Number(item.cantidad || 0),
+                cantidad: Math.max(1, Math.trunc(Number(item.cantidad || 0))),
                 costo_unitario: Number(item.costo_unitario || 0),
-                precio_venta: item.precio_venta === '' || item.precio_venta === null ? null : Number(item.precio_venta),
-                fecha_caducidad: item.fecha_caducidad || null,
+                precio_venta: Number(item.precio_venta),
+                fecha_caducidad: item.fecha_caducidad,
             })),
         };
 
@@ -409,26 +523,39 @@ function formatDate(value) {
     return new Date(value).toLocaleDateString('es-GT');
 }
 
-async function anularCompra(compra) {
+function openAnularCompra(compra) {
     if (!compra?.id || compra.estado !== 'activo') return;
 
-    const ok = window.confirm(`Se anulara la compra ${compra.numero}. Esta accion revierte inventario. Deseas continuar?`);
-    if (!ok) return;
+    selectedCompra.value = compra;
+    anularError.value = '';
+    anularModalRef.value?.open();
+}
+
+function onAnularModalHidden() {
+    anularError.value = '';
+}
+
+async function confirmAnularCompra() {
+    if (!selectedCompra.value?.id) return;
 
     saving.value = true;
     formErrors.value = [];
     try {
-        const { data } = await axios.patch(`/compras/anular/${compra.id}`);
-        const idx = compras.value.findIndex((row) => row.id === compra.id);
+        const { data } = await axios.patch(`/compras/anular/${selectedCompra.value.id}`);
+        const idx = compras.value.findIndex((row) => row.id === selectedCompra.value.id);
         if (idx >= 0) {
             compras.value[idx] = {
                 ...compras.value[idx],
                 ...data.data,
             };
         }
+
+        anularModalRef.value?.close();
     } catch (error) {
         const backend = error.response?.data?.errors;
-        formErrors.value = backend ? Object.values(backend).flat() : [error.response?.data?.message ?? 'No se pudo anular la compra.'];
+        anularError.value = backend
+            ? Object.values(backend).flat().join(' ')
+            : (error.response?.data?.message ?? 'No se pudo anular la compra.');
     } finally {
         saving.value = false;
     }

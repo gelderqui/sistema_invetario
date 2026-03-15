@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Categoria;
 use App\Models\Compra;
 use App\Models\CompraDetalle;
+use App\Models\Configuracion;
 use App\Models\InventarioLote;
 use App\Models\InventarioMovimiento;
 use App\Models\Producto;
@@ -78,6 +79,7 @@ class CompraController extends Controller
                 'categorias'          => $categorias,
                 'proveedores'         => $proveedores,
                 'proveedor_general_id' => $proveedorGeneral,
+                'porcentaje_utilidad_compra' => (int) Configuracion::valor('porcentaje_utilidad_compra', 25),
                 'productos'           => $productos,
             ],
         ]);
@@ -85,18 +87,28 @@ class CompraController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'proveedor_id' => ['required', Rule::exists('proveedores', 'id')],
-            'fecha_compra' => ['required', 'date'],
-            'observaciones' => ['nullable', 'string'],
-            'items' => ['required', 'array', 'min:1'],
-            'items.*.producto_id' => ['required', Rule::exists('productos', 'id')],
-            'items.*.cantidad' => ['required', 'numeric', 'gt:0'],
-            'items.*.costo_unitario' => ['required', 'numeric', 'gt:0'],
-            'items.*.precio_venta' => ['nullable', 'numeric', 'gte:0'],
-            'items.*.fecha_caducidad' => ['nullable', 'date'],
-            'items.*.nota' => ['nullable', 'string', 'max:255'],
-        ]);
+        $validated = $request->validate(
+            [
+                'proveedor_id' => ['required', Rule::exists('proveedores', 'id')],
+                'fecha_compra' => ['required', 'date'],
+                'observaciones' => ['nullable', 'string'],
+                'items' => ['required', 'array', 'min:1'],
+                'items.*.producto_id' => ['required', Rule::exists('productos', 'id'), 'distinct'],
+                'items.*.cantidad' => ['required', 'integer', 'min:1'],
+                'items.*.costo_unitario' => ['required', 'numeric', 'gt:0'],
+                'items.*.precio_venta' => ['required', 'numeric', 'gt:0'],
+                'items.*.fecha_caducidad' => ['required', 'date'],
+                'items.*.nota' => ['nullable', 'string', 'max:255'],
+            ],
+            [
+                'items.*.cantidad.integer' => 'La cantidad debe ser un numero entero.',
+                'items.*.cantidad.min' => 'La cantidad debe ser mayor o igual a 1.',
+                'items.*.producto_id.required' => 'Debe seleccionar un producto para cada item.',
+                'items.*.producto_id.distinct' => 'No puede repetir el mismo producto en varios items de la compra.',
+                'items.*.precio_venta.required' => 'El precio de venta es obligatorio para cada item.',
+                'items.*.fecha_caducidad.required' => 'La fecha de caducidad es obligatoria para cada item.',
+            ]
+        );
 
         $proveedorActivo = Proveedor::query()
             ->whereKey($validated['proveedor_id'])
@@ -109,7 +121,10 @@ class CompraController extends Controller
             ]);
         }
 
-        $result = DB::transaction(function () use ($validated) {
+        $porcentajeUtilidadCompra = max(0, (int) Configuracion::valor('porcentaje_utilidad_compra', 25));
+        $userId = (int) $request->user()->id;
+
+        $result = DB::transaction(function () use ($validated, $porcentajeUtilidadCompra, $userId) {
             $numeroCompra = sprintf(
                 'CMP-%s-%03d',
                 now()->format('YmdHis'),
@@ -123,7 +138,7 @@ class CompraController extends Controller
                 'estado' => 'activo',
                 'total' => 0,
                 'observaciones' => $validated['observaciones'] ?? null,
-                'add_user' => getUserId(),
+                'add_user' => $userId,
             ]);
 
             $total = 0.0;
@@ -138,7 +153,7 @@ class CompraController extends Controller
                     ]);
                 }
 
-                $cantidad = toMoney($item['cantidad'], 4);
+                $cantidad = toMoney((int) $item['cantidad'], 4);
                 $unidadMedidaSnap = $producto->unidadMedida?->abreviatura ?? 'und';
                 $costoUnitario = toMoney($item['costo_unitario'], 4);
                 $subtotal = toMoney($cantidad * $costoUnitario, 4);
@@ -148,13 +163,8 @@ class CompraController extends Controller
                 $costoAnterior = (float) $producto->costo_promedio;
                 $costoPromedioNuevo = weightedAverageCost($stockAnterior, $costoAnterior, $cantidad, $costoUnitario);
 
-                $ratioVenta = $costoAnterior > 0
-                    ? ((float) $producto->precio_venta / $costoAnterior)
-                    : 1.35;
-                $ratioVenta = $ratioVenta <= 0 ? 1.35 : $ratioVenta;
-
-                $precioVentaSugerido = toMoney($costoPromedioNuevo * $ratioVenta, 4);
-                $precioVentaAplicado = toMoney($item['precio_venta'] ?? $precioVentaSugerido, 4);
+                $precioVentaSugerido = $this->calcularPrecioVentaSugerido($costoUnitario, $porcentajeUtilidadCompra);
+                $precioVentaAplicado = toMoney($item['precio_venta'], 4);
 
                 if (abs($precioVentaAplicado - $precioVentaSugerido) > 0.0001) {
                     $alerts[] = sprintf(
@@ -198,7 +208,7 @@ class CompraController extends Controller
                     'costo_unitario' => $costoUnitario,
                     'referencia' => $compra->numero,
                     'nota' => $item['nota'] ?? null,
-                    'add_user' => getUserId(),
+                    'add_user' => $userId,
                 ]);
 
                 $producto->update([
@@ -206,7 +216,7 @@ class CompraController extends Controller
                     'costo_promedio' => $costoPromedioNuevo,
                     'stock_actual'   => $stockNuevo,
                     'precio_venta'   => $precioVentaAplicado,
-                    'mod_user'       => getUserId(),
+                    'mod_user'       => $userId,
                 ]);
 
                 $total += $subtotal;
@@ -214,7 +224,7 @@ class CompraController extends Controller
 
             $compra->update([
                 'total' => toMoney($total, 4),
-                'mod_user' => getUserId(),
+                'mod_user' => $userId,
             ]);
 
             return [
@@ -228,6 +238,13 @@ class CompraController extends Controller
             'data' => $result['compra'],
             'alerts' => $result['alerts'],
         ], 201);
+    }
+
+    private function calcularPrecioVentaSugerido(float $costoUnitario, int $porcentajeUtilidadCompra): float
+    {
+        $factor = 1 + ($porcentajeUtilidadCompra / 100);
+
+        return toMoney($costoUnitario * $factor, 4);
     }
 
     public function anular(Request $request, Compra $compra): JsonResponse

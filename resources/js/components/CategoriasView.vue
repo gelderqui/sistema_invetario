@@ -253,7 +253,7 @@ const displayedCategorias = computed(() => {
 async function loadCategorias() {
     loading.value = true;
     try {
-        const { data } = await axios.get('/catalogos/categorias/get');
+        const { data } = await axios.get('/categorias/get');
         categorias.value = data.data;
     } finally {
         loading.value = false;
@@ -302,11 +302,11 @@ async function save() {
     formErrors.value = [];
     try {
         if (editingId.value) {
-            const { data } = await axios.put(`/catalogos/categorias/update/${editingId.value}`, form.value);
+            const { data } = await axios.put(`/categorias/update/${editingId.value}`, form.value);
             const idx = categorias.value.findIndex((c) => c.id === editingId.value);
             if (idx !== -1) categorias.value[idx] = { ...categorias.value[idx], ...data.data };
         } else {
-            const { data } = await axios.post('/catalogos/categorias/store', form.value);
+            const { data } = await axios.post('/categorias/store', form.value);
             categorias.value.push({ ...data.data, productos_count: 0 });
             categorias.value.sort((a, b) => a.nombre.localeCompare(b.nombre));
         }
@@ -324,7 +324,7 @@ async function save() {
 async function confirmToggle() {
     toggling.value = true;
     try {
-        const { data } = await axios.patch(`/catalogos/categorias/toggle/${selected.value.id}`);
+        const { data } = await axios.patch(`/categorias/toggle/${selected.value.id}`);
         const idx = categorias.value.findIndex((c) => c.id === selected.value.id);
         if (idx !== -1) categorias.value[idx] = { ...categorias.value[idx], activo: data.data.activo };
         confirmModalRef.value?.close();
@@ -337,7 +337,7 @@ async function confirmDelete() {
     deleting.value = true;
     deleteError.value = '';
     try {
-        await axios.delete(`/catalogos/categorias/destroy/${selected.value.id}`);
+        await axios.delete(`/categorias/destroy/${selected.value.id}`);
         categorias.value = categorias.value.filter((c) => c.id !== selected.value.id);
         confirmModalRef.value?.close();
     } catch (error) {

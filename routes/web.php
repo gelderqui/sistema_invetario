@@ -35,9 +35,11 @@ Route::prefix('api')->group(function (): void {
 
     Route::middleware('guest')->get('/configuraciones/get/login', [ConfiguracionController::class, 'login']);
 
-    Route::middleware(['auth:sanctum', 'permission', 'ajax'])->group(function (): void {
+    Route::middleware(['auth:sanctum', 'ajax'])->group(function (): void {
         Route::get('/configuraciones/get/publicas', [ConfiguracionController::class, 'publicas']);
+    });
 
+    Route::middleware(['auth:sanctum', 'permission', 'ajax'])->group(function (): void {
         Route::get('/dashboard/get', [DashboardController::class, 'index']);
 
         Route::prefix('usuarios')->group(function (): void {
@@ -55,7 +57,7 @@ Route::prefix('api')->group(function (): void {
             Route::delete('/destroy/{role}', [RoleManagementController::class, 'destroy']);
         });
 
-        Route::get('/permissions/get', [PermissionCatalogController::class, 'index']);
+        Route::get('/permissions/get', [PermissionCatalogController::class, 'index'])->middleware('permission:roles');
 
         Route::prefix('configuraciones')->group(function (): void {
             Route::get('/get', [ConfiguracionController::class, 'index']);
@@ -64,42 +66,40 @@ Route::prefix('api')->group(function (): void {
             Route::delete('/destroy/{configuracion}', [ConfiguracionController::class, 'destroy']);
         });
 
-        Route::prefix('catalogos')->group(function (): void {
-            Route::prefix('categorias')->group(function (): void {
-                Route::get('/get', [CategoriaController::class, 'index']);
-                Route::post('/store', [CategoriaController::class, 'store']);
-                Route::put('/update/{categoria}', [CategoriaController::class, 'update']);
-                Route::patch('/toggle/{categoria}', [CategoriaController::class, 'toggle']);
-                Route::delete('/destroy/{categoria}', [CategoriaController::class, 'destroy']);
-            });
+        Route::prefix('categorias')->group(function (): void {
+            Route::get('/get', [CategoriaController::class, 'index']);
+            Route::post('/store', [CategoriaController::class, 'store']);
+            Route::put('/update/{categoria}', [CategoriaController::class, 'update']);
+            Route::patch('/toggle/{categoria}', [CategoriaController::class, 'toggle']);
+            Route::delete('/destroy/{categoria}', [CategoriaController::class, 'destroy']);
+        });
 
-            Route::prefix('productos')->group(function (): void {
-                Route::get('/get', [ProductoController::class, 'index']);
-                Route::post('/store', [ProductoController::class, 'store']);
-                Route::put('/update/{producto}', [ProductoController::class, 'update']);
-                Route::patch('/toggle/{producto}', [ProductoController::class, 'toggle']);
-                Route::delete('/destroy/{producto}', [ProductoController::class, 'destroy']);
-            });
+        Route::prefix('productos')->group(function (): void {
+            Route::get('/get', [ProductoController::class, 'index']);
+            Route::post('/store', [ProductoController::class, 'store']);
+            Route::put('/update/{producto}', [ProductoController::class, 'update']);
+            Route::patch('/toggle/{producto}', [ProductoController::class, 'toggle']);
+            Route::delete('/destroy/{producto}', [ProductoController::class, 'destroy']);
+        });
 
-            Route::prefix('proveedores')->group(function (): void {
-                Route::get('/get', [ProveedorController::class, 'index']);
-                Route::post('/store', [ProveedorController::class, 'store']);
-                Route::put('/update/{proveedor}', [ProveedorController::class, 'update']);
-                Route::patch('/toggle/{proveedor}', [ProveedorController::class, 'toggle']);
-                Route::delete('/destroy/{proveedor}', [ProveedorController::class, 'destroy']);
-            });
+        Route::prefix('proveedores')->group(function (): void {
+            Route::get('/get', [ProveedorController::class, 'index']);
+            Route::post('/store', [ProveedorController::class, 'store']);
+            Route::put('/update/{proveedor}', [ProveedorController::class, 'update']);
+            Route::patch('/toggle/{proveedor}', [ProveedorController::class, 'toggle']);
+            Route::delete('/destroy/{proveedor}', [ProveedorController::class, 'destroy']);
+        });
 
-            Route::prefix('clientes')->group(function (): void {
-                Route::get('/get', [ClienteController::class, 'index']);
-                Route::post('/store', [ClienteController::class, 'store']);
-                Route::put('/update/{cliente}', [ClienteController::class, 'update']);
-                Route::patch('/toggle/{cliente}', [ClienteController::class, 'toggle']);
-                Route::delete('/destroy/{cliente}', [ClienteController::class, 'destroy']);
-            });
+        Route::prefix('clientes')->group(function (): void {
+            Route::get('/get', [ClienteController::class, 'index']);
+            Route::post('/store', [ClienteController::class, 'store']);
+            Route::put('/update/{cliente}', [ClienteController::class, 'update']);
+            Route::patch('/toggle/{cliente}', [ClienteController::class, 'toggle']);
+            Route::delete('/destroy/{cliente}', [ClienteController::class, 'destroy']);
+        });
 
-            Route::prefix('medidas')->group(function (): void {
-                Route::get('/get', [MedidaController::class, 'index']);
-            });
+        Route::prefix('medidas')->group(function (): void {
+            Route::get('/get', [MedidaController::class, 'index'])->middleware('permission:productos');
         });
 
         Route::prefix('compras')->group(function (): void {

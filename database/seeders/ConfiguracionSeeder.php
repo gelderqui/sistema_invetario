@@ -37,6 +37,12 @@ class ConfiguracionSeeder extends Seeder
                 'value' => '15',
                 'activo' => true,
             ],
+            [
+                'codigo' => 'porcentaje_utilidad_compra',
+                'descripcion' => 'Porcentaje entero usado en compras para sugerir el precio de venta sobre el costo.',
+                'value' => '25',
+                'activo' => true,
+            ],
         ];
 
         foreach ($items as $item) {

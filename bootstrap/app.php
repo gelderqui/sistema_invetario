@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__.'/../app/Support/helpers.php';
+
 use App\Http\Middleware\CheckPermission;
 use App\Http\Middleware\EnsureAjaxRequest;
 use Illuminate\Foundation\Application;

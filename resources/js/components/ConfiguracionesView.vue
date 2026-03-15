@@ -198,6 +198,7 @@ function inputMinPorCodigo(codigo) {
 function ayudaPorCodigo(codigo) {
     if (codigo === 'nombre_empresa') return 'Texto requerido.';
     if (codigo === 'devolucion_limite_dias_cajero') return 'Solo entero. Minimo 2.';
+    if (codigo === 'porcentaje_utilidad_compra') return 'Porcentaje entero usado en compras para sugerir el precio de venta. Minimo 0.';
     if (esCodigoEntero(codigo)) return 'Solo entero. Minimo 0.';
     return 'Este campo es obligatorio.';
 }

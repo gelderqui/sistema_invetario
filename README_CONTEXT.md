@@ -135,6 +135,7 @@ Codigos base:
 - `tiempo_sesion`: entero (dias)
 - `caja_alerta_faltante_monto`: entero (Q)
 - `devolucion_limite_dias_cajero`: entero
+- `porcentaje_utilidad_compra`: entero (%)
 
 Reglas:
 
@@ -142,6 +143,7 @@ Reglas:
 - Las demas configuraciones aceptan entero.
 - Enteros: minimo `0`.
 - Excepcion: `devolucion_limite_dias_cajero` minimo `2`.
+- `porcentaje_utilidad_compra` define el precio sugerido en compras como `costo + porcentaje`.
 
 Defaults actuales (seeder):
 
@@ -149,6 +151,7 @@ Defaults actuales (seeder):
 - `tiempo_sesion = 1` (dia)
 - `caja_alerta_faltante_monto = 50`
 - `devolucion_limite_dias_cajero = 15`
+- `porcentaje_utilidad_compra = 25`
 
 ## 6) Roles y alcance
 

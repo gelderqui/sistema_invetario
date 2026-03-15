@@ -26,6 +26,8 @@ class ConfiguracionController extends Controller
 
     public function index(): JsonResponse
     {
+        $this->ensureDefaults();
+
         $items = Configuracion::query()
             ->orderBy('codigo')
             ->get([
@@ -153,5 +155,17 @@ class ConfiguracionController extends Controller
         }
 
         return (string) $valorEntero;
+    }
+
+    private function ensureDefaults(): void
+    {
+        Configuracion::query()->updateOrCreate(
+            ['codigo' => 'porcentaje_utilidad_compra'],
+            [
+                'descripcion' => 'Porcentaje de venta en compras para sugerir precio sobre el costo.',
+                'value' => Configuracion::query()->where('codigo', 'porcentaje_utilidad_compra')->value('value') ?? '25',
+                'activo' => true,
+            ]
+        );
     }
 }

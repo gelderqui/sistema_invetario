@@ -166,6 +166,7 @@ Codigos vigentes:
 - `tiempo_sesion` (entero en dias)
 - `caja_alerta_faltante_monto` (entero)
 - `devolucion_limite_dias_cajero` (entero)
+- `porcentaje_utilidad_compra` (entero en porcentaje)
 
 Reglas:
 
@@ -173,6 +174,7 @@ Reglas:
 - Las demas configuraciones aceptan entero.
 - Minimo entero general: 0.
 - Excepcion: `devolucion_limite_dias_cajero` minimo 2.
+- En Compras, el precio de venta sugerido se calcula como costo + `porcentaje_utilidad_compra`.
 
 ## 11. Criterios para cambios futuros
 
@@ -194,6 +196,8 @@ Al agregar o modificar reglas, validar siempre:
 - En usuarios, filtros por estado y nombre funcionan sobre listados grandes.
 - Proveedor inactivo no aparece en compras.
 - No se puede registrar compra con proveedor inactivo.
+- En compras, la cantidad solo acepta enteros.
+- En compras, el precio de venta se sugiere automaticamente segun costo + porcentaje configurable, aunque puede editarse por item.
 - Proveedor con compras no se elimina; solo se desactiva.
 - Categoria inactiva no aparece al crear/editar producto.
 - No se puede asignar categoria inactiva por backend.

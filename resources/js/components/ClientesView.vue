@@ -185,7 +185,7 @@ const actionLocked = computed(() => loading.value || saving.value || toggling.va
 async function loadClientes() {
   loading.value = true;
   try {
-    const { data } = await axios.get('/catalogos/clientes/get');
+    const { data } = await axios.get('/clientes/get');
     clientes.value = data.data;
   } finally {
     loading.value = false;
@@ -247,11 +247,11 @@ async function save() {
     };
 
     if (editingId.value) {
-      const { data } = await axios.put(`/catalogos/clientes/update/${editingId.value}`, payload);
+      const { data } = await axios.put(`/clientes/update/${editingId.value}`, payload);
       const idx = clientes.value.findIndex((x) => x.id === editingId.value);
       if (idx !== -1) clientes.value[idx] = data.data;
     } else {
-      const { data } = await axios.post('/catalogos/clientes/store', payload);
+      const { data } = await axios.post('/clientes/store', payload);
       clientes.value.push(data.data);
       clientes.value.sort((a, b) => a.nombre.localeCompare(b.nombre));
     }
@@ -268,7 +268,7 @@ async function save() {
 async function confirmToggle() {
   toggling.value = true;
   try {
-    const { data } = await axios.patch(`/catalogos/clientes/toggle/${selected.value.id}`);
+    const { data } = await axios.patch(`/clientes/toggle/${selected.value.id}`);
     const idx = clientes.value.findIndex((x) => x.id === selected.value.id);
     if (idx !== -1) clientes.value[idx].activo = data.data.activo;
     confirmModalRef.value?.close();
@@ -280,7 +280,7 @@ async function confirmToggle() {
 async function confirmDelete() {
   deleting.value = true;
   try {
-    await axios.delete(`/catalogos/clientes/destroy/${selected.value.id}`);
+    await axios.delete(`/clientes/destroy/${selected.value.id}`);
     clientes.value = clientes.value.filter((x) => x.id !== selected.value.id);
     confirmModalRef.value?.close();
   } finally {

@@ -289,6 +289,7 @@
                                             class="form-check-input"
                                         >
                                         <label class="form-check-label" for="p-activo">Activo</label>
+                                        <div class="form-text">Si lo desactivas, el producto dejara de mostrarse en Ventas y Compras, pero su historial se conserva.</div>
                                     </div>
                                 </div>
                             </div>
@@ -402,7 +403,17 @@ const confirmMessage = computed(() => {
 
     return `¿Desea ${selected.value?.activo ? 'desactivar' : 'activar'} el producto <strong>${selected.value?.nombre ?? ''}</strong>?`;
 });
-const confirmHint = computed(() => (confirmMode.value === 'delete' ? 'Esta accion no se puede deshacer.' : ''));
+const confirmHint = computed(() => {
+    if (confirmMode.value === 'delete') {
+        return 'Esta accion no se puede deshacer.';
+    }
+
+    if (selected.value?.activo) {
+        return 'Al desactivarlo, dejara de mostrarse en Ventas y Compras hasta que vuelva a activarse.';
+    }
+
+    return 'Al activarlo, volvera a mostrarse en Ventas y Compras.';
+});
 const confirmConfirmText = computed(() => (confirmMode.value === 'delete' ? 'Eliminar' : 'Confirmar'));
 const confirmLoading = computed(() => (confirmMode.value === 'delete' ? deleting.value : toggling.value));
 const actionLocked = computed(() => loading.value || saving.value || toggling.value || deleting.value);
@@ -448,7 +459,7 @@ const displayedProductos = computed(() => {
 async function loadProductos() {
     loading.value = true;
     try {
-        const { data } = await axios.get('/catalogos/productos/get');
+        const { data } = await axios.get('/productos/get');
         productos.value = data.data;
     } finally {
         loading.value = false;
@@ -456,17 +467,17 @@ async function loadProductos() {
 }
 
 async function loadCategorias() {
-    const { data } = await axios.get('/catalogos/categorias/get?solo_activas=1');
+    const { data } = await axios.get('/categorias/get?solo_activas=1');
     categoriasActivas.value = data.data;
 }
 
 async function loadProveedores() {
-    const { data } = await axios.get('/catalogos/proveedores/get');
+    const { data } = await axios.get('/proveedores/get');
     proveedoresActivos.value = (data.data ?? []).filter((item) => item.activo);
 }
 
 async function loadMedidas() {
-    const { data } = await axios.get('/catalogos/medidas/get');
+    const { data } = await axios.get('/medidas/get');
     medidasActivas.value = data.data ?? [];
 }
 
@@ -556,11 +567,11 @@ async function save() {
         };
 
         if (editingId.value) {
-            const { data } = await axios.put(`/catalogos/productos/update/${editingId.value}`, payload);
+            const { data } = await axios.put(`/productos/update/${editingId.value}`, payload);
             const idx = productos.value.findIndex((p) => p.id === editingId.value);
             if (idx !== -1) productos.value[idx] = data.data;
         } else {
-            const { data } = await axios.post('/catalogos/productos/store', payload);
+            const { data } = await axios.post('/productos/store', payload);
             productos.value.push(data.data);
             productos.value.sort((a, b) => a.nombre.localeCompare(b.nombre));
         }
@@ -578,7 +589,7 @@ async function save() {
 async function confirmToggle() {
     toggling.value = true;
     try {
-        const { data } = await axios.patch(`/catalogos/productos/toggle/${selected.value.id}`);
+        const { data } = await axios.patch(`/productos/toggle/${selected.value.id}`);
         const idx = productos.value.findIndex((p) => p.id === selected.value.id);
         if (idx !== -1) productos.value[idx] = { ...productos.value[idx], activo: data.data.activo };
         confirmModalRef.value?.close();
@@ -590,7 +601,7 @@ async function confirmToggle() {
 async function confirmDelete() {
     deleting.value = true;
     try {
-        await axios.delete(`/catalogos/productos/destroy/${selected.value.id}`);
+        await axios.delete(`/productos/destroy/${selected.value.id}`);
         productos.value = productos.value.filter((p) => p.id !== selected.value.id);
         confirmModalRef.value?.close();
     } finally {

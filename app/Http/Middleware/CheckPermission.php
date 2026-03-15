@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Permission;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -53,73 +54,46 @@ class CheckPermission
             return $parsed->unique()->values();
         }
 
-        return collect($this->permissionsByRequest($request))->unique()->values();
+        $resolved = $this->permissionFromRoute($request);
+
+        if ($resolved === null) {
+            abort(404, 'Ruta no existe en permisos.');
+        }
+
+        return collect([$resolved]);
     }
 
-    private function permissionsByRequest(Request $request): array
+    private function permissionFromRoute(Request $request): ?string
     {
-        $path = preg_replace('/^api\//', '', $request->path()) ?? $request->path();
+        $rawPath = preg_replace('/^api\//', '', $request->path()) ?? $request->path();
+        $path = trim($rawPath, '/');
 
-        if (preg_match('/^dashboard\//', $path)) {
-            return ['dashboard'];
+        if ($path === '' || preg_match('/^auth\//', $path)) {
+            return null;
         }
 
-        if (preg_match('/^configuracion\/usuarios\//', $path)) {
-            return ['users'];
+        if ($path === 'dashboard/get') {
+            return 'dashboard';
         }
 
-        if (preg_match('/^configuracion\/(roles\/|permissions\/)/', $path)) {
-            return ['roles'];
+        $segments = explode('/', $path);
+        $candidates = [];
+
+        for ($i = count($segments); $i > 0; $i--) {
+            $candidates[] = '/'.implode('/', array_slice($segments, 0, $i));
         }
 
-        if (preg_match('/^configuracion\/configuraciones\//', $path)) {
-            return ['configuraciones'];
+        foreach ($candidates as $candidate) {
+            $permissionCode = Permission::query()
+                ->where('activo', true)
+                ->where('ruta', $candidate)
+                ->value('code');
+
+            if ($permissionCode) {
+                return (string) $permissionCode;
+            }
         }
 
-        if (preg_match('/^catalogos\/categorias\//', $path)) {
-            return ['categorias'];
-        }
-
-        if (preg_match('/^catalogos\/productos\//', $path)) {
-            return ['productos'];
-        }
-
-        if (preg_match('/^catalogos\/proveedores\//', $path)) {
-            return ['proveedores'];
-        }
-
-        if (preg_match('/^catalogos\/clientes\//', $path)) {
-            return ['cliente'];
-        }
-
-        if (preg_match('/^compras\//', $path)) {
-            return ['compras'];
-        }
-
-        if (preg_match('/^ventas\//', $path)) {
-            return ['ventas'];
-        }
-
-        if (preg_match('/^inventario\//', $path)) {
-            return ['inventario'];
-        }
-
-        if (preg_match('/^gastos\//', $path)) {
-            return ['gastos'];
-        }
-
-        if (preg_match('/^caja\//', $path)) {
-            return [];
-        }
-
-        if (preg_match('/^reportes\//', $path)) {
-            return ['reportes'];
-        }
-
-        if (preg_match('/^configuraciones\//', $path) || preg_match('/^auth\//', $path)) {
-            return [];
-        }
-
-        abort(404, 'Ruta no existe en permisos.');
+        return null;
     }
 }

@@ -25,6 +25,11 @@ return new class extends Migration
             $table->string('name');
             $table->string('code')->unique();
             $table->string('module')->nullable();
+            $table->string('module_label')->nullable();
+            $table->string('module_icono')->nullable();
+            $table->string('ruta')->nullable();
+            $table->string('icono')->nullable();
+            $table->unsignedSmallInteger('orden')->nullable();
             $table->string('description')->nullable();
             $table->boolean('activo')->default(true);
             $table->timestamps();

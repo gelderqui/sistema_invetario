@@ -13,6 +13,8 @@ return new class extends Migration
             $table->unsignedBigInteger('producto_id');
             $table->unsignedBigInteger('compra_id')->nullable();
             $table->unsignedBigInteger('compra_detalle_id')->nullable();
+            $table->unsignedBigInteger('venta_id')->nullable();
+            $table->unsignedBigInteger('venta_detalle_id')->nullable();
             $table->string('tipo', 20);
             $table->decimal('cantidad', 12, 4);
             $table->decimal('stock_anterior', 12, 4)->default(0);
@@ -28,6 +30,8 @@ return new class extends Migration
             $table->foreign('compra_detalle_id')->references('id')->on('compra_detalles')->nullOnDelete();
             $table->foreign('add_user')->references('id')->on('users')->nullOnDelete();
             $table->index(['producto_id', 'created_at']);
+            $table->index('venta_id');
+            $table->index('venta_detalle_id');
         });
     }
 

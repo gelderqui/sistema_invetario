@@ -22,10 +22,20 @@ return new class extends Migration
             $table->foreign('producto_id')->references('id')->on('productos')->restrictOnDelete();
             $table->index(['producto_id', 'venta_id']);
         });
+
+        Schema::table('inventario_movimientos', function (Blueprint $table): void {
+            $table->foreign('venta_id')->references('id')->on('ventas')->nullOnDelete();
+            $table->foreign('venta_detalle_id')->references('id')->on('venta_detalles')->nullOnDelete();
+        });
     }
 
     public function down(): void
     {
+        Schema::table('inventario_movimientos', function (Blueprint $table): void {
+            $table->dropForeign(['venta_id']);
+            $table->dropForeign(['venta_detalle_id']);
+        });
+
         Schema::dropIfExists('venta_detalles');
     }
 };

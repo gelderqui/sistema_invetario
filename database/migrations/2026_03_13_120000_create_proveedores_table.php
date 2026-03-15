@@ -22,10 +22,18 @@ return new class extends Migration
             $table->foreign('mod_user')->references('id')->on('users')->nullOnDelete();
             $table->timestamps();
         });
+
+        Schema::table('productos', function (Blueprint $table): void {
+            $table->foreign('proveedor_id')->references('id')->on('proveedores')->nullOnDelete();
+        });
     }
 
     public function down(): void
     {
+        Schema::table('productos', function (Blueprint $table): void {
+            $table->dropForeign(['proveedor_id']);
+        });
+
         Schema::dropIfExists('proveedores');
     }
 };

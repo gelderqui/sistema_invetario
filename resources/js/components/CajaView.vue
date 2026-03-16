@@ -31,7 +31,7 @@
                 <div class="row g-3 align-items-end">
                     <div class="col-12 col-md-4">
                         <label class="form-label">Fondo inicial</label>
-                        <input v-model.number="formApertura.monto_apertura" type="number" step="0.01" min="0" class="form-control" />
+                        <input v-model.number="formApertura.monto_apertura" type="number" step="0.01" min="0" class="form-control" :disabled="loading || !!cajaActiva" />
                     </div>
                     <div class="col-12 col-md-4 d-flex gap-2">
                         <button class="btn btn-brand" :disabled="loading || !!cajaActiva" @click="abrirCaja">Abrir caja</button>
@@ -118,7 +118,7 @@
                     </div>
                     <div class="col-12 col-md-4">
                         <label class="form-label">Dinero contado</label>
-                        <input v-model.number="formArqueo.monto_contado" type="number" min="0" step="0.01" class="form-control" />
+                        <input v-model.number="formArqueo.monto_contado" type="number" min="0" step="0.01" class="form-control" readonly disabled />
                     </div>
                     <div class="col-12 col-md-4 d-grid align-items-end">
                         <button class="btn btn-brand mt-4" :disabled="loading || !cajaActiva" @click="registrarArqueo">Registrar arqueo</button>
@@ -213,7 +213,7 @@ const section = computed(() => {
 const totalBilletes = computed(() => billetes.value.reduce((acc, row) => acc + Number(row.denominacion) * Number(row.cantidad || 0), 0));
 
 watch(totalBilletes, (v) => {
-    if (section.value === 'arqueo' && v > 0) {
+    if (section.value === 'arqueo') {
         formArqueo.value.monto_contado = Number(v.toFixed(2));
     }
 });

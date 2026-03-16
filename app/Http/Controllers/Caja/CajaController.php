@@ -137,6 +137,18 @@ class CajaController extends Controller
             $montoApertura = toMoney($validated['monto_apertura'], 4);
             $cajaGeneral = capitalCuentaPorCodigo('caja_general');
 
+            $yaAbiertaTransaccion = Caja::query()
+                ->lockForUpdate()
+                ->where('usuario_id', $user->id)
+                ->where('estado', 'abierta')
+                ->exists();
+
+            if ($yaAbiertaTransaccion) {
+                throw ValidationException::withMessages([
+                    'monto_apertura' => ['Ya existe una caja abierta para este usuario.'],
+                ]);
+            }
+
             if (! $cajaGeneral) {
                 throw ValidationException::withMessages([
                     'monto_apertura' => ['No existe una cuenta activa de caja general para fondear la apertura.'],
@@ -388,6 +400,12 @@ class CajaController extends Controller
 
         $diferencia = toMoney($montoContadoFinal - $resumen['monto_sistema'], 4);
         $alerta = $this->resolverAlertaDiferencia($diferencia);
+
+        if ($alerta !== null) {
+            throw ValidationException::withMessages([
+                'monto_contado' => [$alerta['mensaje'].' Debe regularizar caja antes del cierre.'],
+            ]);
+        }
 
         DB::transaction(function () use ($validated, $resumen, $montoContadoFinal, $diferencia, $caja, $user) {
             $fechaCierre = $validated['fecha_cierre'] ?? now()->toDateTimeString();

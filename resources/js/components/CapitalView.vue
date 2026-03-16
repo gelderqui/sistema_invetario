@@ -42,7 +42,7 @@
                         <label class="form-label">Cuenta origen</label>
                         <select v-model="form.cuenta_origen_id" class="form-select">
                             <option :value="null">Seleccione</option>
-                            <option v-for="cuenta in catalogs.cuentas" :key="`origen-${cuenta.id}`" :value="cuenta.id">
+                            <option v-for="cuenta in originAccounts" :key="`origen-${cuenta.id}`" :value="cuenta.id">
                                 {{ cuenta.nombre }} | Q {{ q(cuenta.saldo_actual) }}
                             </option>
                         </select>
@@ -52,7 +52,7 @@
                         <label class="form-label">Cuenta destino</label>
                         <select v-model="form.cuenta_destino_id" class="form-select">
                             <option :value="null">Seleccione</option>
-                            <option v-for="cuenta in catalogs.cuentas" :key="`destino-${cuenta.id}`" :value="cuenta.id">
+                            <option v-for="cuenta in destinationAccounts" :key="`destino-${cuenta.id}`" :value="cuenta.id">
                                 {{ cuenta.nombre }} | Q {{ q(cuenta.saldo_actual) }}
                             </option>
                         </select>
@@ -64,8 +64,8 @@
                     </div>
 
                     <div class="col-12 col-md-3">
-                        <label class="form-label">Fecha</label>
-                        <input v-model="form.fecha" type="datetime-local" class="form-control" />
+                        <label class="form-label">Fecha actual</label>
+                        <div class="form-control bg-light-subtle">{{ currentDateLabel }}</div>
                     </div>
 
                     <div class="col-12 col-md-6">
@@ -118,7 +118,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import axios from '@/bootstrap';
 import { formatMoney } from '@/utils/formatters';
 
@@ -134,10 +134,35 @@ const emptyForm = () => ({
     cuenta_destino_id: null,
     monto: null,
     descripcion: '',
-    fecha: '',
 });
 
 const form = ref(emptyForm());
+
+const currentDateLabel = computed(() => new Date().toLocaleString('es-GT'));
+
+const originAccounts = computed(() => {
+    const selectedDestino = form.value.cuenta_destino_id;
+
+    return catalogs.value.cuentas.filter((cuenta) => cuenta.id !== selectedDestino);
+});
+
+const destinationAccounts = computed(() => {
+    const selectedOrigen = form.value.cuenta_origen_id;
+
+    return catalogs.value.cuentas.filter((cuenta) => cuenta.id !== selectedOrigen);
+});
+
+watch(() => form.value.cuenta_origen_id, (newValue) => {
+    if (newValue && newValue === form.value.cuenta_destino_id) {
+        form.value.cuenta_destino_id = null;
+    }
+});
+
+watch(() => form.value.cuenta_destino_id, (newValue) => {
+    if (newValue && newValue === form.value.cuenta_origen_id) {
+        form.value.cuenta_origen_id = null;
+    }
+});
 
 onMounted(async () => {
     await Promise.all([loadCatalogs(), loadData()]);
@@ -189,7 +214,6 @@ async function registrarMovimiento() {
         await axios.post('/capital/store', {
             ...form.value,
             monto: Number(form.value.monto || 0),
-            fecha: form.value.fecha || undefined,
         });
         form.value = emptyForm();
         await Promise.all([loadCatalogs(), loadData()]);

@@ -141,7 +141,6 @@ Route::prefix('api')->group(function (): void {
         Route::prefix('gastos')->group(function (): void {
             Route::get('/get', [GastoController::class, 'index']);
             Route::get('/get/catalogs', [GastoController::class, 'catalogs']);
-            Route::get('/get/reportes', [GastoController::class, 'reportes']);
             Route::post('/store', [GastoController::class, 'store']);
         });
 

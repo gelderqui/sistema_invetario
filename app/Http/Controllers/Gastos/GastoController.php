@@ -3,13 +3,14 @@
 namespace App\Http\Controllers\Gastos;
 
 use App\Http\Controllers\Controller;
+use App\Models\Caja;
 use App\Models\Gasto;
 use App\Models\TipoGasto;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class GastoController extends Controller
 {
@@ -35,65 +36,33 @@ class GastoController extends Controller
         ]);
     }
 
-    public function catalogs(): JsonResponse
+    public function catalogs(Request $request): JsonResponse
     {
         $tipos = TipoGasto::query()
             ->where('activo', true)
             ->orderBy('nombre')
             ->get(['id', 'nombre', 'descripcion']);
 
+        $cajaActiva = Caja::query()
+            ->where('usuario_id', $request->user()->id)
+            ->where('estado', 'abierta')
+            ->latest('id')
+            ->first(['id', 'fecha_apertura']);
+
+        $metodosPago = [
+            ['value' => 'caja_general', 'label' => 'Caja general'],
+            ['value' => 'banco', 'label' => 'Banco'],
+        ];
+
+        if ($cajaActiva) {
+            array_unshift($metodosPago, ['value' => 'caja', 'label' => 'Caja']);
+        }
+
         return response()->json([
             'data' => [
                 'tipos_gasto' => $tipos,
-                'metodos_pago' => ['caja', 'caja_chica', 'banco'],
-            ],
-        ]);
-    }
-
-    public function reportes(Request $request): JsonResponse
-    {
-        $desde = $request->filled('desde')
-            ? Carbon::parse((string) $request->input('desde'))->toDateString()
-            : Carbon::today()->startOfMonth()->toDateString();
-        $hasta = $request->filled('hasta')
-            ? Carbon::parse((string) $request->input('hasta'))->toDateString()
-            : Carbon::today()->toDateString();
-
-        $porDia = Gasto::query()
-            ->select([
-                DB::raw('fecha as fecha'),
-                DB::raw('COUNT(*) as cantidad'),
-                DB::raw('SUM(monto) as total'),
-            ])
-            ->whereBetween('fecha', [$desde, $hasta])
-            ->groupBy('fecha')
-            ->orderBy('fecha')
-            ->get();
-
-        $porTipo = Gasto::query()
-            ->join('tipos_gasto', 'tipos_gasto.id', '=', 'gastos.tipo_gasto_id')
-            ->select([
-                'tipos_gasto.id as tipo_gasto_id',
-                'tipos_gasto.nombre as tipo_nombre',
-                DB::raw('COUNT(gastos.id) as cantidad'),
-                DB::raw('SUM(gastos.monto) as total'),
-            ])
-            ->whereBetween('gastos.fecha', [$desde, $hasta])
-            ->groupBy('tipos_gasto.id', 'tipos_gasto.nombre')
-            ->orderByDesc('total')
-            ->get();
-
-        $totalPeriodo = (float) Gasto::query()
-            ->whereBetween('fecha', [$desde, $hasta])
-            ->sum('monto');
-
-        return response()->json([
-            'data' => [
-                'desde' => $desde,
-                'hasta' => $hasta,
-                'total_periodo' => toMoney($totalPeriodo, 4),
-                'por_dia' => $porDia,
-                'por_tipo' => $porTipo,
+                'metodos_pago' => $metodosPago,
+                'caja_activa' => $cajaActiva,
             ],
         ]);
     }
@@ -105,8 +74,31 @@ class GastoController extends Controller
             'descripcion' => ['required', 'string', 'max:255'],
             'monto' => ['required', 'numeric', 'gt:0'],
             'fecha' => ['required', 'date'],
-            'metodo_pago' => ['required', Rule::in(['caja', 'caja_chica', 'banco'])],
+            'metodo_pago' => ['required', Rule::in(['caja', 'caja_general', 'banco'])],
         ]);
+
+        $cajaActiva = null;
+        if ($validated['metodo_pago'] === 'caja') {
+            $cajaActiva = Caja::query()
+                ->where('usuario_id', $request->user()->id)
+                ->where('estado', 'abierta')
+                ->latest('id')
+                ->first();
+
+            if (! $cajaActiva) {
+                throw ValidationException::withMessages([
+                    'metodo_pago' => ['Solo puede usar Caja si el usuario tiene una caja abierta.'],
+                ]);
+            }
+
+            $fechaGasto = Carbon::parse((string) $validated['fecha'])->toDateString();
+            $fechaCaja = Carbon::parse((string) $cajaActiva->fecha_apertura)->toDateString();
+            if ($fechaGasto !== $fechaCaja) {
+                throw ValidationException::withMessages([
+                    'fecha' => ['La fecha del gasto debe coincidir con el dia de la caja abierta cuando el metodo de pago es Caja.'],
+                ]);
+            }
+        }
 
         $gasto = Gasto::query()->create([
             ...$validated,

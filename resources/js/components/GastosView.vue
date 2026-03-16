@@ -34,7 +34,7 @@
                             <td>{{ gasto.tipo_gasto?.nombre ?? '-' }}</td>
                             <td>{{ gasto.descripcion }}</td>
                             <td class="fw-semibold">Q {{ Number(gasto.monto ?? 0).toFixed(2) }}</td>
-                            <td class="text-uppercase">{{ gasto.metodo_pago }}</td>
+                            <td>{{ paymentMethodLabel(gasto.metodo_pago) }}</td>
                             <td>{{ gasto.usuario?.name ?? '-' }}</td>
                         </tr>
                     </tbody>
@@ -83,10 +83,13 @@
                                 <div class="col-12 col-md-6">
                                     <label class="form-label fw-semibold">Metodo de pago *</label>
                                     <select v-model="form.metodo_pago" class="form-select" required>
-                                        <option v-for="metodo in catalogs.metodos_pago" :key="metodo" :value="metodo">
-                                            {{ metodo }}
+                                        <option v-for="metodo in catalogs.metodos_pago" :key="metodo.value" :value="metodo.value">
+                                            {{ metodo.label }}
                                         </option>
                                     </select>
+                                    <div class="form-text">
+                                        El gasto siempre se registra. Solo afecta Caja cuando el metodo es Caja.
+                                    </div>
                                 </div>
                             </div>
 
@@ -125,7 +128,7 @@ import axios from '@/bootstrap';
 import FormErrors from '@/components/FormErrors.vue';
 
 const gastos = ref([]);
-const catalogs = ref({ tipos_gasto: [], metodos_pago: ['caja', 'caja_chica', 'banco'] });
+const catalogs = ref({ tipos_gasto: [], metodos_pago: [], caja_activa: null });
 const loading = ref(true);
 const saving = ref(false);
 const formErrors = ref([]);
@@ -138,7 +141,7 @@ const emptyForm = () => ({
     descripcion: '',
     monto: null,
     fecha: new Date().toISOString().slice(0, 10),
-    metodo_pago: 'caja',
+    metodo_pago: 'caja_general',
 });
 
 const form = ref(emptyForm());
@@ -166,10 +169,15 @@ async function loadGastos() {
 async function loadCatalogs() {
     const { data } = await axios.get('/gastos/get/catalogs');
     catalogs.value = data.data;
+
+    if (!catalogs.value.metodos_pago.some((metodo) => metodo.value === form.value.metodo_pago)) {
+        form.value.metodo_pago = catalogs.value.metodos_pago[0]?.value ?? 'caja_general';
+    }
 }
 
 function openCreate() {
     form.value = emptyForm();
+    form.value.metodo_pago = catalogs.value.metodos_pago[0]?.value ?? 'caja_general';
     formErrors.value = [];
     formModal.show();
 }
@@ -206,5 +214,16 @@ async function save() {
 function formatDate(value) {
     if (!value) return '-';
     return new Date(value).toLocaleDateString('es-GT');
+}
+
+function paymentMethodLabel(value) {
+    const labels = {
+        caja: 'Caja',
+        caja_general: 'Caja general',
+        caja_chica: 'Caja general',
+        banco: 'Banco',
+    };
+
+    return labels[value] ?? value ?? '-';
 }
 </script>

@@ -54,11 +54,17 @@
         </aside>
 
         <div class="flex-grow-1 d-flex flex-column" :class="sidebarVisible ? '' : 'w-100'">
-            <header class="bg-white border-bottom px-3 px-md-4 py-3 d-flex justify-content-between align-items-center">
+            <header class="bg-white border-bottom px-3 px-md-4 py-3 d-flex align-items-center gap-3">
                 <div class="d-flex align-items-center gap-3">
                     <button type="button" class="btn btn-outline-brand" @click="toggleSidebar">
                         <FontAwesomeIcon :icon="sidebarVisible ? 'fa-solid fa-bars-staggered' : 'fa-solid fa-bars'" />
                     </button>
+                </div>
+
+                <div class="flex-grow-1 text-center">
+                    <small class="text-body-secondary d-block">Hora del sistema (Guatemala)</small>
+                    <strong v-if="clockSyncedFromServer">{{ horaSistemaGuatemala }} {{ fechaSistemaGuatemala }}</strong>
+                    <strong v-else>Sincronizando...</strong>
                 </div>
 
                 <div class="dropdown">
@@ -218,6 +224,21 @@ import LoadingOverlay from '@/components/components_ui/LoadingOverlay.vue';
 import { isAppLoading } from '@/components/components_ui/loadingState';
 import { useAuthStore } from '@/stores/auth';
 
+const gtTimeFormatter = new Intl.DateTimeFormat('es-GT', {
+    timeZone: 'America/Guatemala',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+});
+
+const gtDateFormatter = new Intl.DateTimeFormat('es-GT', {
+    timeZone: 'America/Guatemala',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+});
+
 const authStore = useAuthStore();
 const route = useRoute();
 const router = useRouter();
@@ -231,9 +252,17 @@ const successToastRef = ref(null);
 const errorToastRef = ref(null);
 const successToastMessage = ref('');
 const errorToastMessage = ref('');
+const systemNow = ref(null);
+const serverClockOffsetMs = ref(0);
+const clockSyncedFromServer = ref(false);
 let passwordModal = null;
 let successToast = null;
 let errorToast = null;
+let systemClockTimer = null;
+let serverResyncTimer = null;
+
+const horaSistemaGuatemala = computed(() => (systemNow.value ? gtTimeFormatter.format(systemNow.value) : '--:--:--'));
+const fechaSistemaGuatemala = computed(() => (systemNow.value ? gtDateFormatter.format(systemNow.value) : '--/--/----'));
 
 const emptyPasswordForm = () => ({
     current_password: '',
@@ -327,8 +356,7 @@ watch(
         }
 
         try {
-            const { data } = await axios.get('/configuraciones/get/publicas');
-            nombreSistema.value = data?.nombre_empresa ?? nombreSistema.value;
+            await syncPublicConfigAndClock();
             configuracionCargada.value = true;
             if (!passwordModal && passwordModalRef.value) {
                 passwordModal = new Modal(passwordModalRef.value);
@@ -341,6 +369,18 @@ watch(
         }
     }
 );
+
+async function syncPublicConfigAndClock() {
+    const { data } = await axios.get('/configuraciones/get/publicas');
+    nombreSistema.value = data?.nombre_empresa ?? nombreSistema.value;
+
+    const serverEpochMs = Number(data?.server_epoch_ms ?? NaN);
+    if (Number.isFinite(serverEpochMs)) {
+        serverClockOffsetMs.value = serverEpochMs - Date.now();
+        systemNow.value = Date.now() + serverClockOffsetMs.value;
+        clockSyncedFromServer.value = true;
+    }
+}
 
 function toggleSidebar() {
     sidebarVisible.value = !sidebarVisible.value;
@@ -384,10 +424,28 @@ function onGlobalError(event) {
 
 onMounted(() => {
     window.addEventListener('app:error', onGlobalError);
+    systemClockTimer = window.setInterval(() => {
+        if (!clockSyncedFromServer.value) {
+            return;
+        }
+        systemNow.value = Date.now() + serverClockOffsetMs.value;
+    }, 1000);
+
+    serverResyncTimer = window.setInterval(() => {
+        if (showShell.value) {
+            void syncPublicConfigAndClock();
+        }
+    }, 30 * 60 * 1000);
 });
 
 onBeforeUnmount(() => {
     window.removeEventListener('app:error', onGlobalError);
+    if (systemClockTimer) {
+        window.clearInterval(systemClockTimer);
+    }
+    if (serverResyncTimer) {
+        window.clearInterval(serverResyncTimer);
+    }
 });
 
 async function submitChangePassword() {

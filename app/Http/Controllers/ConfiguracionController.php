@@ -18,9 +18,12 @@ class ConfiguracionController extends Controller
 
     public function publicas(): JsonResponse
     {
+        $serverNow = now();
+
         return response()->json([
             'nombre_empresa' => Configuracion::valor('nombre_empresa', config('app.name', 'Sistema POS e Inventario')),
             'tiempo_sesion' => (int) Configuracion::valor('tiempo_sesion', 1),
+            'server_epoch_ms' => $serverNow->getTimestampMs(),
         ]);
     }
 

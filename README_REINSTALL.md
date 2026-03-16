@@ -1,6 +1,6 @@
 # Reinstalacion del proyecto (WSL + Docker + Sail)
 
-Este documento permite reinstalar y ejecutar el proyecto desde cero en otra maquina.
+Este documento indica que debe hacer el siguiente programador para reinstalar y ejecutar el proyecto desde cero en su maquina local.
 
 ## 1. Requisitos
 
@@ -40,6 +40,12 @@ cp .env.example .env
 ```
 
 Revisar variables minimas en .env (DB, APP_URL, etc.) segun entorno local.
+
+Variable recomendada para operacion en Guatemala:
+
+```dotenv
+APP_TIMEZONE=America/Guatemala
+```
 
 ## 6. Levantar contenedores Sail
 
@@ -96,6 +102,11 @@ Despues de sembrar configuraciones, validar en el modulo Configuraciones:
 - `caja_aperturas_maximas_por_dia`: maximo de aperturas por usuario por dia.
 
 Ejemplo para doble turno: establecer `caja_aperturas_maximas_por_dia = 2`.
+
+Adicional:
+
+- El reloj mostrado en header toma hora base desde backend.
+- El frontend solo anima segundos y resincroniza con backend cada 30 minutos.
 
 ## 11. Comandos utiles diarios
 

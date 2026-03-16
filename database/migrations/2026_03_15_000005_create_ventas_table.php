@@ -13,6 +13,7 @@ return new class extends Migration
             $table->string('numero')->unique();
             $table->unsignedBigInteger('cliente_id')->nullable();
             $table->date('fecha_venta');
+            $table->string('estado', 20)->default('activo');
             $table->string('metodo_pago', 20)->default('efectivo');
             $table->decimal('subtotal', 12, 4)->default(0);
             $table->decimal('descuento', 12, 4)->default(0);
@@ -28,6 +29,7 @@ return new class extends Migration
             $table->foreign('add_user')->references('id')->on('users')->nullOnDelete();
             $table->foreign('mod_user')->references('id')->on('users')->nullOnDelete();
             $table->index(['fecha_venta', 'id']);
+            $table->index('estado');
             $table->index('metodo_pago');
         });
     }

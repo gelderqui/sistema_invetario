@@ -13,12 +13,14 @@ return new class extends Migration
             $table->unsignedBigInteger('venta_id');
             $table->unsignedBigInteger('usuario_id');
             $table->date('fecha');
+            $table->string('estado', 20)->default('activo');
             $table->decimal('total', 12, 4)->default(0);
             $table->timestamps();
 
             $table->foreign('venta_id')->references('id')->on('ventas')->restrictOnDelete();
             $table->foreign('usuario_id')->references('id')->on('users')->restrictOnDelete();
             $table->index(['fecha', 'id']);
+            $table->index('estado');
         });
 
         Schema::create('detalle_devoluciones', function (Blueprint $table): void {

@@ -1,6 +1,6 @@
 # Sistema Inventario - Instalacion con WSL + Docker Desktop + Laravel Sail
 
-Guia rapida para levantar el proyecto en Windows usando WSL2 (Ubuntu) y Docker Desktop.
+Este README explica como se creo y se levanta el proyecto base en entorno local con WSL + Docker + Sail.
 
 ## Estado funcional reciente
 
@@ -8,13 +8,19 @@ Guia rapida para levantar el proyecto en Windows usando WSL2 (Ubuntu) y Docker D
 - En caja: el arqueo registra historial; el umbral de faltante bloquea en cierre, no en arqueo.
 - En cierre de caja: si existe arqueo, se usa el monto contado del ultimo arqueo.
 - Configuracion nueva: `caja_aperturas_maximas_por_dia` para controlar aperturas por usuario al dia.
+- En ventas: metodo de pago solo efectivo, precio tomado del producto en backend y descuento controlado por checkbox.
+- En clientes: inactivo no puede vender y con historial de ventas no se elimina.
 - Formato monetario frontend estandar: 2 decimales, separador de miles con coma y decimal con punto.
+- Reloj de header sincronizado desde backend al login y resincronizado cada 30 minutos.
 
-Para detalle operativo y reglas de negocio:
+## Mapa de documentacion
 
-- Ver `README_MANUAL_USUARIO.md`
-- Ver `README_CONTEXT.md`
-- Ver `README_REINSTALL.md`
+- `README.md`: como se creo y se levanta el proyecto base.
+- `README_REINSTALL.md`: guia para que otro programador reinstale todo en su maquina local.
+- `CONTEXT_IA.md`: contexto operativo y de arquitectura para que una IA entienda el sistema.
+- `README_PROGRAMACION.md`: convenciones y estilo de programacion del proyecto.
+- `README_BASE_DATOS.md`: tablas y relaciones actuales de la base de datos.
+- `README_MANUAL_USUARIO.md`: manual funcional para usuario final (pantallas, botones y flujo).
 
 ## 1. Prerrequisitos en Windows
 

@@ -104,6 +104,14 @@ Infra local:
 
 - No se eliminan ventas/compras/devoluciones fisicamente para anular.
 - Se usa `estado` (`activo` o `anulada`) y se registra compensacion en inventario/caja.
+- En ventas nuevas, el metodo de pago permitido es solo `efectivo`.
+- En ventas nuevas, el precio unitario se toma siempre del producto en backend (no se acepta override por request).
+- El descuento en UI se habilita manualmente por checkbox.
+
+### Clientes
+
+- Cliente inactivo no puede usarse en nuevas ventas.
+- Cliente con ventas registradas no puede eliminarse; solo puede desactivarse.
 
 Regla de fecha:
 
@@ -226,3 +234,5 @@ Tests:
 - Si se cambian permisos/seeders, volver a ejecutar seeders.
 - Formato monetario estandar en frontend: 2 decimales, miles con coma y decimal con punto.
 - Errores de API se muestran en UI (toast global + mensajes locales por pantalla).
+- Zona horaria de aplicacion: `APP_TIMEZONE=America/Guatemala`.
+- El reloj del header se sincroniza desde backend al cargar sesion y se resincroniza cada 30 minutos.

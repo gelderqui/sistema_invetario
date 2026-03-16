@@ -47,7 +47,7 @@ return new class extends Migration
 
         // Ahora que roles existe, agregar FK de role_id en users
         Schema::table('users', function (Blueprint $table): void {
-            $table->foreign('role_id')->references('id')->on('roles')->nullOnDelete();
+            $table->foreign('role_id')->references('id')->on('roles')->restrictOnDelete();
         });
     }
 
@@ -56,7 +56,6 @@ return new class extends Migration
         // Primero quitar la FK de users antes de eliminar roles
         Schema::table('users', function (Blueprint $table): void {
             $table->dropForeign(['role_id']);
-            $table->dropColumn('role_id');
         });
         Schema::dropIfExists('permission_role');
         Schema::dropIfExists('permissions');

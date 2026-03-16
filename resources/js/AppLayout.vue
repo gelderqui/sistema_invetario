@@ -280,7 +280,10 @@ const openGroups = ref([]);
 const menuItems = computed(() => {
     const perms = [...(authStore.user?.permissions ?? [])]
         .filter((p) => Boolean(p.ruta))
+        .map((p) => (p.code === 'gastos' ? { ...p, orden: 64 } : p))
         .sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999));
+
+    const forcedTopLevelCodes = new Set(['gastos']);
 
     const groupedModules = [
         { module: 'caja', name: 'caja', label: 'Caja', icon: 'fa-solid fa-cash-register' },
@@ -292,11 +295,11 @@ const menuItems = computed(() => {
     ];
 
     const groupedSet = new Set(groupedModules.map((g) => g.module));
-    const topLevel = perms.filter((p) => !groupedSet.has(p.module));
+    const topLevel = perms.filter((p) => forcedTopLevelCodes.has(p.code) || !groupedSet.has(p.module));
     const result = [...topLevel];
 
     for (const groupDef of groupedModules) {
-        const children = perms.filter((p) => p.module === groupDef.module);
+        const children = perms.filter((p) => p.module === groupDef.module && !forcedTopLevelCodes.has(p.code));
         if (!children.length) continue;
 
         const minOrden = Math.min(...children.map((p) => p.orden ?? 999));

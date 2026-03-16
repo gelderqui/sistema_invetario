@@ -1,6 +1,18 @@
 # Manual de Usuario - Sistema Inventario
 
-Este documento resume las reglas funcionales vigentes del sistema para uso operativo y futuras mejoras.
+Este documento es para usuario final. Explica para que sirve cada pantalla, las acciones principales (botones) y el flujo recomendado de operacion.
+
+## Flujo operativo recomendado (orden sugerido)
+
+1. Crear categorias.
+2. Crear productos y vincular categoria/proveedor cuando aplique.
+3. Crear proveedores.
+4. Registrar compras para ingresar inventario y actualizar costos.
+5. Abrir caja.
+6. Registrar ventas en POS.
+7. Registrar movimientos/arqueos de caja durante el turno.
+8. Cerrar caja al final del turno.
+9. Revisar historial, devoluciones y ajustes cuando corresponda.
 
 ## 1. Estructura actual del menu
 
@@ -47,6 +59,13 @@ Submodulos relevantes:
 - La fecha del movimiento se toma del sistema (fecha actual).
 
 ## 5. Ventas, devoluciones y anulaciones
+
+Reglas operativas de POS:
+
+- Metodo de pago permitido para venta nueva: solo `efectivo`.
+- El precio unitario en venta no es editable a nivel de negocio: backend toma siempre el precio vigente del producto.
+- Para ajustes comerciales se usa `descuento` (habilitado por checkbox en UI).
+- En buscador de producto se permite localizar por nombre, codigo de barras o palabras clave.
 
 ### 5.1 Estados
 
@@ -131,6 +150,12 @@ Submodulos relevantes:
 - Se puede eliminar proveedor solo si no tiene compras asociadas.
 - Si tiene compras, se muestra error: no se puede eliminar, solo desactivar.
 
+## 8.4 Clientes (reglas alineadas a proveedores)
+
+- Cliente activo/inactivo disponible desde la tabla.
+- Cliente inactivo no puede usarse en nuevas ventas.
+- Cliente con ventas registradas no puede eliminarse; solo desactivarse.
+
 ## 9. Categorias
 
 ### 9.1 Estados y uso en productos
@@ -197,6 +222,8 @@ Reglas:
 - Formato monetario estandar en todo el frontend: 2 decimales, miles con coma y decimal con punto.
 - Los errores de backend se muestran al usuario con notificacion global y mensajes locales por vista.
 - Inputs numericos sin flechas visuales para una captura mas limpia.
+- Reloj de header: hora base tomada de backend y animacion en frontend.
+- Resincronizacion de hora con backend cada 30 minutos para reducir peticiones.
 
 ## 13. Criterios para cambios futuros
 
@@ -231,6 +258,8 @@ Al agregar o modificar reglas, validar siempre:
 - En caja, el cierre usa monto del ultimo arqueo cuando exista.
 - En caja, si falta excede el umbral configurado, cierre queda bloqueado.
 - En caja, aperturas diarias respetan `caja_aperturas_maximas_por_dia`.
+- En ventas, backend ignora precio enviado y usa `precio_venta` del producto.
+- En clientes, no se permite eliminar si existen ventas asociadas.
 
 ---
 

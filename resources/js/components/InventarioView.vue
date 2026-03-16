@@ -2,19 +2,39 @@
     <div>
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="h4 mb-0">{{ pageTitle }}</h2>
-            <div class="inventario-toolbar d-flex gap-2 align-items-center flex-wrap justify-content-end">
-                <input
-                    v-model="search"
-                    type="search"
-                    class="form-control inventario-search"
-                    placeholder="Buscar por barra o nombre"
-                    @keyup.enter="loadExistencias"
-                >
-                <div class="form-check form-switch mb-0">
-                    <input id="only-low" v-model="soloBajoStock" class="form-check-input" type="checkbox" @change="loadExistencias">
-                    <label class="form-check-label" for="only-low">Solo bajo stock</label>
+            <button class="btn btn-outline-brand" :disabled="loading" @click="loadExistencias">Actualizar</button>
+        </div>
+
+        <div v-if="showStock" class="card border-0 shadow-sm mb-3">
+            <div class="card-body row g-3 align-items-end">
+                <div class="col-12 col-md-3">
+                    <label class="form-label fw-semibold">Categoria</label>
+                    <select v-model="categoriaId" class="form-select" @change="loadExistencias">
+                        <option :value="null">Todas</option>
+                        <option v-for="categoria in categorias" :key="categoria.id" :value="categoria.id">
+                            {{ categoria.nombre }}
+                        </option>
+                    </select>
                 </div>
-                <button class="btn btn-brand" :disabled="loading" @click="loadExistencias">Actualizar</button>
+                <div class="col-12 col-md-5">
+                    <label class="form-label fw-semibold">Nombre o codigo de barra</label>
+                    <input
+                        v-model="search"
+                        type="search"
+                        class="form-control"
+                        placeholder="Buscar por barra o nombre"
+                        @keyup.enter="loadExistencias"
+                    >
+                </div>
+                <div class="col-12 col-md-2">
+                    <div class="form-check form-switch pt-4">
+                        <input id="only-low" v-model="soloBajoStock" class="form-check-input" type="checkbox" @change="loadExistencias">
+                        <label class="form-check-label" for="only-low">Solo bajo stock</label>
+                    </div>
+                </div>
+                <div class="col-12 col-md-2 d-grid">
+                    <button class="btn btn-brand" :disabled="loading" @click="loadExistencias">Filtrar</button>
+                </div>
             </div>
         </div>
 
@@ -30,13 +50,15 @@
                             <th>Stock</th>
                             <th>Stock Min.</th>
                             <th>Costo Prom.</th>
+                            <th>Venta Prom.</th>
+                            <th>Costo Ult.</th>
                             <th>Precio Venta</th>
                             <th>Estado</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-if="!existencias.length">
-                            <td colspan="7" class="text-center text-body-secondary py-4">Sin datos de inventario.</td>
+                            <td colspan="9" class="text-center text-body-secondary py-4">Sin datos de inventario.</td>
                         </tr>
                         <tr v-for="item in existencias" :key="item.id">
                             <td>
@@ -45,10 +67,12 @@
                             </td>
                             <td>{{ item.categoria?.nombre ?? '-' }}</td>
                             <td :class="Number(item.stock_actual) <= Number(item.stock_minimo) ? 'stock-low' : 'stock-ok'">
-                                {{ Number(item.stock_actual || 0).toFixed(2) }} {{ item.unidad_medida || '' }}
+                                {{ Number(item.stock_actual || 0).toFixed(0) }} {{ item.unidad_medida_abreviatura || '' }}
                             </td>
-                            <td>{{ Number(item.stock_minimo || 0).toFixed(2) }}</td>
+                            <td>{{ Number(item.stock_minimo || 0).toFixed(0) }}</td>
                             <td>Q {{ Number(item.costo_promedio || 0).toFixed(2) }}</td>
+                            <td>Q {{ Number(item.precio_venta_promedio || 0).toFixed(2) }}</td>
+                            <td>Q {{ Number(item.costo_ultimo || 0).toFixed(2) }}</td>
                             <td>Q {{ Number(item.precio_venta || 0).toFixed(2) }}</td>
                             <td>
                                 <span class="badge" :class="item.activo ? 'text-bg-success' : 'text-bg-secondary'">
@@ -88,9 +112,9 @@
                             <td>{{ formatDateTime(mov.created_at) }}</td>
                             <td>{{ mov.producto?.nombre ?? '-' }}</td>
                             <td><span class="badge text-bg-light border text-uppercase">{{ mov.tipo }}</span></td>
-                            <td>{{ Number(mov.cantidad || 0).toFixed(2) }}</td>
-                            <td>{{ Number(mov.stock_anterior || 0).toFixed(2) }}</td>
-                            <td>{{ Number(mov.stock_nuevo || 0).toFixed(2) }}</td>
+                            <td>{{ Number(mov.cantidad || 0).toFixed(0) }}</td>
+                            <td>{{ Number(mov.stock_anterior || 0).toFixed(0) }}</td>
+                            <td>{{ Number(mov.stock_nuevo || 0).toFixed(0) }}</td>
                             <td>Q {{ Number(mov.costo_unitario || 0).toFixed(2) }}</td>
                             <td>{{ mov.referencia || '-' }}</td>
                         </tr>
@@ -109,8 +133,10 @@ import axios from '@/bootstrap';
 
 const loading = ref(true);
 const search = ref('');
+const categoriaId = ref(null);
 const soloBajoStock = ref(false);
 const existencias = ref([]);
+const categorias = ref([]);
 const movimientos = ref([]);
 const route = useRoute();
 
@@ -128,10 +154,12 @@ async function loadExistencias() {
         const { data } = await axios.get('/inventario/existencias/get', {
             params: {
                 search: search.value || null,
+                categoria_id: categoriaId.value || null,
                 solo_bajo_stock: soloBajoStock.value ? 1 : 0,
             },
         });
         existencias.value = data.data;
+        categorias.value = data.categorias ?? [];
     } finally {
         loading.value = false;
     }

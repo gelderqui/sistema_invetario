@@ -109,8 +109,8 @@
                                         <input
                                             v-model.number="finder.cantidad"
                                             type="number"
-                                            step="0.0001"
-                                            min="0.0001"
+                                            step="1"
+                                            min="1"
                                             class="form-control"
                                             @keydown.enter.prevent="quickAddFinder"
                                         >
@@ -151,10 +151,10 @@
                                         <tr v-for="(item, idx) in form.items" :key="idx">
                                             <td>
                                                 <div class="fw-semibold">{{ item.producto_nombre }}</div>
-                                                <div class="small text-body-secondary">Stock: {{ Number(item.stock_actual ?? 0).toFixed(2) }}</div>
+                                                <div class="small text-body-secondary">Stock: {{ Number(item.stock_actual ?? 0).toFixed(0) }}</div>
                                             </td>
                                             <td>
-                                                <input v-model.number="item.cantidad" type="number" step="0.0001" min="0.0001" class="form-control form-control-sm">
+                                                <input v-model.number="item.cantidad" type="number" step="1" min="1" class="form-control form-control-sm">
                                             </td>
                                             <td>
                                                 <input v-model.number="item.precio_unitario" type="number" step="0.0001" min="0" class="form-control form-control-sm">
@@ -341,7 +341,7 @@ function quickAddFinder() {
         return;
     }
 
-    const cantidad = Number(finder.value.cantidad || 0);
+    const cantidad = Math.trunc(Number(finder.value.cantidad || 0));
     if (cantidad <= 0) {
         formErrors.value = ['La cantidad debe ser mayor a cero.'];
         return;
@@ -352,14 +352,14 @@ function quickAddFinder() {
     const existing = form.value.items.find((i) => i.producto_id === producto.id);
     if (existing) {
         const nuevaCantidad = Number(existing.cantidad || 0) + cantidad;
-        if (nuevaCantidad > stockActual + 0.0001) {
+        if (nuevaCantidad > stockActual) {
             formErrors.value = [`Stock insuficiente para ${producto.nombre}. Disponible: ${stockActual}.`];
             return;
         }
-        existing.cantidad = to4(nuevaCantidad);
+        existing.cantidad = nuevaCantidad;
         existing.precio_unitario = Number(finder.value.precio_unitario || existing.precio_unitario || 0);
     } else {
-        if (cantidad > stockActual + 0.0001) {
+        if (cantidad > stockActual) {
             formErrors.value = [`Stock insuficiente para ${producto.nombre}. Disponible: ${stockActual}.`];
             return;
         }
@@ -368,7 +368,7 @@ function quickAddFinder() {
             producto_id: producto.id,
             producto_nombre: producto.nombre,
             stock_actual: stockActual,
-            cantidad: to4(cantidad),
+            cantidad,
             precio_unitario: Number(finder.value.precio_unitario || producto.precio_venta || 0),
         });
     }
@@ -386,10 +386,6 @@ function removeItem(index) {
 
 function itemSubtotal(item) {
     return Number(item.cantidad || 0) * Number(item.precio_unitario || 0);
-}
-
-function to4(value) {
-    return Number((Number(value || 0)).toFixed(4));
 }
 
 async function save() {

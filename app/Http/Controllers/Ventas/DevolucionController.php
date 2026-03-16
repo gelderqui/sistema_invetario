@@ -107,7 +107,7 @@ class DevolucionController extends Controller
             'fecha' => ['required', 'date'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.venta_detalle_id' => ['required', Rule::exists('venta_detalles', 'id')],
-            'items.*.cantidad' => ['required', 'numeric', 'gt:0'],
+            'items.*.cantidad' => ['required', 'integer', 'min:1'],
             'items.*.motivo' => ['nullable', 'string', 'max:255'],
         ]);
 
@@ -177,7 +177,7 @@ class DevolucionController extends Controller
                     ->whereHas('devolucion', fn ($q) => $q->where('estado', 'activo'))
                     ->sum('cantidad');
 
-                $cantidad = toMoney($item['cantidad'], 4);
+                $cantidad = toMoney((int) $item['cantidad'], 4);
                 $disponible = toMoney((float) $detalleVenta->cantidad - $yaDevuelto, 4);
 
                 if ($cantidad > $disponible + 0.0001) {

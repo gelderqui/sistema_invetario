@@ -16,7 +16,7 @@
                                 <tr v-if="!data.bajo_stock.length"><td colspan="2" class="text-center text-body-secondary py-3">Sin alertas</td></tr>
                                 <tr v-for="i in data.bajo_stock" :key="i.id">
                                     <td>{{ i.nombre }}</td>
-                                    <td class="text-end">{{ Number(i.stock_actual || 0).toFixed(2) }}</td>
+                                    <td class="text-end">{{ Number(i.stock_actual || 0).toFixed(0) }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -35,7 +35,7 @@
                                 <tr v-for="i in data.por_vencer" :key="`pv-${i.lote_id}`">
                                     <td>{{ i.producto_nombre }}</td>
                                     <td>{{ fmtDate(i.fecha_vencimiento) }}</td>
-                                    <td class="text-end">{{ Number(i.cantidad_disponible || 0).toFixed(2) }}</td>
+                                    <td class="text-end">{{ Number(i.cantidad_disponible || 0).toFixed(0) }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -54,7 +54,7 @@
                                 <tr v-for="i in data.vencidos" :key="`v-${i.lote_id}`">
                                     <td>{{ i.producto_nombre }}</td>
                                     <td>{{ fmtDate(i.fecha_vencimiento) }}</td>
-                                    <td class="text-end">{{ Number(i.cantidad_disponible || 0).toFixed(2) }}</td>
+                                    <td class="text-end">{{ Number(i.cantidad_disponible || 0).toFixed(0) }}</td>
                                 </tr>
                             </tbody>
                         </table>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Inventario;
 
 use App\Http\Controllers\Controller;
+use App\Models\Categoria;
 use App\Models\InventarioLote;
 use App\Models\InventarioMovimiento;
 use App\Models\Producto;
@@ -30,6 +31,10 @@ class InventarioController extends Controller
             });
         }
 
+        if ($request->filled('categoria_id')) {
+            $query->where('categoria_id', $request->integer('categoria_id'));
+        }
+
         $productos = $query->get([
             'id',
             'categoria_id',
@@ -38,19 +43,39 @@ class InventarioController extends Controller
             'stock_actual',
             'stock_minimo',
             'costo_promedio',
+            'precio_venta_promedio',
+            'costo_ultimo',
             'precio_venta',
             'unidad_medida_id',
             'activo',
             'updated_at',
-        ])->map(function (Producto $producto) {
-            $abreviatura = $producto->unidadMedida?->abreviatura;
-            $producto->setAttribute('unidad_medida', $abreviatura ?: null);
-
-            return $producto;
+        ])->map(function (Producto $producto): array {
+            return [
+                'id' => $producto->id,
+                'categoria_id' => $producto->categoria_id,
+                'categoria' => $producto->categoria,
+                'nombre' => $producto->nombre,
+                'codigo_barra' => $producto->codigo_barra,
+                'stock_actual' => $producto->stock_actual,
+                'stock_minimo' => $producto->stock_minimo,
+                'costo_promedio' => $producto->costo_promedio,
+                'precio_venta_promedio' => $producto->precio_venta_promedio,
+                'costo_ultimo' => $producto->costo_ultimo,
+                'precio_venta' => $producto->precio_venta,
+                'unidad_medida_abreviatura' => $producto->unidadMedida?->abreviatura,
+                'activo' => $producto->activo,
+                'updated_at' => $producto->updated_at,
+            ];
         });
+
+        $categorias = Categoria::query()
+            ->where('activo', true)
+            ->orderBy('nombre')
+            ->get(['id', 'nombre']);
 
         return response()->json([
             'data' => $productos,
+            'categorias' => $categorias,
         ]);
     }
 

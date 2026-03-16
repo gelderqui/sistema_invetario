@@ -17,8 +17,10 @@ return new class extends Migration
             $table->text('palabras_clave')->nullable();
             $table->decimal('precio_venta', 12, 4)->default(0);
             $table->decimal('costo_promedio', 12, 4)->default(0);
-            $table->decimal('stock_actual', 12, 4)->default(0);
-            $table->decimal('stock_minimo', 12, 4)->default(0);
+            $table->decimal('precio_venta_promedio', 12, 4)->default(0);
+            $table->decimal('costo_ultimo', 12, 4)->default(0);
+            $table->unsignedInteger('stock_actual')->default(0);
+            $table->unsignedInteger('stock_minimo')->default(0);
             $table->unsignedBigInteger('unidad_medida_id')->nullable();
             $table->boolean('control_vencimiento')->default(false);
             $table->unsignedSmallInteger('dias_alerta_vencimiento')->default(15);

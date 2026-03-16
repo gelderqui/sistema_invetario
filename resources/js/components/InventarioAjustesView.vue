@@ -13,12 +13,12 @@
                     <label class="form-label fw-semibold">Producto</label>
                     <select v-model="form.producto_id" class="form-select">
                         <option :value="null">Seleccione</option>
-                        <option v-for="p in productos" :key="p.id" :value="p.id">{{ p.nombre }} (Stock: {{ Number(p.stock_actual || 0).toFixed(2) }})</option>
+                        <option v-for="p in productos" :key="p.id" :value="p.id">{{ p.nombre }} (Stock: {{ Number(p.stock_actual || 0).toFixed(0) }})</option>
                     </select>
                 </div>
                 <div class="col-12 col-md-2">
                     <label class="form-label fw-semibold">Cantidad (+/-)</label>
-                    <input v-model.number="form.cantidad" type="number" step="0.0001" class="form-control">
+                    <input v-model.number="form.cantidad" type="number" step="1" class="form-control">
                 </div>
                 <div class="col-12 col-md-3">
                     <label class="form-label fw-semibold">Motivo</label>
@@ -62,7 +62,7 @@
                             <td>{{ fmtDate(a.fecha) }}</td>
                             <td>{{ a.producto?.nombre || '-' }}</td>
                             <td>{{ a.motivo?.nombre || '-' }}</td>
-                            <td :class="Number(a.cantidad) < 0 ? 'text-danger' : 'text-success'">{{ Number(a.cantidad || 0).toFixed(2) }}</td>
+                            <td :class="Number(a.cantidad) < 0 ? 'text-danger' : 'text-success'">{{ Number(a.cantidad || 0).toFixed(0) }}</td>
                             <td>{{ a.usuario?.name || '-' }}</td>
                             <td>{{ a.observacion || '-' }}</td>
                         </tr>
@@ -116,7 +116,7 @@ async function guardar() {
     try {
         await axios.post('/inventario/ajustes/store', {
             producto_id: form.value.producto_id,
-            cantidad: Number(form.value.cantidad || 0),
+            cantidad: Math.trunc(Number(form.value.cantidad || 0)),
             motivo_id: form.value.motivo_id,
             fecha: form.value.fecha,
             observacion: form.value.observacion || null,

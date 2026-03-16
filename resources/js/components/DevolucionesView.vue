@@ -49,11 +49,11 @@
                             </tr>
                             <tr v-for="row in detallesVenta" :key="row.id">
                                 <td>{{ row.producto?.nombre }}</td>
-                                <td>{{ Number(row.cantidad || 0).toFixed(2) }}</td>
-                                <td>{{ Number(row.cantidad_devuelta || 0).toFixed(2) }}</td>
-                                <td class="fw-semibold">{{ Number(row.cantidad_disponible_devolucion || 0).toFixed(2) }}</td>
+                                <td>{{ Number(row.cantidad || 0).toFixed(0) }}</td>
+                                <td>{{ Number(row.cantidad_devuelta || 0).toFixed(0) }}</td>
+                                <td class="fw-semibold">{{ Number(row.cantidad_disponible_devolucion || 0).toFixed(0) }}</td>
                                 <td style="max-width: 120px;">
-                                    <input v-model.number="row.devolver" type="number" min="0" step="0.0001" class="form-control form-control-sm">
+                                    <input v-model.number="row.devolver" type="number" min="0" step="1" class="form-control form-control-sm">
                                 </td>
                                 <td>
                                     <input v-model="row.motivo" type="text" class="form-control form-control-sm" placeholder="Motivo">
@@ -174,7 +174,7 @@ async function guardar() {
             .filter((row) => Number(row.devolver || 0) > 0)
             .map((row) => ({
                 venta_detalle_id: row.id,
-                cantidad: Number(row.devolver || 0),
+                cantidad: Math.trunc(Number(row.devolver || 0)),
                 motivo: row.motivo || null,
             }));
 

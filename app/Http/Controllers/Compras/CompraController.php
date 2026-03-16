@@ -193,6 +193,8 @@ class CompraController extends Controller
 
                 $precioVentaSugerido = $this->calcularPrecioVentaSugerido($costoUnitario, $porcentajeUtilidadCompra);
                 $precioVentaAplicado = toMoney($item['precio_venta'], 4);
+                $precioVentaPromedioAnterior = (float) $producto->precio_venta_promedio;
+                $precioVentaPromedioNuevo = weightedAverageCost($stockAnterior, $precioVentaPromedioAnterior, $cantidad, $precioVentaAplicado);
 
                 if (abs($precioVentaAplicado - $precioVentaSugerido) > 0.0001) {
                     $alerts[] = sprintf(
@@ -241,6 +243,8 @@ class CompraController extends Controller
 
                 $producto->update([
                     'costo_promedio' => $costoPromedioNuevo,
+                    'precio_venta_promedio' => $precioVentaPromedioNuevo,
+                    'costo_ultimo'  => $costoUnitario,
                     'stock_actual'   => $stockNuevo,
                     'precio_venta'   => $precioVentaAplicado,
                     'mod_user'       => $userId,

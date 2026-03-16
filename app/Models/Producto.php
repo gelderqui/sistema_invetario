@@ -17,6 +17,8 @@ class Producto extends Model
         'palabras_clave',
         'precio_venta',
         'costo_promedio',
+        'precio_venta_promedio',
+        'costo_ultimo',
         'stock_actual',
         'stock_minimo',
         'unidad_medida_id',
@@ -36,8 +38,10 @@ class Producto extends Model
             'dias_alerta_vencimiento' => 'integer',
             'precio_venta'        => 'decimal:4',
             'costo_promedio'      => 'decimal:4',
-            'stock_actual'        => 'decimal:4',
-            'stock_minimo'        => 'decimal:4',
+            'precio_venta_promedio' => 'decimal:4',
+            'costo_ultimo'        => 'decimal:4',
+            'stock_actual'        => 'integer',
+            'stock_minimo'        => 'integer',
             'peso_referencial'    => 'decimal:4',
         ];
     }

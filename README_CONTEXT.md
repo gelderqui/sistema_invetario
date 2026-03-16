@@ -201,9 +201,8 @@ Build frontend:
 
 Tests:
 
-```bash
-./vendor/bin/sail artisan test
-```
+- Actualmente no se requiere crear ni mantener tests automatizados en este proyecto.
+- Si existen archivos de prueba locales o temporales, se pueden omitir o eliminar para priorizar velocidad de entrega.
 
 ## 8) Notas operativas
 

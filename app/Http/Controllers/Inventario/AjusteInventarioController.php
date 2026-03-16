@@ -72,7 +72,7 @@ class AjusteInventarioController extends Controller
     {
         $validated = $request->validate([
             'producto_id' => ['required', Rule::exists('productos', 'id')],
-            'cantidad' => ['required', 'numeric', 'not_in:0'],
+            'cantidad' => ['required', 'integer', 'not_in:0'],
             'motivo_id' => ['required', Rule::exists('motivos_ajuste', 'id')],
             'lote_id' => ['nullable', Rule::exists('inventario_lotes', 'id')],
             'fecha' => ['required', 'date'],
@@ -85,7 +85,7 @@ class AjusteInventarioController extends Controller
             $producto = Producto::query()->lockForUpdate()->findOrFail($validated['producto_id']);
             $motivo = MotivoAjuste::query()->findOrFail($validated['motivo_id']);
 
-            $cantidad = toMoney($validated['cantidad'], 4);
+            $cantidad = toMoney((int) $validated['cantidad'], 4);
 
             if ($motivo->tipo === 'entrada' && $cantidad < 0) {
                 throw ValidationException::withMessages([

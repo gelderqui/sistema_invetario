@@ -107,7 +107,7 @@ class VentaController extends Controller
             'observaciones' => ['nullable', 'string'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.producto_id' => ['required', Rule::exists('productos', 'id')],
-            'items.*.cantidad' => ['required', 'numeric', 'gt:0'],
+            'items.*.cantidad' => ['required', 'integer', 'min:1'],
             'items.*.precio_unitario' => ['required', 'numeric', 'gte:0'],
         ]);
 
@@ -144,7 +144,7 @@ class VentaController extends Controller
                     ]);
                 }
 
-                $cantidad = toMoney($item['cantidad'], 4);
+                $cantidad = toMoney((int) $item['cantidad'], 4);
                 $precio = toMoney($item['precio_unitario'], 4);
                 $lineSubtotal = toMoney($cantidad * $precio, 4);
                 $stockAnterior = (float) $producto->stock_actual;

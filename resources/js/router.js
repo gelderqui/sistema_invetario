@@ -4,6 +4,7 @@ import axios from '@/bootstrap';
 import { beginLoading, endLoading } from '@/components/components_ui/loadingState';
 import { useAuthStore } from '@/stores/auth';
 import CajaView from '@/components/CajaView.vue';
+import CapitalView from '@/components/CapitalView.vue';
 import CategoriasView from '@/components/CategoriasView.vue';
 import ClientesView from '@/components/ClientesView.vue';
 import ComprasView from '@/components/ComprasView.vue';
@@ -18,7 +19,6 @@ import InventarioView from '@/components/InventarioView.vue';
 import LoginView from '@/components_public/LoginView.vue';
 import ProveedoresView from '@/components/ProveedoresView.vue';
 import ProductosView from '@/components/ProductosView.vue';
-import ReportesView from '@/components/ReportesView.vue';
 import RolesView from '@/components/RolesView.vue';
 import UnauthorizedView from '@/components/UnauthorizedView.vue';
 import UsersView from '@/components/UsersView.vue';
@@ -149,6 +149,14 @@ const routes = [
         },
     },
     {
+        path: '/capital',
+        name: 'capital',
+        component: CapitalView,
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
         path: '/ventas',
         name: 'ventas',
         component: VentasView,
@@ -223,14 +231,6 @@ const routes = [
         path: '/gastos',
         name: 'gastos',
         component: GastosView,
-        meta: {
-            requiresAuth: true,
-        },
-    },
-    {
-        path: '/reportes',
-        name: 'reportes',
-        component: ReportesView,
         meta: {
             requiresAuth: true,
         },

@@ -14,7 +14,7 @@ class AuthorizationSeeder extends Seeder
     {
         $permissions = [
             ['name' => 'Dashboard',    'code' => 'dashboard',  'module' => 'dashboard',  'module_label' => null,             'module_icono' => null,                            'ruta' => '/',               'icono' => 'fa-solid fa-chart-line',     'orden' => 10],
-            ['name' => 'Reportes',     'code' => 'reportes',   'module' => 'reportes',    'module_label' => null,            'module_icono' => null,                             'ruta' => '/reportes',              'icono' => 'fa-solid fa-chart-pie',        'orden' => 20],
+            ['name' => 'Capital',            'code' => 'capital',         'module' => 'capital',    'module_label' => null,        'module_icono' => null,                             'ruta' => '/capital',         'icono' => 'fa-solid fa-building-columns', 'orden' => 20],
             ['name' => 'Apertura de caja',   'code' => 'caja_apertura',   'module' => 'caja',       'module_label' => 'Caja',      'module_icono' => 'fa-solid fa-cash-register', 'ruta' => '/caja/apertura',   'icono' => 'fa-solid fa-lock-open',      'orden' => 30],
             ['name' => 'Movimientos de caja','code' => 'caja_movimientos','module' => 'caja',       'module_label' => 'Caja',      'module_icono' => 'fa-solid fa-cash-register', 'ruta' => '/caja/movimientos','icono' => 'fa-solid fa-money-bill-transfer', 'orden' => 31],
             ['name' => 'Arqueo de caja',     'code' => 'caja_arqueo',     'module' => 'caja',       'module_label' => 'Caja',      'module_icono' => 'fa-solid fa-cash-register', 'ruta' => '/caja/arqueo',     'icono' => 'fa-solid fa-scale-balanced', 'orden' => 32],
@@ -23,18 +23,18 @@ class AuthorizationSeeder extends Seeder
             ['name' => 'Clientes',           'code' => 'cliente',         'module' => 'ventas',     'module_label' => 'Ventas',    'module_icono' => 'fa-solid fa-cart-shopping', 'ruta' => '/clientes',            'icono' => 'fa-solid fa-address-card',   'orden' => 41],
             ['name' => 'Devoluciones',       'code' => 'devoluciones',    'module' => 'ventas',     'module_label' => 'Ventas',    'module_icono' => 'fa-solid fa-cart-shopping', 'ruta' => '/ventas/devoluciones', 'icono' => 'fa-solid fa-rotate-left',    'orden' => 42],
             ['name' => 'Historial',          'code' => 'historial_ventas','module' => 'ventas',     'module_label' => 'Ventas',    'module_icono' => 'fa-solid fa-cart-shopping', 'ruta' => '/ventas/historial',    'icono' => 'fa-solid fa-clock-rotate-left', 'orden' => 43],
-            ['name' => 'Proveedores',  'code' => 'proveedores','module' => 'operaciones', 'module_label' => 'Salidas', 'module_icono' => 'fa-solid fa-briefcase',        'ruta' => '/proveedores',           'icono' => 'fa-solid fa-truck-field',     'orden' => 49],
-            ['name' => 'Compras',      'code' => 'compras',    'module' => 'operaciones', 'module_label' => 'Salidas', 'module_icono' => 'fa-solid fa-briefcase',        'ruta' => '/compras',               'icono' => 'fa-solid fa-truck-ramp-box',  'orden' => 50],
-            ['name' => 'Inventario',   'code' => 'inventario', 'module' => 'inventario', 'module_label' => 'Inventario', 'module_icono' => 'fa-solid fa-warehouse',        'ruta' => '/inventario/stock',      'icono' => 'fa-solid fa-warehouse',       'orden' => 51],
-            ['name' => 'Gastos',       'code' => 'gastos',     'module' => 'operaciones', 'module_label' => 'Salidas', 'module_icono' => 'fa-solid fa-briefcase',        'ruta' => '/gastos',                'icono' => 'fa-solid fa-receipt',         'orden' => 52],
-            ['name' => 'Movimientos inventario', 'code' => 'inventario_movimientos', 'module' => 'inventario', 'module_label' => 'Inventario', 'module_icono' => 'fa-solid fa-warehouse',        'ruta' => '/inventario/movimientos', 'icono' => 'fa-solid fa-arrow-right-arrow-left', 'orden' => 53],
-            ['name' => 'Ajustes inventario', 'code' => 'inventario_ajustes',     'module' => 'inventario', 'module_label' => 'Inventario', 'module_icono' => 'fa-solid fa-warehouse',        'ruta' => '/inventario/ajustes',     'icono' => 'fa-solid fa-screwdriver-wrench', 'orden' => 54],
-            ['name' => 'Alertas inventario', 'code' => 'inventario_alertas',     'module' => 'inventario', 'module_label' => 'Inventario', 'module_icono' => 'fa-solid fa-warehouse',        'ruta' => '/inventario/alertas',     'icono' => 'fa-solid fa-triangle-exclamation', 'orden' => 55],
-            ['name' => 'Categorias',   'code' => 'categorias', 'module' => 'catalogos',  'module_label' => 'Catalogo',       'module_icono' => 'fa-solid fa-boxes-stacked',    'ruta' => '/categorias',     'icono' => 'fa-solid fa-tags',            'orden' => 61],
-            ['name' => 'Productos',    'code' => 'productos',  'module' => 'catalogos',  'module_label' => 'Catalogo',       'module_icono' => 'fa-solid fa-boxes-stacked',    'ruta' => '/productos',      'icono' => 'fa-solid fa-box',             'orden' => 62],
-            ['name' => 'Usuarios',     'code' => 'users',      'module' => 'configuracion', 'module_label' => 'Configuracion', 'module_icono' => 'fa-solid fa-gears',          'ruta' => '/usuarios',       'icono' => 'fa-solid fa-users',           'orden' => 70],
-            ['name' => 'Roles',        'code' => 'roles',      'module' => 'configuracion', 'module_label' => 'Configuracion', 'module_icono' => 'fa-solid fa-gears',          'ruta' => '/roles',          'icono' => 'fa-solid fa-user-shield',     'orden' => 71],
-            ['name' => 'Configuraciones', 'code' => 'configuraciones', 'module' => 'configuracion', 'module_label' => 'Configuracion', 'module_icono' => 'fa-solid fa-gears',  'ruta' => '/configuraciones','icono' => 'fa-solid fa-sliders',         'orden' => 72],
+            ['name' => 'Proveedores',  'code' => 'proveedores','module' => 'operaciones', 'module_label' => 'Compras', 'module_icono' => 'fa-solid fa-briefcase',        'ruta' => '/proveedores',           'icono' => 'fa-solid fa-truck-field',     'orden' => 50],
+            ['name' => 'Compras',      'code' => 'compras',    'module' => 'operaciones', 'module_label' => 'Compras', 'module_icono' => 'fa-solid fa-briefcase',        'ruta' => '/compras',               'icono' => 'fa-solid fa-truck-ramp-box',  'orden' => 51],
+            ['name' => 'Gastos',       'code' => 'gastos',     'module' => 'operaciones', 'module_label' => 'Compras', 'module_icono' => 'fa-solid fa-briefcase',        'ruta' => '/gastos',                'icono' => 'fa-solid fa-receipt',         'orden' => 52],
+            ['name' => 'Inventario',   'code' => 'inventario', 'module' => 'inventario', 'module_label' => 'Inventario', 'module_icono' => 'fa-solid fa-warehouse',        'ruta' => '/inventario/stock',      'icono' => 'fa-solid fa-warehouse',       'orden' => 60],
+            ['name' => 'Movimientos inventario', 'code' => 'inventario_movimientos', 'module' => 'inventario', 'module_label' => 'Inventario', 'module_icono' => 'fa-solid fa-warehouse',        'ruta' => '/inventario/movimientos', 'icono' => 'fa-solid fa-arrow-right-arrow-left', 'orden' => 61],
+            ['name' => 'Ajustes inventario', 'code' => 'inventario_ajustes',     'module' => 'inventario', 'module_label' => 'Inventario', 'module_icono' => 'fa-solid fa-warehouse',        'ruta' => '/inventario/ajustes',     'icono' => 'fa-solid fa-screwdriver-wrench', 'orden' => 62],
+            ['name' => 'Alertas inventario', 'code' => 'inventario_alertas',     'module' => 'inventario', 'module_label' => 'Inventario', 'module_icono' => 'fa-solid fa-warehouse',        'ruta' => '/inventario/alertas',     'icono' => 'fa-solid fa-triangle-exclamation', 'orden' => 63],
+            ['name' => 'Categorias',   'code' => 'categorias', 'module' => 'catalogos',  'module_label' => 'Catalogo',       'module_icono' => 'fa-solid fa-boxes-stacked',    'ruta' => '/categorias',     'icono' => 'fa-solid fa-tags',            'orden' => 70],
+            ['name' => 'Productos',    'code' => 'productos',  'module' => 'catalogos',  'module_label' => 'Catalogo',       'module_icono' => 'fa-solid fa-boxes-stacked',    'ruta' => '/productos',      'icono' => 'fa-solid fa-box',             'orden' => 71],
+            ['name' => 'Usuarios',     'code' => 'users',      'module' => 'configuracion', 'module_label' => 'Configuracion', 'module_icono' => 'fa-solid fa-gears',          'ruta' => '/usuarios',       'icono' => 'fa-solid fa-users',           'orden' => 80],
+            ['name' => 'Roles',        'code' => 'roles',      'module' => 'configuracion', 'module_label' => 'Configuracion', 'module_icono' => 'fa-solid fa-gears',          'ruta' => '/roles',          'icono' => 'fa-solid fa-user-shield',     'orden' => 81],
+            ['name' => 'Configuraciones', 'code' => 'configuraciones', 'module' => 'configuracion', 'module_label' => 'Configuracion', 'module_icono' => 'fa-solid fa-gears',  'ruta' => '/configuraciones','icono' => 'fa-solid fa-sliders',         'orden' => 82],
         ];
 
         foreach ($permissions as $permissionData) {
@@ -47,7 +47,7 @@ class AuthorizationSeeder extends Seeder
             );
         }
 
-        Permission::query()->where('code', 'inventario_vencidos')->delete();
+        Permission::query()->whereIn('code', ['inventario_vencidos', 'reportes'])->delete();
 
         $allPermissionCodes = Permission::query()->pluck('code')->values();
 
@@ -67,9 +67,9 @@ class AuthorizationSeeder extends Seeder
             ],
             'cajero' => [
                 'name' => 'Cajero',
-                'description' => 'Acceso a todo excepto configuracion y reportes.',
+                'description' => 'Acceso a todo excepto configuracion y capital.',
                 'permissions' => $allPermissionCodes
-                    ->reject(fn (string $code): bool => in_array($code, ['users', 'roles', 'configuraciones', 'reportes'], true))
+                    ->reject(fn (string $code): bool => in_array($code, ['users', 'roles', 'configuraciones', 'capital'], true))
                     ->values()
                     ->all(),
             ],

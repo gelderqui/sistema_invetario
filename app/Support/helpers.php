@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 use Carbon\Carbon;
 use App\Models\Caja;
+use App\Models\CapitalCuenta;
+use App\Models\CapitalMovimiento;
 use App\Models\MovimientoCaja;
 use App\Models\User;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 if (! function_exists('getUser')) {
     function getUser(): ?Authenticatable
@@ -128,5 +132,123 @@ if (! function_exists('registrarMovimientoCajaAutomatico')) {
             'fecha' => $fecha ?? now()->toDateTimeString(),
             'usuario_id' => $usuarioId,
         ]);
+    }
+}
+
+if (! function_exists('capitalCuentaPorCodigo')) {
+    function capitalCuentaPorCodigo(string $codigo): ?CapitalCuenta
+    {
+        return CapitalCuenta::query()
+            ->where('codigo', $codigo)
+            ->where('activo', true)
+            ->first();
+    }
+}
+
+if (! function_exists('registrarMovimientoCapital')) {
+    function registrarMovimientoCapital(
+        string $tipo,
+        float|int|string $monto,
+        ?int $usuarioId = null,
+        ?int $cuentaOrigenId = null,
+        ?int $cuentaDestinoId = null,
+        ?string $descripcion = null,
+        ?string $fecha = null,
+        ?string $referenciaTipo = null,
+        ?int $referenciaId = null,
+        array $meta = []
+    ): CapitalMovimiento {
+        $montoNormalizado = toMoney($monto, 4);
+
+        if ($montoNormalizado <= 0) {
+            throw ValidationException::withMessages([
+                'monto' => ['El monto del movimiento de capital debe ser mayor que cero.'],
+            ]);
+        }
+
+        if ($cuentaOrigenId === null && $cuentaDestinoId === null) {
+            throw ValidationException::withMessages([
+                'cuenta_origen_id' => ['Debe indicar al menos una cuenta origen o destino.'],
+            ]);
+        }
+
+        if ($cuentaOrigenId !== null && $cuentaDestinoId !== null && $cuentaOrigenId === $cuentaDestinoId) {
+            throw ValidationException::withMessages([
+                'cuenta_destino_id' => ['La cuenta origen y destino deben ser diferentes.'],
+            ]);
+        }
+
+        return DB::transaction(function () use (
+            $tipo,
+            $montoNormalizado,
+            $usuarioId,
+            $cuentaOrigenId,
+            $cuentaDestinoId,
+            $descripcion,
+            $fecha,
+            $referenciaTipo,
+            $referenciaId,
+            $meta
+        ): CapitalMovimiento {
+            $cuentaOrigen = $cuentaOrigenId
+                ? CapitalCuenta::query()->lockForUpdate()->find($cuentaOrigenId)
+                : null;
+            $cuentaDestino = $cuentaDestinoId
+                ? CapitalCuenta::query()->lockForUpdate()->find($cuentaDestinoId)
+                : null;
+
+            if ($cuentaOrigenId !== null && ! $cuentaOrigen) {
+                throw ValidationException::withMessages([
+                    'cuenta_origen_id' => ['La cuenta origen seleccionada no existe.'],
+                ]);
+            }
+
+            if ($cuentaDestinoId !== null && ! $cuentaDestino) {
+                throw ValidationException::withMessages([
+                    'cuenta_destino_id' => ['La cuenta destino seleccionada no existe.'],
+                ]);
+            }
+
+            if ($cuentaOrigen && ! $cuentaOrigen->activo) {
+                throw ValidationException::withMessages([
+                    'cuenta_origen_id' => ['La cuenta origen no esta activa.'],
+                ]);
+            }
+
+            if ($cuentaDestino && ! $cuentaDestino->activo) {
+                throw ValidationException::withMessages([
+                    'cuenta_destino_id' => ['La cuenta destino no esta activa.'],
+                ]);
+            }
+
+            if ($cuentaOrigen && (float) $cuentaOrigen->saldo_actual < $montoNormalizado) {
+                throw ValidationException::withMessages([
+                    'monto' => ['Saldo insuficiente en '.$cuentaOrigen->nombre.'.'],
+                ]);
+            }
+
+            if ($cuentaOrigen) {
+                $cuentaOrigen->saldo_actual = toMoney((float) $cuentaOrigen->saldo_actual - $montoNormalizado, 4);
+                $cuentaOrigen->save();
+            }
+
+            if ($cuentaDestino) {
+                $cuentaDestino->saldo_actual = toMoney((float) $cuentaDestino->saldo_actual + $montoNormalizado, 4);
+                $cuentaDestino->save();
+            }
+
+            return CapitalMovimiento::query()->create([
+                'tipo' => $tipo,
+                'cuenta_origen_id' => $cuentaOrigen?->id,
+                'cuenta_destino_id' => $cuentaDestino?->id,
+                'monto' => $montoNormalizado,
+                'descripcion' => $descripcion,
+                'referencia_tipo' => $referenciaTipo,
+                'referencia_id' => $referenciaId,
+                'fecha' => $fecha ?? now()->toDateTimeString(),
+                'usuario_id' => $usuarioId,
+                'meta' => $meta === [] ? null : $meta,
+            ]);
+        });
     }
 }

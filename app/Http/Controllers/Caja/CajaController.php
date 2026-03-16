@@ -27,7 +27,7 @@ class CajaController extends Controller
         return response()->json([
             'data' => [
                 'tipos_gasto' => $tiposGasto,
-                'destinos_egreso' => ['banco', 'caja_principal', 'otro'],
+                'destinos_egreso' => ['banco', 'caja_general', 'otro'],
             ],
         ]);
     }
@@ -135,6 +135,13 @@ class CajaController extends Controller
         $caja = DB::transaction(function () use ($validated, $user) {
             $fecha = $validated['fecha_apertura'] ?? now()->toDateTimeString();
             $montoApertura = toMoney($validated['monto_apertura'], 4);
+            $cajaGeneral = capitalCuentaPorCodigo('caja_general');
+
+            if (! $cajaGeneral) {
+                throw ValidationException::withMessages([
+                    'monto_apertura' => ['No existe una cuenta activa de caja general para fondear la apertura.'],
+                ]);
+            }
 
             $caja = Caja::query()->create([
                 'usuario_id' => $user->id,
@@ -151,6 +158,24 @@ class CajaController extends Controller
                 'fecha' => $fecha,
                 'usuario_id' => $user->id,
             ]);
+
+            if ($montoApertura > 0) {
+                registrarMovimientoCapital(
+                    tipo: 'apertura_caja',
+                    monto: $montoApertura,
+                    usuarioId: (int) $user->id,
+                    cuentaOrigenId: $cajaGeneral->id,
+                    cuentaDestinoId: null,
+                    descripcion: 'Salida de caja general para apertura de caja POS #'.$caja->id,
+                    fecha: $fecha,
+                    referenciaTipo: 'caja',
+                    referenciaId: $caja->id,
+                    meta: [
+                        'caja_id' => $caja->id,
+                        'usuario_caja_id' => $user->id,
+                    ]
+                );
+            }
 
             return $caja;
         });
@@ -232,7 +257,7 @@ class CajaController extends Controller
                 $descripcion = trim($descripcion.' | Destino: '.$destino);
             }
 
-            return MovimientoCaja::query()->create([
+            $movimiento = MovimientoCaja::query()->create([
                 'caja_id' => $caja->id,
                 'tipo' => $tipo,
                 'monto' => $monto,
@@ -240,6 +265,34 @@ class CajaController extends Controller
                 'fecha' => $fecha,
                 'usuario_id' => $user->id,
             ]);
+
+            if ($tipo === 'egreso' && in_array(($validated['destino'] ?? null), ['banco', 'caja_general'], true)) {
+                $cuentaDestino = capitalCuentaPorCodigo((string) $validated['destino']);
+
+                if (! $cuentaDestino) {
+                    throw ValidationException::withMessages([
+                        'destino' => ['No existe una cuenta activa para el destino seleccionado.'],
+                    ]);
+                }
+
+                registrarMovimientoCapital(
+                    tipo: 'egreso_caja',
+                    monto: $validated['monto'],
+                    usuarioId: (int) $user->id,
+                    cuentaOrigenId: null,
+                    cuentaDestinoId: $cuentaDestino->id,
+                    descripcion: 'Ingreso desde caja POS #'.$caja->id.' hacia '.$cuentaDestino->nombre,
+                    fecha: $fecha,
+                    referenciaTipo: 'movimiento_caja',
+                    referenciaId: $movimiento->id,
+                    meta: [
+                        'caja_id' => $caja->id,
+                        'destino' => $validated['destino'],
+                    ]
+                );
+            }
+
+            return $movimiento;
         });
 
         return response()->json([
@@ -336,66 +389,53 @@ class CajaController extends Controller
         $diferencia = toMoney($montoContadoFinal - $resumen['monto_sistema'], 4);
         $alerta = $this->resolverAlertaDiferencia($diferencia);
 
-        $caja->update([
-            'fecha_cierre' => $validated['fecha_cierre'] ?? now()->toDateTimeString(),
-            'total_ventas' => $resumen['total_ventas'],
-            'total_gastos' => $resumen['total_gastos'],
-            'total_compras' => $resumen['total_egresos'],
-            'total_ajustes' => $resumen['total_ingresos'],
-            'monto_sistema_final' => $resumen['monto_sistema'],
-            'monto_contado_final' => $montoContadoFinal,
-            'diferencia' => $diferencia,
-            'estado' => 'cerrada',
-        ]);
+        DB::transaction(function () use ($validated, $resumen, $montoContadoFinal, $diferencia, $caja, $user) {
+            $fechaCierre = $validated['fecha_cierre'] ?? now()->toDateTimeString();
+            $cajaGeneral = capitalCuentaPorCodigo('caja_general');
+
+            if (! $cajaGeneral) {
+                throw ValidationException::withMessages([
+                    'fecha_cierre' => ['No existe una cuenta activa de caja general para recibir el cierre.'],
+                ]);
+            }
+
+            if ($montoContadoFinal > 0) {
+                registrarMovimientoCapital(
+                    tipo: 'cierre_caja',
+                    monto: $montoContadoFinal,
+                    usuarioId: (int) $user->id,
+                    cuentaOrigenId: null,
+                    cuentaDestinoId: $cajaGeneral->id,
+                    descripcion: 'Ingreso a caja general por cierre de caja POS #'.$caja->id,
+                    fecha: $fechaCierre,
+                    referenciaTipo: 'caja',
+                    referenciaId: $caja->id,
+                    meta: [
+                        'caja_id' => $caja->id,
+                        'monto_sistema' => $resumen['monto_sistema'],
+                        'diferencia' => $diferencia,
+                    ]
+                );
+            }
+
+            $caja->update([
+                'fecha_cierre' => $fechaCierre,
+                'total_ventas' => $resumen['total_ventas'],
+                'total_gastos' => $resumen['total_gastos'],
+                'total_compras' => $resumen['total_egresos'],
+                'total_ajustes' => $resumen['total_ingresos'],
+                'monto_sistema_final' => $resumen['monto_sistema'],
+                'monto_contado_final' => $montoContadoFinal,
+                'diferencia' => $diferencia,
+                'estado' => 'cerrada',
+            ]);
+        });
 
         return response()->json([
             'message' => 'Caja cerrada correctamente.',
             'data' => [
                 'caja' => $caja->fresh(),
                 'alerta' => $alerta,
-            ],
-        ]);
-    }
-
-    public function reporteDia(Request $request): JsonResponse
-    {
-        $fecha = $request->filled('fecha')
-            ? Carbon::parse((string) $request->input('fecha'))->toDateString()
-            : now()->toDateString();
-
-        $query = Caja::query()
-            ->with('usuario:id,name')
-            ->whereDate('fecha_apertura', $fecha)
-            ->orderBy('fecha_apertura');
-
-        $user = $request->user();
-        $user->loadMissing('role:id,code');
-
-        if ($user->role?->code !== 'admin') {
-            $query->where('usuario_id', $user->id);
-        }
-
-        $cajas = $query->get();
-
-        $data = $cajas->map(function (Caja $caja): array {
-            $resumen = $this->resumenCaja($caja->id);
-
-            return [
-                'id' => $caja->id,
-                'usuario' => $caja->usuario?->name,
-                'estado' => $caja->estado,
-                'fecha_apertura' => $caja->fecha_apertura,
-                'fecha_cierre' => $caja->fecha_cierre,
-                ...$resumen,
-                'monto_contado_final' => $caja->monto_contado_final,
-                'diferencia_final' => $caja->diferencia,
-            ];
-        })->values();
-
-        return response()->json([
-            'data' => [
-                'fecha' => $fecha,
-                'items' => $data,
             ],
         ]);
     }

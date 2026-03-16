@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             TipoGastoSeeder::class,
             MotivoAjusteSeeder::class,
             ConfiguracionSeeder::class,
+            CapitalSeeder::class,
             AuthorizationSeeder::class,
             CatalogDefaultsSeeder::class,
         ]);

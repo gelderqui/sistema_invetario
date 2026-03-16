@@ -90,6 +90,9 @@
                                     <div class="form-text">
                                         El gasto siempre se registra. Solo afecta Caja cuando el metodo es Caja.
                                     </div>
+                                    <div class="form-text" v-if="catalogs.capital_cuentas?.length">
+                                        {{ capitalBalancesText }}
+                                    </div>
                                 </div>
                             </div>
 
@@ -128,7 +131,7 @@ import axios from '@/bootstrap';
 import FormErrors from '@/components/FormErrors.vue';
 
 const gastos = ref([]);
-const catalogs = ref({ tipos_gasto: [], metodos_pago: [], caja_activa: null });
+const catalogs = ref({ tipos_gasto: [], metodos_pago: [], caja_activa: null, capital_cuentas: [] });
 const loading = ref(true);
 const saving = ref(false);
 const formErrors = ref([]);
@@ -150,6 +153,10 @@ const isTipoOtros = computed(() => {
     const nombre = form.value.tipo_gasto?.nombre ?? '';
     return nombre.toLowerCase() === 'otros';
 });
+
+const capitalBalancesText = computed(() => catalogs.value.capital_cuentas
+    .map((cuenta) => `${cuenta.nombre}: Q ${Number(cuenta.saldo_actual || 0).toFixed(2)}`)
+    .join(' | '));
 
 onMounted(async () => {
     formModal = new Modal(formModalRef.value);

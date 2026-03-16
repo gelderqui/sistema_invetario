@@ -67,7 +67,7 @@
                         <label class="form-label">Destino</label>
                         <select v-model="formAjuste.destino" class="form-select">
                             <option value="banco">Banco</option>
-                            <option value="caja_principal">Caja principal</option>
+                            <option value="caja_general">Caja general</option>
                             <option value="otro">Otro</option>
                         </select>
                     </div>

@@ -16,7 +16,8 @@ class Compra extends Model
         'fecha_compra',
         'estado',
         'total',
-        'observaciones',
+        'tipo_documento',
+        'numero_documento',
         'add_user',
         'mod_user',
     ];
@@ -26,6 +27,8 @@ class Compra extends Model
         return [
             'fecha_compra' => 'date',
             'total' => 'decimal:4',
+            'tipo_documento' => 'string',
+            'numero_documento' => 'string',
         ];
     }
 

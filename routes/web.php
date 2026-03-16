@@ -105,6 +105,7 @@ Route::prefix('api')->group(function (): void {
         Route::prefix('compras')->group(function (): void {
             Route::get('/get', [CompraController::class, 'index']);
             Route::get('/get/catalogs', [CompraController::class, 'catalogs']);
+            Route::get('/get/{compra}', [CompraController::class, 'show']);
             Route::post('/store', [CompraController::class, 'store']);
             Route::patch('/anular/{compra}', [CompraController::class, 'anular']);
         });

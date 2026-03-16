@@ -11,11 +11,9 @@ return new class extends Migration
         Schema::create('productos', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('categoria_id')->nullable();
-            $table->unsignedBigInteger('proveedor_id')->nullable();
             $table->foreign('categoria_id')->references('id')->on('categorias')->nullOnDelete();
             $table->string('nombre');
             $table->string('codigo_barra')->nullable()->unique();
-            $table->text('detalle')->nullable();
             $table->text('palabras_clave')->nullable();
             $table->decimal('precio_venta', 12, 4)->default(0);
             $table->decimal('costo_promedio', 12, 4)->default(0);
@@ -33,7 +31,6 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['activo', 'stock_actual'], 'productos_activo_stock_idx');
-            $table->index('proveedor_id');
         });
     }
 

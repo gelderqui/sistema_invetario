@@ -208,6 +208,58 @@ class CompraPricingRulesTest extends TestCase
             ->assertJsonValidationErrors(['items.0.producto_id']);
     }
 
+    public function test_purchase_allows_missing_expiration_for_products_without_expiration_control(): void
+    {
+        $proveedor = $this->createProveedor();
+        $producto = $this->createProducto([
+            'control_vencimiento' => false,
+        ]);
+
+        $this->postJson('/api/compras/store', [
+            'proveedor_id' => $proveedor->id,
+            'fecha_compra' => now()->toDateString(),
+            'items' => [
+                [
+                    'producto_id' => $producto->id,
+                    'cantidad' => 2,
+                    'costo_unitario' => 10,
+                    'precio_venta' => 12,
+                    'fecha_caducidad' => null,
+                ],
+            ],
+        ])
+            ->assertCreated();
+
+        $this->assertDatabaseHas('compra_detalles', [
+            'producto_id' => $producto->id,
+            'fecha_caducidad' => null,
+        ]);
+    }
+
+    public function test_purchase_requires_expiration_for_products_with_expiration_control(): void
+    {
+        $proveedor = $this->createProveedor();
+        $producto = $this->createProducto([
+            'control_vencimiento' => true,
+        ]);
+
+        $this->postJson('/api/compras/store', [
+            'proveedor_id' => $proveedor->id,
+            'fecha_compra' => now()->toDateString(),
+            'items' => [
+                [
+                    'producto_id' => $producto->id,
+                    'cantidad' => 2,
+                    'costo_unitario' => 10,
+                    'precio_venta' => 12,
+                    'fecha_caducidad' => null,
+                ],
+            ],
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['items.0.fecha_caducidad']);
+    }
+
     private function createProveedor(): Proveedor
     {
         return Proveedor::query()->create([
@@ -217,11 +269,11 @@ class CompraPricingRulesTest extends TestCase
         ]);
     }
 
-    private function createProducto(): Producto
+    private function createProducto(array $overrides = []): Producto
     {
         static $sequence = 1;
 
-        return Producto::query()->create([
+        return Producto::query()->create(array_merge([
             'categoria_id' => $this->categoria->id,
             'nombre' => 'Producto compra '.$sequence,
             'codigo_barra' => 'CP'.$sequence++,
@@ -234,6 +286,6 @@ class CompraPricingRulesTest extends TestCase
             'dias_alerta_vencimiento' => 15,
             'activo' => true,
             'add_user' => $this->user->id,
-        ]);
+        ], $overrides));
     }
 }

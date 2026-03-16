@@ -15,15 +15,13 @@ class ProductoController extends Controller
     public function index(): JsonResponse
     {
         $productos = Producto::query()
-            ->with(['categoria:id,nombre', 'proveedor:id,nombre', 'unidadMedida:id,nombre,abreviatura'])
+            ->with(['categoria:id,nombre', 'unidadMedida:id,nombre,abreviatura'])
             ->orderBy('nombre')
             ->get([
                 'id',
                 'categoria_id',
-                'proveedor_id',
                 'nombre',
                 'codigo_barra',
-                'detalle',
                 'palabras_clave',
                 'precio_venta',
                 'costo_promedio',
@@ -46,21 +44,23 @@ class ProductoController extends Controller
     {
         $validated = $request->validate([
             'categoria_id'  => ['nullable', Rule::exists('categorias', 'id')],
-            'proveedor_id'  => ['nullable', Rule::exists('proveedores', 'id')],
             'nombre'        => ['required', 'string', 'max:255'],
             'codigo_barra'  => ['nullable', 'string', 'max:100', 'unique:productos,codigo_barra'],
-            'detalle'       => ['nullable', 'string'],
             'palabras_clave'=> ['nullable', 'string', 'max:500'],
             'precio_venta'  => ['nullable', 'numeric', 'gte:0'],
             'costo_promedio'=> ['nullable', 'numeric', 'gte:0'],
             'stock_actual'  => ['nullable', 'numeric'],
-            'stock_minimo'  => ['nullable', 'numeric', 'gte:0'],
+            'stock_minimo'  => ['required', 'integer', 'min:1'],
             'unidad_medida_id'  => ['required', Rule::exists('productos_unidad_medida', 'id')->where(fn ($q) => $q->where('activo', true))],
             'control_vencimiento' => ['sometimes', 'boolean'],
             'dias_alerta_vencimiento' => ['nullable', 'integer', 'min:1', 'max:365'],
             'dias_alerta_vencimiento' => ['nullable', 'integer', 'min:1', 'max:365'],
             'peso_referencial' => ['nullable', 'numeric', 'gte:0'],
             'activo'        => ['sometimes', 'boolean'],
+        ], [
+            'stock_minimo.required' => 'El stock minimo es obligatorio.',
+            'stock_minimo.integer' => 'El stock minimo debe ser un numero entero.',
+            'stock_minimo.min' => 'El stock minimo debe ser mayor a 0.',
         ]);
 
         if (! empty($validated['categoria_id'])) {
@@ -88,7 +88,7 @@ class ProductoController extends Controller
             'add_user'        => $request->user()->id,
         ]);
 
-        $producto->load(['categoria:id,nombre', 'proveedor:id,nombre', 'unidadMedida:id,nombre,abreviatura']);
+        $producto->load(['categoria:id,nombre', 'unidadMedida:id,nombre,abreviatura']);
 
         return response()->json([
             'message' => 'Producto creado correctamente.',
@@ -100,19 +100,21 @@ class ProductoController extends Controller
     {
         $validated = $request->validate([
             'categoria_id'  => ['nullable', Rule::exists('categorias', 'id')],
-            'proveedor_id'  => ['nullable', Rule::exists('proveedores', 'id')],
             'nombre'        => ['required', 'string', 'max:255'],
             'codigo_barra'  => ['nullable', 'string', 'max:100', Rule::unique('productos', 'codigo_barra')->ignore($producto->id)],
-            'detalle'       => ['nullable', 'string'],
             'palabras_clave'=> ['nullable', 'string', 'max:500'],
             'precio_venta'  => ['nullable', 'numeric', 'gte:0'],
             'costo_promedio'=> ['nullable', 'numeric', 'gte:0'],
             'stock_actual'  => ['nullable', 'numeric'],
-            'stock_minimo'  => ['nullable', 'numeric', 'gte:0'],
+            'stock_minimo'  => ['required', 'integer', 'min:1'],
             'unidad_medida_id'  => ['required', Rule::exists('productos_unidad_medida', 'id')->where(fn ($q) => $q->where('activo', true))],
             'control_vencimiento' => ['sometimes', 'boolean'],
             'peso_referencial' => ['nullable', 'numeric', 'gte:0'],
             'activo'        => ['required', 'boolean'],
+        ], [
+            'stock_minimo.required' => 'El stock minimo es obligatorio.',
+            'stock_minimo.integer' => 'El stock minimo debe ser un numero entero.',
+            'stock_minimo.min' => 'El stock minimo debe ser mayor a 0.',
         ]);
 
         $incomingCategoriaId = $validated['categoria_id'] ?? null;
@@ -144,7 +146,7 @@ class ProductoController extends Controller
             'mod_user'        => $request->user()->id,
         ]);
 
-        $producto->load(['categoria:id,nombre', 'proveedor:id,nombre', 'unidadMedida:id,nombre,abreviatura']);
+        $producto->load(['categoria:id,nombre', 'unidadMedida:id,nombre,abreviatura']);
 
         return response()->json([
             'message' => 'Producto actualizado correctamente.',

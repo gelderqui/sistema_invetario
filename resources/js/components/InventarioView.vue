@@ -27,7 +27,6 @@
                         <tr>
                             <th>Producto</th>
                             <th>Categoria</th>
-                            <th>Proveedor</th>
                             <th>Stock</th>
                             <th>Stock Min.</th>
                             <th>Costo Prom.</th>
@@ -37,7 +36,7 @@
                     </thead>
                     <tbody>
                         <tr v-if="!existencias.length">
-                            <td colspan="8" class="text-center text-body-secondary py-4">Sin datos de inventario.</td>
+                            <td colspan="7" class="text-center text-body-secondary py-4">Sin datos de inventario.</td>
                         </tr>
                         <tr v-for="item in existencias" :key="item.id">
                             <td>
@@ -45,7 +44,6 @@
                                 <div class="small text-body-secondary">{{ item.codigo_barra || 'Sin cod. barra' }}</div>
                             </td>
                             <td>{{ item.categoria?.nombre ?? '-' }}</td>
-                            <td>{{ item.proveedor?.nombre ?? '-' }}</td>
                             <td :class="Number(item.stock_actual) <= Number(item.stock_minimo) ? 'stock-low' : 'stock-ok'">
                                 {{ Number(item.stock_actual || 0).toFixed(2) }} {{ item.unidad_medida || '' }}
                             </td>

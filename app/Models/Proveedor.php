@@ -27,11 +27,6 @@ class Proveedor extends Model
         ];
     }
 
-    public function productos(): HasMany
-    {
-        return $this->hasMany(Producto::class, 'proveedor_id');
-    }
-
     public function compras(): HasMany
     {
         return $this->hasMany(Compra::class, 'proveedor_id');

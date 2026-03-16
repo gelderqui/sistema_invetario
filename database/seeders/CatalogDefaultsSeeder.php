@@ -36,16 +36,13 @@ class CatalogDefaultsSeeder extends Seeder
             ]
         );
 
-        $proveedorVarios = Proveedor::query()->where('nombre', 'Proveedores varios')->first();
         $unidadUnidad = ProductoUnidadMedida::query()->where('abreviatura', 'und')->first();
 
         Producto::query()->updateOrCreate(
             ['nombre' => 'Producto prueba'],
             [
                 'categoria_id'       => $categoriaGeneral->id,
-                'proveedor_id'       => $proveedorVarios?->id,
                 'codigo_barra'       => null,
-                'detalle'            => 'Producto inicial de prueba para compras e inventario.',
                 'palabras_clave'     => 'prueba,general',
                 'precio_venta'       => 0,
                 'costo_promedio'     => 0,

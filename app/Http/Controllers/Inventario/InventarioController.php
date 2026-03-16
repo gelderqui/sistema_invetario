@@ -15,7 +15,7 @@ class InventarioController extends Controller
     public function existencias(Request $request): JsonResponse
     {
         $query = Producto::query()
-            ->with(['categoria:id,nombre', 'proveedor:id,nombre'])
+            ->with(['categoria:id,nombre', 'unidadMedida:id,nombre,abreviatura'])
             ->orderBy('nombre');
 
         if ($request->boolean('solo_bajo_stock')) {
@@ -33,17 +33,21 @@ class InventarioController extends Controller
         $productos = $query->get([
             'id',
             'categoria_id',
-            'proveedor_id',
             'nombre',
             'codigo_barra',
             'stock_actual',
             'stock_minimo',
             'costo_promedio',
             'precio_venta',
-            'unidad_medida',
+            'unidad_medida_id',
             'activo',
             'updated_at',
-        ]);
+        ])->map(function (Producto $producto) {
+            $abreviatura = $producto->unidadMedida?->abreviatura;
+            $producto->setAttribute('unidad_medida', $abreviatura ?: null);
+
+            return $producto;
+        });
 
         return response()->json([
             'data' => $productos,

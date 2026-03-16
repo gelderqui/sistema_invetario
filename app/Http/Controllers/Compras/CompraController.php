@@ -33,7 +33,8 @@ class CompraController extends Controller
                 'fecha_compra',
                 'estado',
                 'total',
-                'observaciones',
+                'tipo_documento',
+                'numero_documento',
                 'created_at',
             ]);
 
@@ -72,6 +73,7 @@ class CompraController extends Controller
                 'precio_venta',
                 'stock_actual',
                 'unidad_medida_id',
+                'control_vencimiento',
             ]);
 
         return response()->json([
@@ -85,19 +87,33 @@ class CompraController extends Controller
         ]);
     }
 
+    public function show(Compra $compra): JsonResponse
+    {
+        $compra->load([
+            'proveedor:id,nombre',
+            'detalles:id,compra_id,producto_id,cantidad,unidad_medida,costo_unitario,subtotal,precio_venta_sugerido,precio_venta_aplicado,fecha_caducidad',
+            'detalles.producto:id,nombre,codigo_barra',
+        ]);
+
+        return response()->json([
+            'data' => $compra,
+        ]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate(
             [
                 'proveedor_id' => ['required', Rule::exists('proveedores', 'id')],
                 'fecha_compra' => ['required', 'date'],
-                'observaciones' => ['nullable', 'string'],
+                'tipo_documento' => ['nullable', Rule::in(['sin_documento', 'recibo', 'factura'])],
+                'numero_documento' => ['nullable', 'string', 'max:100'],
                 'items' => ['required', 'array', 'min:1'],
                 'items.*.producto_id' => ['required', Rule::exists('productos', 'id'), 'distinct'],
                 'items.*.cantidad' => ['required', 'integer', 'min:1'],
                 'items.*.costo_unitario' => ['required', 'numeric', 'gt:0'],
                 'items.*.precio_venta' => ['required', 'numeric', 'gt:0'],
-                'items.*.fecha_caducidad' => ['required', 'date'],
+                'items.*.fecha_caducidad' => ['nullable', 'date'],
                 'items.*.nota' => ['nullable', 'string', 'max:255'],
             ],
             [
@@ -106,9 +122,14 @@ class CompraController extends Controller
                 'items.*.producto_id.required' => 'Debe seleccionar un producto para cada item.',
                 'items.*.producto_id.distinct' => 'No puede repetir el mismo producto en varios items de la compra.',
                 'items.*.precio_venta.required' => 'El precio de venta es obligatorio para cada item.',
-                'items.*.fecha_caducidad.required' => 'La fecha de caducidad es obligatoria para cada item.',
             ]
         );
+
+        if (in_array(($validated['tipo_documento'] ?? null), ['recibo', 'factura'], true) && empty($validated['numero_documento'])) {
+            throw ValidationException::withMessages([
+                'numero_documento' => 'El numero de documento es obligatorio cuando el tipo es recibo o factura.',
+            ]);
+        }
 
         $proveedorActivo = Proveedor::query()
             ->whereKey($validated['proveedor_id'])
@@ -137,19 +158,26 @@ class CompraController extends Controller
                 'fecha_compra' => $validated['fecha_compra'],
                 'estado' => 'activo',
                 'total' => 0,
-                'observaciones' => $validated['observaciones'] ?? null,
+                'tipo_documento' => $validated['tipo_documento'] ?? null,
+                'numero_documento' => $validated['numero_documento'] ?? null,
                 'add_user' => $userId,
             ]);
 
             $total = 0.0;
             $alerts = [];
 
-            foreach ($validated['items'] as $item) {
+            foreach ($validated['items'] as $index => $item) {
                 $producto = Producto::query()->with('unidadMedida:id,abreviatura')->lockForUpdate()->findOrFail($item['producto_id']);
 
                 if (! $producto->activo) {
                     throw ValidationException::withMessages([
                         'items' => ["El producto {$producto->nombre} esta inactivo y no puede usarse en compras."],
+                    ]);
+                }
+
+                if ((bool) $producto->control_vencimiento && empty($item['fecha_caducidad'])) {
+                    throw ValidationException::withMessages([
+                        "items.{$index}.fecha_caducidad" => 'La fecha de caducidad es obligatoria para productos con control de vencimiento.',
                     ]);
                 }
 
@@ -212,7 +240,6 @@ class CompraController extends Controller
                 ]);
 
                 $producto->update([
-                    'proveedor_id'   => $compra->proveedor_id,
                     'costo_promedio' => $costoPromedioNuevo,
                     'stock_actual'   => $stockNuevo,
                     'precio_venta'   => $precioVentaAplicado,
@@ -228,7 +255,7 @@ class CompraController extends Controller
             ]);
 
             return [
-                'compra' => $compra->load(['proveedor:id,nombre', 'detalles.producto:id,nombre']),
+                'compra' => $compra->load(['proveedor:id,nombre', 'detalles.producto:id,nombre'])->loadCount('detalles'),
                 'alerts' => $alerts,
             ];
         });

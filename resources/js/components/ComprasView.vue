@@ -20,7 +20,7 @@
                             <th>Numero</th>
                             <th>Proveedor</th>
                             <th>Fecha</th>
-                            <th>Items</th>
+                            <th>Productos</th>
                             <th>Total</th>
                             <th>Estado</th>
                             <th>Creado</th>
@@ -44,18 +44,114 @@
                             </td>
                             <td class="text-body-secondary small">{{ formatDate(compra.created_at) }}</td>
                             <td class="text-end">
-                                <button
-                                    type="button"
-                                    class="btn btn-sm btn-outline-danger"
-                                    :disabled="saving || compra.estado !== 'activo'"
-                                    @click="openAnularCompra(compra)"
-                                >
-                                    Anular
-                                </button>
+                                <div class="d-inline-flex gap-2">
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm btn-outline-secondary"
+                                        :disabled="saving"
+                                        @click="openDetalleCompra(compra)"
+                                    >
+                                        Ver detalle
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm btn-outline-danger"
+                                        :disabled="saving || compra.estado !== 'activo'"
+                                        @click="openAnularCompra(compra)"
+                                    >
+                                        Anular
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <div ref="detailModalRef" class="modal fade" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header modal-header-brand">
+                        <h5 class="modal-title">Detalle de compra</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" />
+                    </div>
+                    <div class="modal-body">
+                        <div v-if="detalleLoading" class="text-center py-4 text-body-secondary">Cargando detalle...</div>
+
+                        <div v-else-if="detalleError" class="alert alert-danger mb-0">{{ detalleError }}</div>
+
+                        <div v-else-if="detalleCompra">
+                            <div class="row g-3 mb-3">
+                                <div class="col-12 col-md-3">
+                                    <div class="small text-body-secondary">Numero</div>
+                                    <div class="fw-semibold">{{ detalleCompra.numero }}</div>
+                                </div>
+                                <div class="col-12 col-md-3">
+                                    <div class="small text-body-secondary">Proveedor</div>
+                                    <div class="fw-semibold">{{ detalleCompra.proveedor?.nombre ?? '-' }}</div>
+                                </div>
+                                <div class="col-12 col-md-2">
+                                    <div class="small text-body-secondary">Fecha</div>
+                                    <div class="fw-semibold">{{ formatDate(detalleCompra.fecha_compra) }}</div>
+                                </div>
+                                <div class="col-12 col-md-2">
+                                    <div class="small text-body-secondary">Estado</div>
+                                    <span :class="['badge text-uppercase', detalleCompra.estado === 'anulada' ? 'text-bg-danger' : 'text-bg-success']">
+                                        {{ detalleCompra.estado }}
+                                    </span>
+                                </div>
+                                <div class="col-12 col-md-2">
+                                    <div class="small text-body-secondary">Total</div>
+                                    <div class="fw-semibold">Q {{ Number(detalleCompra.total ?? 0).toFixed(2) }}</div>
+                                </div>
+                                <div class="col-12 col-md-3">
+                                    <div class="small text-body-secondary">Tipo documento</div>
+                                    <div class="fw-semibold">{{ documentTypeLabel(detalleCompra.tipo_documento) }}</div>
+                                </div>
+                                <div class="col-12 col-md-3">
+                                    <div class="small text-body-secondary">Numero documento</div>
+                                    <div class="fw-semibold">{{ detalleCompra.numero_documento || '-' }}</div>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Producto</th>
+                                            <th>Cantidad</th>
+                                            <th>Medida</th>
+                                            <th>Costo unitario</th>
+                                            <th>Precio sugerido</th>
+                                            <th>Precio aplicado</th>
+                                            <th>Caducidad</th>
+                                            <th>Subtotal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-if="!(detalleCompra.detalles ?? []).length">
+                                            <td colspan="8" class="text-center text-body-secondary py-3">Sin productos en esta compra.</td>
+                                        </tr>
+                                        <tr v-for="detalle in (detalleCompra.detalles ?? [])" :key="detalle.id">
+                                            <td>{{ detalle.producto?.nombre ?? '-' }}</td>
+                                            <td>{{ Number(detalle.cantidad ?? 0).toFixed(2) }}</td>
+                                            <td>{{ detalle.unidad_medida || '-' }}</td>
+                                            <td>Q {{ Number(detalle.costo_unitario ?? 0).toFixed(2) }}</td>
+                                            <td>Q {{ Number(detalle.precio_venta_sugerido ?? 0).toFixed(2) }}</td>
+                                            <td>Q {{ Number(detalle.precio_venta_aplicado ?? 0).toFixed(2) }}</td>
+                                            <td>{{ formatDate(detalle.fecha_caducidad) }}</td>
+                                            <td class="fw-semibold">Q {{ Number(detalle.subtotal ?? 0).toFixed(2) }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-brand" data-bs-dismiss="modal">Cerrar</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -93,11 +189,23 @@
                                         deselect-label="Quitar"
                                     />
                                 </div>
-                            </div>
-
-                            <div>
-                                <label class="form-label fw-semibold">Observaciones</label>
-                                <textarea v-model="form.observaciones" rows="2" class="form-control" />
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label fw-semibold">Tipo documento</label>
+                                    <select v-model="form.tipo_documento" class="form-select">
+                                        <option value="sin_documento">Sin documento</option>
+                                        <option value="recibo">Recibo</option>
+                                        <option value="factura">Factura</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-8">
+                                    <label class="form-label fw-semibold">Numero documento</label>
+                                    <input
+                                        v-model.trim="form.numero_documento"
+                                        type="text"
+                                        class="form-control"
+                                        placeholder="Numero de recibo o factura"
+                                    >
+                                </div>
                             </div>
 
                             <div class="d-flex justify-content-between align-items-center">
@@ -181,7 +289,16 @@
                                                     @input="handleSalePriceInput(item, $event)"
                                                 >
                                             </td>
-                                            <td><input v-model="item.fecha_caducidad" type="date" class="form-control form-control-sm" required></td>
+                                            <td>
+                                                <input
+                                                    v-if="itemRequiresCaducidad(item)"
+                                                    v-model="item.fecha_caducidad"
+                                                    type="date"
+                                                    class="form-control form-control-sm"
+                                                    required
+                                                >
+                                                <span v-else class="form-control-plaintext form-control-sm py-1 d-block text-body-secondary">No aplica</span>
+                                            </td>
                                             <td class="fw-semibold">Q {{ itemSubtotal(item).toFixed(2) }}</td>
                                             <td>
                                                 <button type="button" class="btn btn-sm btn-action-brand" :disabled="saving" @click="removeItem(idx)">
@@ -254,10 +371,15 @@ const alerts = ref([]);
 const porcentajeUtilidadCompra = ref(25);
 const anularError = ref('');
 const selectedCompra = ref(null);
+const detalleLoading = ref(false);
+const detalleError = ref('');
+const detalleCompra = ref(null);
 
 const formModalRef = ref(null);
 const anularModalRef = ref(null);
+const detailModalRef = ref(null);
 let formModal = null;
+let detailModal = null;
 
 const emptyItem = () => ({
     producto: null,
@@ -268,13 +390,14 @@ const emptyItem = () => ({
     costo_unitario: 0,
     precio_venta: 0,
     precio_venta_manual: false,
-    fecha_caducidad: new Date().toISOString().slice(0, 10),
+    fecha_caducidad: '',
 });
 
 const emptyForm = () => ({
     proveedor: proveedorGeneral.value,
     fecha_compra: new Date().toISOString().slice(0, 10),
-    observaciones: '',
+    tipo_documento: 'sin_documento',
+    numero_documento: '',
     items: [emptyItem()],
 });
 
@@ -286,6 +409,7 @@ const anularMessage = computed(() => `¿Deseas anular la compra <strong>${select
 
 onMounted(async () => {
     formModal = new Modal(formModalRef.value);
+    detailModal = new Modal(detailModalRef.value);
     await Promise.all([loadCompras(), loadCatalogs()]);
 });
 
@@ -375,6 +499,7 @@ function onProductClear(item) {
     item.unidad_medida = '';
     item.precio_venta_manual = false;
     item.precio_venta = 0;
+    item.fecha_caducidad = '';
 }
 
 function applySelectedProduct(item, producto) {
@@ -382,7 +507,32 @@ function applySelectedProduct(item, producto) {
     item.producto_id = Number(producto.id);
     item.producto_search = '';
     syncItemMeasure(item, producto);
+    syncCaducidadRequirement(item, producto);
     syncSuggestedSalePrice(item);
+}
+
+function getItemProduct(item) {
+    return item.producto
+        ?? catalogs.value.productos.find((prod) => Number(prod.id) === Number(item.producto_id))
+        ?? null;
+}
+
+function itemRequiresCaducidad(item) {
+    const producto = getItemProduct(item);
+    return Boolean(producto?.control_vencimiento);
+}
+
+function syncCaducidadRequirement(item, selectedProducto = null) {
+    const producto = selectedProducto ?? getItemProduct(item);
+
+    if (!producto?.control_vencimiento) {
+        item.fecha_caducidad = '';
+        return;
+    }
+
+    if (!item.fecha_caducidad) {
+        item.fecha_caducidad = new Date().toISOString().slice(0, 10);
+    }
 }
 
 function syncItemMeasure(item, selectedProducto = null) {
@@ -470,6 +620,10 @@ async function save() {
         validationErrors.push('Seleccione un proveedor válido de la lista.');
     }
 
+    if (form.value.tipo_documento !== 'sin_documento' && !String(form.value.numero_documento || '').trim()) {
+        validationErrors.push('Debe ingresar el numero de documento cuando el tipo es recibo o factura.');
+    }
+
     if (!form.value.items.length) {
         validationErrors.push('Debe agregar al menos un item.');
     }
@@ -481,7 +635,7 @@ async function save() {
         if (!Number.isInteger(Number(item.cantidad)) || Number(item.cantidad) < 1) validationErrors.push(`Item ${row}: la cantidad debe ser un entero mayor o igual a 1.`);
         if (Number(item.costo_unitario || 0) <= 0) validationErrors.push(`Item ${row}: el costo unitario es obligatorio y debe ser mayor a 0.`);
         if (Number(item.precio_venta || 0) <= 0) validationErrors.push(`Item ${row}: el precio de venta es obligatorio y debe ser mayor a 0.`);
-        if (!item.fecha_caducidad) validationErrors.push(`Item ${row}: la fecha de caducidad es obligatoria.`);
+        if (itemRequiresCaducidad(item) && !item.fecha_caducidad) validationErrors.push(`Item ${row}: la fecha de caducidad es obligatoria para productos con control de vencimiento.`);
     });
 
     if (validationErrors.length) {
@@ -496,13 +650,14 @@ async function save() {
         const payload = {
             proveedor_id: form.value.proveedor.id,
             fecha_compra: form.value.fecha_compra,
-            observaciones: form.value.observaciones || null,
+            tipo_documento: form.value.tipo_documento,
+            numero_documento: form.value.tipo_documento === 'sin_documento' ? null : (form.value.numero_documento || null),
             items: form.value.items.map((item) => ({
                 producto_id: item.producto_id,
                 cantidad: Math.max(1, Math.trunc(Number(item.cantidad || 0))),
                 costo_unitario: Number(item.costo_unitario || 0),
                 precio_venta: Number(item.precio_venta),
-                fecha_caducidad: item.fecha_caducidad,
+                fecha_caducidad: itemRequiresCaducidad(item) ? item.fecha_caducidad : null,
             })),
         };
 
@@ -523,12 +678,37 @@ function formatDate(value) {
     return new Date(value).toLocaleDateString('es-GT');
 }
 
+function documentTypeLabel(value) {
+    if (value === 'sin_documento') return 'Sin documento';
+    if (value === 'recibo') return 'Recibo';
+    if (value === 'factura') return 'Factura';
+    return 'Sin documento';
+}
+
 function openAnularCompra(compra) {
     if (!compra?.id || compra.estado !== 'activo') return;
 
     selectedCompra.value = compra;
     anularError.value = '';
     anularModalRef.value?.open();
+}
+
+async function openDetalleCompra(compra) {
+    if (!compra?.id) return;
+
+    detalleCompra.value = null;
+    detalleError.value = '';
+    detalleLoading.value = true;
+    detailModal?.show();
+
+    try {
+        const { data } = await axios.get(`/compras/get/${compra.id}`);
+        detalleCompra.value = data.data;
+    } catch (error) {
+        detalleError.value = error.response?.data?.message ?? 'No se pudo cargar el detalle de la compra.';
+    } finally {
+        detalleLoading.value = false;
+    }
 }
 
 function onAnularModalHidden() {

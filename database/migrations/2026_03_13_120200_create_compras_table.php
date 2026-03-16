@@ -15,7 +15,8 @@ return new class extends Migration
             $table->date('fecha_compra');
             $table->string('estado')->default('activo');
             $table->decimal('total', 12, 4)->default(0);
-            $table->text('observaciones')->nullable();
+            $table->string('tipo_documento', 20)->nullable();
+            $table->string('numero_documento', 100)->nullable();
             $table->unsignedBigInteger('add_user')->nullable();
             $table->unsignedBigInteger('mod_user')->nullable();
             $table->foreign('proveedor_id')->references('id')->on('proveedores')->restrictOnDelete();

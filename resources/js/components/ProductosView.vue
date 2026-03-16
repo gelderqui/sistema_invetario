@@ -51,7 +51,6 @@
                         <tr>
                             <th>Nombre</th>
                             <th>Categoria</th>
-                            <th>Proveedor</th>
                             <th>Estado</th>
                             <th>Creado</th>
                             <th></th>
@@ -59,7 +58,7 @@
                     </thead>
                     <tbody>
                         <tr v-if="!displayedProductos.length">
-                            <td colspan="6" class="text-center text-body-secondary py-4">Sin registros</td>
+                            <td colspan="5" class="text-center text-body-secondary py-4">Sin registros</td>
                         </tr>
                         <tr v-for="prod in displayedProductos" :key="prod.id">
                             <td class="fw-semibold">{{ prod.nombre }}</td>
@@ -69,7 +68,6 @@
                                 </span>
                                 <span v-else class="text-body-secondary small">—</span>
                             </td>
-                            <td>{{ prod.proveedor?.nombre ?? '—' }}</td>
                             <td>
                                 <span
                                     class="badge"
@@ -169,25 +167,6 @@
                                 </div>
 
                                 <div class="col-12 col-sm-6">
-                                    <label class="form-label fw-semibold" for="p-proveedor">Proveedor referencial</label>
-                                    <Multiselect
-                                        id="p-proveedor"
-                                        v-model="selectedProveedorOption"
-                                        :options="proveedoresActivos"
-                                        label="nombre"
-                                        track-by="id"
-                                        placeholder="Buscar proveedor..."
-                                        :searchable="true"
-                                        :allow-empty="true"
-                                        :close-on-select="true"
-                                        :show-labels="false"
-                                        select-label="Seleccionar"
-                                        selected-label="Seleccionado"
-                                        deselect-label="Quitar"
-                                    />
-                                </div>
-
-                                <div class="col-12 col-sm-6">
                                     <label class="form-label fw-semibold" for="p-barra">Codigo de barra</label>
                                     <input
                                         id="p-barra"
@@ -200,16 +179,6 @@
                                         <svg ref="barcodeSvgRef" class="barcode-preview-svg" />
                                         <div v-if="barcodePreviewError" class="form-text text-danger">{{ barcodePreviewError }}</div>
                                     </div>
-                                </div>
-
-                                <div class="col-12">
-                                    <label class="form-label fw-semibold" for="p-detalle">Detalle</label>
-                                    <textarea
-                                        id="p-detalle"
-                                        v-model="form.detalle"
-                                        class="form-control"
-                                        rows="3"
-                                    />
                                 </div>
 
                                 <div class="col-12">
@@ -246,9 +215,10 @@
                                         id="p-stock-minimo"
                                         v-model.number="form.stock_minimo"
                                         type="number"
-                                        step="0.0001"
-                                        min="0"
+                                        step="1"
+                                        min="1"
                                         class="form-control"
+                                        required
                                     >
                                     <div class="form-text">Alerta cuando el inventario baje de este valor.</div>
                                 </div>
@@ -331,7 +301,6 @@ import ModalConfirm from '@/components/components_ui/ModalConfirm.vue';
 
 const productos = ref([]);
 const categoriasActivas = ref([]);
-const proveedoresActivos = ref([]);
 const medidasActivas = ref([]);
 const loading = ref(true);
 const saving = ref(false);
@@ -354,13 +323,11 @@ let formModal = null;
 
 const emptyForm = () => ({
     categoria_id: null,
-    proveedor_id: null,
     nombre: '',
     codigo_barra: '',
-    detalle: '',
     palabras_clave: '',
     unidad_medida_id: medidasActivas.value[0]?.id ?? null,
-    stock_minimo: 0,
+    stock_minimo: 1,
     control_vencimiento: false,
     dias_alerta_vencimiento: 15,
     activo: true,
@@ -375,16 +342,9 @@ const selectedCategoriaOption = computed({
         form.value.categoria_id = option?.id ?? null;
     },
 });
-const selectedProveedorOption = computed({
-    get: () => proveedoresActivos.value.find((item) => item.id === form.value.proveedor_id) ?? null,
-    set: (option) => {
-        form.value.proveedor_id = option?.id ?? null;
-    },
-});
-
 onMounted(async () => {
     formModal = new Modal(formModalRef.value);
-    await Promise.all([loadProductos(), loadCategorias(), loadProveedores(), loadMedidas()]);
+    await Promise.all([loadProductos(), loadCategorias(), loadMedidas()]);
 });
 
 watch(
@@ -471,11 +431,6 @@ async function loadCategorias() {
     categoriasActivas.value = data.data;
 }
 
-async function loadProveedores() {
-    const { data } = await axios.get('/proveedores/get');
-    proveedoresActivos.value = (data.data ?? []).filter((item) => item.activo);
-}
-
 async function loadMedidas() {
     const { data } = await axios.get('/medidas/get');
     medidasActivas.value = data.data ?? [];
@@ -493,13 +448,11 @@ function openEdit(prod) {
     editingId.value = prod.id;
     form.value = {
         categoria_id:         prod.categoria_id ?? null,
-        proveedor_id:         prod.proveedor_id ?? null,
         nombre:               prod.nombre,
         codigo_barra:         prod.codigo_barra ?? '',
-        detalle:              prod.detalle ?? '',
         palabras_clave:       prod.palabras_clave ?? '',
         unidad_medida_id:     prod.unidad_medida_id ?? null,
-        stock_minimo:             prod.stock_minimo ?? 0,
+        stock_minimo:             Math.max(1, Math.trunc(Number(prod.stock_minimo ?? 1))),
         control_vencimiento:      prod.control_vencimiento ?? false,
         dias_alerta_vencimiento:  prod.dias_alerta_vencimiento ?? 15,
         activo:                   prod.activo,
@@ -563,7 +516,6 @@ async function save() {
         const payload = {
             ...form.value,
             codigo_barra: form.value.codigo_barra || null,
-            proveedor_id: form.value.proveedor_id || null,
         };
 
         if (editingId.value) {

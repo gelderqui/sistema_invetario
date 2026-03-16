@@ -42,80 +42,6 @@
             </div>
         </div>
 
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-body d-grid gap-3">
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <h5 class="mb-0">Reporte de gastos</h5>
-                    <div class="d-flex align-items-end gap-2 flex-wrap">
-                        <div>
-                            <label class="form-label small mb-1">Desde</label>
-                            <input v-model="reportFilters.desde" type="date" class="form-control form-control-sm">
-                        </div>
-                        <div>
-                            <label class="form-label small mb-1">Hasta</label>
-                            <input v-model="reportFilters.hasta" type="date" class="form-control form-control-sm">
-                        </div>
-                        <button class="btn btn-outline-brand btn-sm" :disabled="loadingReportes" @click="loadReportes">Actualizar</button>
-                    </div>
-                </div>
-
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="text-body-secondary small">Total en el periodo</span>
-                    <strong class="h5 mb-0">Q {{ Number(reportes.total_periodo || 0).toFixed(2) }}</strong>
-                </div>
-
-                <div class="row g-3">
-                    <div class="col-12 col-lg-6">
-                        <div class="table-responsive">
-                            <table class="table table-sm align-middle mb-0">
-                                <thead>
-                                    <tr>
-                                        <th>Fecha</th>
-                                        <th>Cantidad</th>
-                                        <th>Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-if="!reportes.por_dia.length">
-                                        <td colspan="3" class="text-center text-body-secondary py-3">Sin datos por día.</td>
-                                    </tr>
-                                    <tr v-for="row in reportes.por_dia" :key="row.fecha">
-                                        <td>{{ formatDate(row.fecha) }}</td>
-                                        <td>{{ row.cantidad }}</td>
-                                        <td class="fw-semibold">Q {{ Number(row.total || 0).toFixed(2) }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div class="col-12 col-lg-6">
-                        <div class="table-responsive">
-                            <table class="table table-sm align-middle mb-0">
-                                <thead>
-                                    <tr>
-                                        <th>Tipo</th>
-                                        <th>Cantidad</th>
-                                        <th>Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-if="!reportes.por_tipo.length">
-                                        <td colspan="3" class="text-center text-body-secondary py-3">Sin datos por tipo.</td>
-                                    </tr>
-                                    <tr v-for="row in reportes.por_tipo" :key="row.tipo_gasto_id">
-                                        <td>{{ row.tipo_nombre }}</td>
-                                        <td>{{ row.cantidad }}</td>
-                                        <td class="fw-semibold">Q {{ Number(row.total || 0).toFixed(2) }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <div ref="formModalRef" class="modal fade" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
@@ -202,13 +128,7 @@ const gastos = ref([]);
 const catalogs = ref({ tipos_gasto: [], metodos_pago: ['caja', 'caja_chica', 'banco'] });
 const loading = ref(true);
 const saving = ref(false);
-const loadingReportes = ref(false);
 const formErrors = ref([]);
-const reportes = ref({ por_dia: [], por_tipo: [], total_periodo: 0 });
-const reportFilters = ref({
-    desde: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10),
-    hasta: new Date().toISOString().slice(0, 10),
-});
 
 const formModalRef = ref(null);
 let formModal = null;
@@ -230,7 +150,7 @@ const isTipoOtros = computed(() => {
 
 onMounted(async () => {
     formModal = new Modal(formModalRef.value);
-    await Promise.all([loadGastos(), loadCatalogs(), loadReportes()]);
+    await Promise.all([loadGastos(), loadCatalogs()]);
 });
 
 async function loadGastos() {
@@ -246,21 +166,6 @@ async function loadGastos() {
 async function loadCatalogs() {
     const { data } = await axios.get('/gastos/get/catalogs');
     catalogs.value = data.data;
-}
-
-async function loadReportes() {
-    loadingReportes.value = true;
-    try {
-        const { data } = await axios.get('/gastos/get/reportes', {
-            params: {
-                desde: reportFilters.value.desde,
-                hasta: reportFilters.value.hasta,
-            },
-        });
-        reportes.value = data.data;
-    } finally {
-        loadingReportes.value = false;
-    }
 }
 
 function openCreate() {
@@ -289,7 +194,6 @@ async function save() {
 
         const { data } = await axios.post('/gastos/store', payload);
         gastos.value.unshift(data.data);
-        await loadReportes();
         formModal.hide();
     } catch (error) {
         const errors = error.response?.data?.errors;

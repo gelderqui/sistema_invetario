@@ -236,7 +236,7 @@ const menuItems = computed(() => {
         .sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999));
 
     const groupedModules = [
-        { module: 'operaciones', name: 'operaciones', label: 'Operaciones', icon: 'fa-solid fa-briefcase' },
+        { module: 'operaciones', name: 'operaciones', label: 'Salidas', icon: 'fa-solid fa-briefcase' },
         { module: 'inventario', name: 'inventario', label: 'Inventario', icon: 'fa-solid fa-warehouse' },
         { module: 'caja', name: 'caja', label: 'Caja', icon: 'fa-solid fa-cash-register' },
         { module: 'ventas', name: 'ventas', label: 'Ventas', icon: 'fa-solid fa-cart-shopping' },

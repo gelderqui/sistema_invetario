@@ -36,7 +36,7 @@
                             <td>{{ compra.proveedor?.nombre ?? '-' }}</td>
                             <td>{{ formatDate(compra.fecha_compra) }}</td>
                             <td>{{ compra.detalles_count ?? 0 }}</td>
-                            <td class="fw-semibold">Q {{ Number(compra.total ?? 0).toFixed(2) }}</td>
+                            <td class="fw-semibold">Q {{ formatMoney(compra.total) }}</td>
                             <td>
                                 <span :class="['badge text-uppercase', compra.estado === 'anulada' ? 'text-bg-danger' : 'text-bg-success']">
                                     {{ compra.estado }}
@@ -103,7 +103,7 @@
                                 </div>
                                 <div class="col-12 col-md-2">
                                     <div class="small text-body-secondary">Total</div>
-                                    <div class="fw-semibold">Q {{ Number(detalleCompra.total ?? 0).toFixed(2) }}</div>
+                                    <div class="fw-semibold">Q {{ formatMoney(detalleCompra.total) }}</div>
                                 </div>
                                 <div class="col-12 col-md-3">
                                     <div class="small text-body-secondary">Tipo documento</div>
@@ -137,11 +137,11 @@
                                             <td>{{ detalle.producto?.nombre ?? '-' }}</td>
                                             <td>{{ Number(detalle.cantidad ?? 0).toFixed(2) }}</td>
                                             <td>{{ detalle.unidad_medida || '-' }}</td>
-                                            <td>Q {{ Number(detalle.costo_unitario ?? 0).toFixed(2) }}</td>
-                                            <td>Q {{ Number(detalle.precio_venta_sugerido ?? 0).toFixed(2) }}</td>
-                                            <td>Q {{ Number(detalle.precio_venta_aplicado ?? 0).toFixed(2) }}</td>
+                                            <td>Q {{ formatMoney(detalle.costo_unitario) }}</td>
+                                            <td>Q {{ formatMoney(detalle.precio_venta_sugerido) }}</td>
+                                            <td>Q {{ formatMoney(detalle.precio_venta_aplicado) }}</td>
                                             <td>{{ formatDate(detalle.fecha_caducidad) }}</td>
-                                            <td class="fw-semibold">Q {{ Number(detalle.subtotal ?? 0).toFixed(2) }}</td>
+                                            <td class="fw-semibold">Q {{ formatMoney(detalle.subtotal) }}</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -299,7 +299,7 @@
                                                 >
                                                 <span v-else class="form-control-plaintext form-control-sm py-1 d-block text-body-secondary">No aplica</span>
                                             </td>
-                                            <td class="fw-semibold">Q {{ itemSubtotal(item).toFixed(2) }}</td>
+                                            <td class="fw-semibold">Q {{ formatMoney(itemSubtotal(item)) }}</td>
                                             <td>
                                                 <button type="button" class="btn btn-sm btn-action-brand" :disabled="saving" @click="removeItem(idx)">
                                                     <FontAwesomeIcon icon="fa-solid fa-trash" class="icon-action-delete" />
@@ -313,7 +313,7 @@
                             <div class="compra-total-box d-flex justify-content-between align-items-center">
                                 <div>
                                     <div class="small text-body-secondary">Total estimado</div>
-                                    <div class="h5 mb-0">Q {{ totalCompra.toFixed(2) }}</div>
+                                    <div class="h5 mb-0">Q {{ formatMoney(totalCompra) }}</div>
                                 </div>
                                 <div class="text-end small text-body-secondary">Precio de venta sugerido: costo + {{ porcentajeUtilidadCompra }}%. Puede modificarse por item.</div>
                             </div>
@@ -360,6 +360,7 @@ import 'vue-multiselect/dist/vue-multiselect.css';
 import axios from '@/bootstrap';
 import FormErrors from '@/components/FormErrors.vue';
 import ModalConfirm from '@/components/components_ui/ModalConfirm.vue';
+import { formatMoney } from '@/utils/formatters';
 
 const compras = ref([]);
 const catalogs = ref({ categorias: [], proveedores: [], productos: [] });

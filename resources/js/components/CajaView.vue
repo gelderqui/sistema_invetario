@@ -33,10 +33,6 @@
                         <label class="form-label">Fondo inicial</label>
                         <input v-model.number="formApertura.monto_apertura" type="number" step="0.01" min="0" class="form-control" />
                     </div>
-                    <div class="col-12 col-md-4">
-                        <label class="form-label">Fecha/hora apertura</label>
-                        <input v-model="formApertura.fecha_apertura" type="datetime-local" class="form-control" />
-                    </div>
                     <div class="col-12 col-md-4 d-flex gap-2">
                         <button class="btn btn-brand" :disabled="loading || !!cajaActiva" @click="abrirCaja">Abrir caja</button>
                     </div>
@@ -164,6 +160,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from '@/bootstrap';
+import { formatMoney } from '@/utils/formatters';
 
 const route = useRoute();
 const router = useRouter();
@@ -177,7 +174,6 @@ const catalogs = ref({ tipos_gasto: [] });
 
 const formApertura = ref({
     monto_apertura: 0,
-    fecha_apertura: '',
 });
 
 const formAjuste = ref({
@@ -229,7 +225,7 @@ onMounted(async () => {
 });
 
 function q(value) {
-    return Number(value || 0).toFixed(2);
+    return formatMoney(value);
 }
 
 function dateTime(value) {
@@ -241,6 +237,16 @@ function goSection(name) {
     router.push(`/caja/${name}`);
 }
 
+function resolveApiErrorMessage(error, fallback) {
+    const backendErrors = error?.response?.data?.errors;
+    if (backendErrors && typeof backendErrors === 'object') {
+        const first = Object.values(backendErrors).flat()[0];
+        if (first) return String(first);
+    }
+
+    return error?.response?.data?.message || error?.message || fallback;
+}
+
 async function loadEstado() {
     loading.value = true;
     try {
@@ -250,6 +256,8 @@ async function loadEstado() {
         if (resumen.value?.monto_sistema != null) {
             formCierre.value.monto_contado = Number(resumen.value.monto_sistema);
         }
+    } catch (error) {
+        alertaCaja.value = { mensaje: resolveApiErrorMessage(error, 'No se pudo cargar el estado de caja.') };
     } finally {
         loading.value = false;
     }
@@ -262,8 +270,9 @@ async function loadMovimientos() {
         if (data?.data?.resumen) {
             resumen.value = data.data.resumen;
         }
-    } catch {
+    } catch (error) {
         movimientos.value = [];
+        alertaCaja.value = { mensaje: resolveApiErrorMessage(error, 'No se pudieron cargar los movimientos de caja.') };
     }
 }
 
@@ -271,22 +280,24 @@ async function loadCatalogs() {
     try {
         const { data } = await axios.get('/caja/get/catalogs');
         catalogs.value = data?.data ?? catalogs.value;
-    } catch {
+    } catch (error) {
         catalogs.value = { tipos_gasto: [] };
+        alertaCaja.value = { mensaje: resolveApiErrorMessage(error, 'No se pudieron cargar catalogos de caja.') };
     }
 }
 
 async function abrirCaja() {
     loading.value = true;
+    alertaCaja.value = null;
     try {
         const { data } = await axios.post('/caja/apertura', {
-            ...formApertura.value,
             monto_apertura: Number(formApertura.value.monto_apertura || 0),
-            fecha_apertura: formApertura.value.fecha_apertura || undefined,
         });
         alertaCaja.value = data?.data?.alerta ?? null;
         await loadEstado();
         await loadMovimientos();
+    } catch (error) {
+        alertaCaja.value = { mensaje: resolveApiErrorMessage(error, 'No se pudo abrir la caja.') };
     } finally {
         loading.value = false;
     }
@@ -294,6 +305,7 @@ async function abrirCaja() {
 
 async function registrarAjuste() {
     loading.value = true;
+    alertaCaja.value = null;
     try {
         await axios.post('/caja/movimientos/ajuste', {
             ...formAjuste.value,
@@ -304,6 +316,8 @@ async function registrarAjuste() {
         formAjuste.value.tipo_gasto_id = null;
         await loadEstado();
         await loadMovimientos();
+    } catch (error) {
+        alertaCaja.value = { mensaje: resolveApiErrorMessage(error, 'No se pudo registrar el movimiento.') };
     } finally {
         loading.value = false;
     }
@@ -311,6 +325,7 @@ async function registrarAjuste() {
 
 async function registrarArqueo() {
     loading.value = true;
+    alertaCaja.value = null;
     try {
         const { data } = await axios.post('/caja/arqueo', {
             monto_contado: Number(formArqueo.value.monto_contado || 0),
@@ -318,6 +333,8 @@ async function registrarArqueo() {
         });
         alertaCaja.value = data?.data?.alerta ?? null;
         await loadEstado();
+    } catch (error) {
+        alertaCaja.value = { mensaje: resolveApiErrorMessage(error, 'No se pudo registrar el arqueo.') };
     } finally {
         loading.value = false;
     }
@@ -325,6 +342,7 @@ async function registrarArqueo() {
 
 async function cerrarCaja() {
     loading.value = true;
+    alertaCaja.value = null;
     try {
         const { data } = await axios.post('/caja/cierre', {
             monto_contado: Number(formCierre.value.monto_contado || 0),
@@ -332,6 +350,8 @@ async function cerrarCaja() {
         alertaCaja.value = data?.data?.alerta ?? null;
         await loadEstado();
         await loadMovimientos();
+    } catch (error) {
+        alertaCaja.value = { mensaje: resolveApiErrorMessage(error, 'No se pudo cerrar la caja.') };
     } finally {
         loading.value = false;
     }

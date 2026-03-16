@@ -33,7 +33,7 @@
                             <td>{{ formatDate(gasto.fecha) }}</td>
                             <td>{{ gasto.tipo_gasto?.nombre ?? '-' }}</td>
                             <td>{{ gasto.descripcion }}</td>
-                            <td class="fw-semibold">Q {{ Number(gasto.monto ?? 0).toFixed(2) }}</td>
+                            <td class="fw-semibold">Q {{ formatMoney(gasto.monto) }}</td>
                             <td>{{ paymentMethodLabel(gasto.metodo_pago) }}</td>
                             <td>{{ gasto.usuario?.name ?? '-' }}</td>
                         </tr>
@@ -129,6 +129,7 @@ import 'vue-multiselect/dist/vue-multiselect.css';
 
 import axios from '@/bootstrap';
 import FormErrors from '@/components/FormErrors.vue';
+import { formatMoney } from '@/utils/formatters';
 
 const gastos = ref([]);
 const catalogs = ref({ tipos_gasto: [], metodos_pago: [], caja_activa: null, capital_cuentas: [] });
@@ -155,7 +156,7 @@ const isTipoOtros = computed(() => {
 });
 
 const capitalBalancesText = computed(() => catalogs.value.capital_cuentas
-    .map((cuenta) => `${cuenta.nombre}: Q ${Number(cuenta.saldo_actual || 0).toFixed(2)}`)
+    .map((cuenta) => `${cuenta.nombre}: Q ${formatMoney(cuenta.saldo_actual)}`)
     .join(' | '));
 
 onMounted(async () => {

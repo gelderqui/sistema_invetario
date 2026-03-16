@@ -18,7 +18,7 @@
                         <select v-model="selectedVentaId" class="form-select" @change="onVentaChange">
                             <option :value="null">Seleccione una venta</option>
                             <option v-for="v in ventasCatalogo" :key="v.id" :value="v.id">
-                                {{ v.numero }} | {{ fmtDate(v.fecha_venta) }} | Q {{ Number(v.total || 0).toFixed(2) }}
+                                {{ v.numero }} | {{ fmtDate(v.fecha_venta) }} | Q {{ formatMoney(v.total) }}
                             </option>
                         </select>
                     </div>
@@ -94,7 +94,7 @@
                                     {{ d.estado }}
                                 </span>
                             </td>
-                            <td class="fw-semibold">Q {{ Number(d.total || 0).toFixed(2) }}</td>
+                            <td class="fw-semibold">Q {{ formatMoney(d.total) }}</td>
                             <td class="text-end">
                                 <button type="button" class="btn btn-sm btn-outline-brand" title="Imprimir recibo" @click="openTicket(d.id)">
                                     <FontAwesomeIcon icon="fa-solid fa-print" />
@@ -124,6 +124,7 @@ import { computed, onMounted, ref } from 'vue';
 import axios from '@/bootstrap';
 import FormErrors from '@/components/FormErrors.vue';
 import TicketReceiptModal from '@/components/TicketReceiptModal.vue';
+import { formatMoney } from '@/utils/formatters';
 
 const loading = ref(false);
 const saving = ref(false);

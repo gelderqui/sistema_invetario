@@ -58,7 +58,7 @@
                                 </span>
                             </td>
                             <td>{{ venta.detalles_count ?? 0 }}</td>
-                            <td class="fw-semibold">Q {{ Number(venta.total || 0).toFixed(2) }}</td>
+                            <td class="fw-semibold">Q {{ formatMoney(venta.total) }}</td>
                             <td class="text-uppercase">{{ venta.metodo_pago }}</td>
                             <td class="text-body-secondary small">{{ fmtDate(venta.created_at) }}</td>
                             <td class="text-end">
@@ -108,7 +108,7 @@
                                     {{ row.estado }}
                                 </span>
                             </td>
-                            <td class="fw-semibold">Q {{ Number(row.total || 0).toFixed(2) }}</td>
+                            <td class="fw-semibold">Q {{ formatMoney(row.total) }}</td>
                             <td>{{ row.detalles?.length || 0 }}</td>
                             <td class="text-end">
                                 <button type="button" class="btn btn-sm btn-outline-brand" title="Imprimir recibo" @click="imprimirDevolucion(row.id)">
@@ -134,6 +134,7 @@
 <script setup>
 import { onMounted, ref } from 'vue';
 import axios from '@/bootstrap';
+import { formatMoney } from '@/utils/formatters';
 
 const loading = ref(false);
 const rows = ref([]);

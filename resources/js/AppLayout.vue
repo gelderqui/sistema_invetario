@@ -181,6 +181,21 @@
                     <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                 </div>
             </div>
+
+            <div
+                ref="errorToastRef"
+                class="toast align-items-center text-bg-danger border-0 mt-2"
+                role="alert"
+                aria-live="assertive"
+                aria-atomic="true"
+            >
+                <div class="d-flex">
+                    <div class="toast-body">
+                        {{ errorToastMessage }}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -195,7 +210,7 @@
 
 <script setup>
 import { Modal, Toast } from 'bootstrap';
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import axios from '@/bootstrap';
@@ -213,9 +228,12 @@ const passwordSaving = ref(false);
 const passwordErrors = ref([]);
 const passwordModalRef = ref(null);
 const successToastRef = ref(null);
+const errorToastRef = ref(null);
 const successToastMessage = ref('');
+const errorToastMessage = ref('');
 let passwordModal = null;
 let successToast = null;
+let errorToast = null;
 
 const emptyPasswordForm = () => ({
     current_password: '',
@@ -348,6 +366,29 @@ function showSuccessToast(message) {
 
     successToast?.show();
 }
+
+function showErrorToast(message) {
+    errorToastMessage.value = message;
+
+    if (!errorToast && errorToastRef.value) {
+        errorToast = new Toast(errorToastRef.value, { delay: 3500 });
+    }
+
+    errorToast?.show();
+}
+
+function onGlobalError(event) {
+    const message = event?.detail?.message ?? 'Ocurrio un error inesperado.';
+    showErrorToast(message);
+}
+
+onMounted(() => {
+    window.addEventListener('app:error', onGlobalError);
+});
+
+onBeforeUnmount(() => {
+    window.removeEventListener('app:error', onGlobalError);
+});
 
 async function submitChangePassword() {
     passwordErrors.value = [];

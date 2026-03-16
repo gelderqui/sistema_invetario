@@ -41,7 +41,7 @@
                                 </span>
                             </td>
                             <td>{{ venta.detalles_count ?? 0 }}</td>
-                            <td class="fw-semibold">Q {{ Number(venta.total ?? 0).toFixed(2) }}</td>
+                            <td class="fw-semibold">Q {{ formatMoney(venta.total) }}</td>
                             <td class="text-uppercase">{{ venta.metodo_pago }}</td>
                             <td class="text-body-secondary small">{{ formatDate(venta.created_at) }}</td>
                         </tr>
@@ -159,7 +159,7 @@
                                             <td>
                                                 <input v-model.number="item.precio_unitario" type="number" step="0.0001" min="0" class="form-control form-control-sm">
                                             </td>
-                                            <td class="fw-semibold">Q {{ itemSubtotal(item).toFixed(2) }}</td>
+                                            <td class="fw-semibold">Q {{ formatMoney(itemSubtotal(item)) }}</td>
                                             <td>
                                                 <button type="button" class="btn btn-sm btn-action-brand" :disabled="saving" @click="removeItem(idx)">
                                                     <FontAwesomeIcon icon="fa-solid fa-trash" class="icon-action-delete" />
@@ -190,11 +190,11 @@
 
                                 <div class="col-12 col-md-3">
                                     <div class="small text-body-secondary">Subtotal</div>
-                                    <div class="h6 mb-1">Q {{ subtotalVenta.toFixed(2) }}</div>
+                                    <div class="h6 mb-1">Q {{ formatMoney(subtotalVenta) }}</div>
                                     <div class="small text-body-secondary">Total</div>
-                                    <div class="h5 mb-0">Q {{ totalVenta.toFixed(2) }}</div>
+                                    <div class="h5 mb-0">Q {{ formatMoney(totalVenta) }}</div>
                                     <div v-if="form.metodo_pago === 'efectivo' && form.monto_recibido" class="small mt-1">
-                                        Cambio: <strong>Q {{ cambioVenta.toFixed(2) }}</strong>
+                                        Cambio: <strong>Q {{ formatMoney(cambioVenta) }}</strong>
                                     </div>
                                 </div>
                             </div>
@@ -224,6 +224,7 @@ import 'vue-multiselect/dist/vue-multiselect.css';
 import axios from '@/bootstrap';
 import FormErrors from '@/components/FormErrors.vue';
 import TicketReceiptModal from '@/components/TicketReceiptModal.vue';
+import { formatMoney } from '@/utils/formatters';
 
 const ventas = ref([]);
 const catalogs = ref({ clientes: [], productos: [], metodos_pago: [] });

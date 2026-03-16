@@ -15,6 +15,22 @@ import { createPinia } from 'pinia';
 import AppLayout from './AppLayout.vue';
 import router from './router.js';
 
+window.addEventListener('unhandledrejection', (event) => {
+	const reason = event?.reason;
+	if (!reason) return;
+
+	if (reason?.__notifiedToUser) {
+		event.preventDefault();
+		return;
+	}
+
+	const fallback = reason?.response?.data?.message || reason?.message || 'Ocurrio un error inesperado.';
+	window.dispatchEvent(new CustomEvent('app:error', {
+		detail: { message: String(fallback) },
+	}));
+	event.preventDefault();
+});
+
 library.add(fab, far, fas);
 
 const app = createApp(AppLayout);

@@ -120,6 +120,7 @@
 <script setup>
 import { onMounted, ref } from 'vue';
 import axios from '@/bootstrap';
+import { formatMoney } from '@/utils/formatters';
 
 const loading = ref(false);
 const cuentas = ref([]);
@@ -143,7 +144,7 @@ onMounted(async () => {
 });
 
 function q(value) {
-    return Number(value || 0).toFixed(2);
+    return formatMoney(value);
 }
 
 function dateTime(value) {

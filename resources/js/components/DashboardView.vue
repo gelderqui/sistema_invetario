@@ -100,6 +100,7 @@
 import { onMounted, ref } from 'vue';
 
 import axios from '@/bootstrap';
+import { formatMoney } from '@/utils/formatters';
 
 const loading = ref(true);
 const stats = ref({
@@ -131,6 +132,6 @@ onMounted(async () => {
 });
 
 function money(value) {
-    return Number(value || 0).toFixed(2);
+    return formatMoney(value);
 }
 </script>

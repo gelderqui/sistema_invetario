@@ -130,6 +130,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 
 import axios from '@/bootstrap';
+import { formatMoney } from '@/utils/formatters';
 
 const loading = ref(true);
 const search = ref('');

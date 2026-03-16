@@ -209,7 +209,7 @@
                             </div>
 
                             <div class="d-flex justify-content-between align-items-center">
-                                <h6 class="mb-0">Detalle de productos</h6>
+                                <h6 class="mb-0">Detalle de productos (nombre, codigo o palabras clave)</h6>
                                 <button type="button" class="btn btn-outline-brand btn-sm" :disabled="saving" @click="addItem">Agregar item</button>
                             </div>
 
@@ -238,7 +238,7 @@
                                                     :options="productOptionsForItem(item)"
                                                     :custom-label="productOptionLabel"
                                                     track-by="id"
-                                                    placeholder="Buscar por nombre, codigo o palabras clave"
+                                                    placeholder="Buscar"
                                                     :searchable="true"
                                                     :allow-empty="false"
                                                     :close-on-select="true"

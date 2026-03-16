@@ -4,7 +4,7 @@ Documento de contexto rapido para cualquier agente IA que entre a este repositor
 
 ## 1) Objetivo del proyecto
 
-SPA de inventario + POS sobre Laravel + Vue, con control de caja, devoluciones, ajustes y reportes.
+SPA de inventario + POS sobre Laravel + Vue, con control de caja, devoluciones, ajustes y capital.
 
 Estado funcional actual:
 
@@ -12,10 +12,11 @@ Estado funcional actual:
 - RBAC propio por rol/permisos
 - Modulos activos y orden de menu:
   - Dashboard
-  - Reportes
+  - Capital
   - Caja
   - Ventas
-  - Operaciones (Compras, Inventario, Gastos)
+  - Compras
+  - Inventario
   - Catalogo
   - Configuracion
 
@@ -58,9 +59,9 @@ Infra local:
   - `app/Http/Controllers/Caja/CajaController.php`
   - `app/Http/Controllers/Ventas/VentaController.php`
   - `app/Http/Controllers/Ventas/DevolucionController.php`
+  - `app/Http/Controllers/Capital/CapitalController.php`
   - `app/Http/Controllers/Compras/CompraController.php`
   - `app/Http/Controllers/Inventario/*`
-  - `app/Http/Controllers/Reportes/ReporteController.php`
 - Middleware de permisos:
   - `app/Http/Middleware/CheckPermission.php`
 
@@ -76,7 +77,7 @@ Infra local:
   - `resources/js/components/DevolucionesView.vue`
   - `resources/js/components/ComprasView.vue`
   - `resources/js/components/InventarioAlertasView.vue`
-  - `resources/js/components/ReportesView.vue`
+  - `resources/js/components/CapitalView.vue`
   - `resources/js/components/UsersView.vue`
   - `resources/js/components/ConfiguracionesView.vue`
   - `resources/js/components/TicketReceiptModal.vue`
@@ -86,7 +87,18 @@ Infra local:
 ### Caja
 
 - Flujo operativo: apertura, movimientos, arqueo, cierre
-- Umbral de alerta por faltante configurado por `caja_alerta_faltante_monto` (en quetzales)
+- El arqueo permite multiples registros durante la caja abierta (historial de cortes).
+- El arqueo no bloquea por umbral; solo registra y confirma exito.
+- El umbral de faltante (`caja_alerta_faltante_monto`) se aplica en cierre.
+- Si el faltante supera umbral en cierre, el sistema bloquea el cierre (422).
+- En cierre, si existe arqueo, el monto contado final se toma forzosamente del ultimo arqueo.
+- En frontend, monto contado final queda bloqueado cuando ya existe arqueo.
+- La apertura diaria por usuario es configurable por `caja_aperturas_maximas_por_dia`.
+
+### Capital
+
+- Transferencias entre cuentas: no se permite seleccionar la misma cuenta en origen y destino.
+- En formulario de capital no se ingresa fecha manual; se usa fecha actual del sistema.
 
 ### Ventas, devoluciones y anulaciones
 
@@ -136,6 +148,7 @@ Codigos base:
 - `caja_alerta_faltante_monto`: entero (Q)
 - `devolucion_limite_dias_cajero`: entero
 - `porcentaje_utilidad_compra`: entero (%)
+- `caja_aperturas_maximas_por_dia`: entero (aperturas por usuario por dia)
 
 Reglas:
 
@@ -143,6 +156,7 @@ Reglas:
 - Las demas configuraciones aceptan entero.
 - Enteros: minimo `0`.
 - Excepcion: `devolucion_limite_dias_cajero` minimo `2`.
+- Excepcion: `caja_aperturas_maximas_por_dia` minimo `1`.
 - `porcentaje_utilidad_compra` define el precio sugerido en compras como `costo + porcentaje`.
 
 Defaults actuales (seeder):
@@ -152,12 +166,13 @@ Defaults actuales (seeder):
 - `caja_alerta_faltante_monto = 50`
 - `devolucion_limite_dias_cajero = 15`
 - `porcentaje_utilidad_compra = 25`
+- `caja_aperturas_maximas_por_dia = 1`
 
 ## 6) Roles y alcance
 
 - `admin`: todos los permisos
 - `operador`: todo excepto modulo configuracion
-- `cajero`: todo excepto configuracion y reportes
+- `cajero`: todo excepto configuracion y capital
 
 Usuarios seed de prueba:
 
@@ -209,3 +224,5 @@ Tests:
 - No hay triggers activos/referenciados para reglas de negocio.
 - La autorizacion final siempre se valida en backend.
 - Si se cambian permisos/seeders, volver a ejecutar seeders.
+- Formato monetario estandar en frontend: 2 decimales, miles con coma y decimal con punto.
+- Errores de API se muestran en UI (toast global + mensajes locales por pantalla).

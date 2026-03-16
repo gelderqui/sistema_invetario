@@ -84,24 +84,33 @@
                                 </div>
                             </div>
 
+                            <div>
+                                <h6 class="mb-2">Detalle de productos (nombre, codigo o palabras clave)</h6>
+                            </div>
+
                             <div class="card border-0 bg-light-subtle">
                                 <div class="card-body row g-2 align-items-end">
                                     <div class="col-12 col-md-6">
-                                        <label class="form-label fw-semibold mb-1">Buscar producto</label>
-                                        <input
-                                            v-model="finder.query"
-                                            list="ventas-productos-list"
-                                            type="text"
-                                            class="form-control"
-                                            placeholder="Nombre, barra o palabras clave"
-                                            autocomplete="off"
-                                            @input="resolveFinderProduct"
-                                            @keydown.enter.prevent="quickAddFinder"
-                                        >
-                                        <datalist id="ventas-productos-list">
-                                            <option v-for="prod in catalogs.productos" :key="prod.id" :value="productSearchText(prod)" />
-                                        </datalist>
-                                        <div class="form-text">Tip: puedes escanear y presionar Enter para agregar rapido.</div>
+                                        <div class="d-flex align-items-center justify-content-between mb-1">
+                                            <label class="form-label fw-semibold mb-0">Buscar producto</label>
+                                            <small class="text-body-secondary">Tip: escanea y presiona Enter para agregar rapido.</small>
+                                        </div>
+                                        <Multiselect
+                                            v-model="finder.producto"
+                                            :options="finder.productOptions"
+                                            :custom-label="productOptionLabel"
+                                            track-by="id"
+                                            placeholder="Buscar"
+                                            :searchable="true"
+                                            :allow-empty="true"
+                                            :close-on-select="true"
+                                            :show-labels="false"
+                                            :internal-search="false"
+                                            @search-change="onFinderSearchChange"
+                                            @select="onFinderSelect"
+                                            @remove="onFinderClear"
+                                            @clear="onFinderClear"
+                                        />
                                     </div>
 
                                     <div class="col-6 col-md-2">
@@ -124,6 +133,7 @@
                                             step="0.0001"
                                             min="0"
                                             class="form-control"
+                                            readonly
                                         >
                                     </div>
 
@@ -157,7 +167,7 @@
                                                 <input v-model.number="item.cantidad" type="number" step="1" min="1" class="form-control form-control-sm">
                                             </td>
                                             <td>
-                                                <input v-model.number="item.precio_unitario" type="number" step="0.0001" min="0" class="form-control form-control-sm">
+                                                <input v-model.number="item.precio_unitario" type="number" step="0.0001" min="0" class="form-control form-control-sm" readonly>
                                             </td>
                                             <td class="fw-semibold">Q {{ formatMoney(itemSubtotal(item)) }}</td>
                                             <td>
@@ -173,17 +183,18 @@
                             <div class="row g-3 align-items-end">
                                 <div class="col-12 col-md-3">
                                     <label class="form-label fw-semibold">Metodo de pago *</label>
-                                    <select v-model="form.metodo_pago" class="form-select" required>
-                                        <option v-for="metodo in catalogs.metodos_pago" :key="metodo" :value="metodo">{{ metodo }}</option>
-                                    </select>
+                                    <input class="form-control" value="efectivo" disabled>
                                 </div>
 
                                 <div class="col-12 col-md-3">
-                                    <label class="form-label fw-semibold">Descuento</label>
-                                    <input v-model.number="form.descuento" type="number" step="0.0001" min="0" class="form-control">
+                                    <div class="form-check mb-1">
+                                        <input id="habilitar-descuento-venta" v-model="form.habilitar_descuento" type="checkbox" class="form-check-input">
+                                        <label class="form-check-label fw-semibold" for="habilitar-descuento-venta">Habilitar descuento</label>
+                                    </div>
+                                    <input v-model.number="form.descuento" type="number" step="0.0001" min="0" class="form-control" :disabled="!form.habilitar_descuento">
                                 </div>
 
-                                <div v-if="form.metodo_pago === 'efectivo'" class="col-12 col-md-3">
+                                <div class="col-12 col-md-3">
                                     <label class="form-label fw-semibold">Recibido</label>
                                     <input v-model.number="form.monto_recibido" type="number" step="0.0001" min="0" class="form-control">
                                 </div>
@@ -193,7 +204,7 @@
                                     <div class="h6 mb-1">Q {{ formatMoney(subtotalVenta) }}</div>
                                     <div class="small text-body-secondary">Total</div>
                                     <div class="h5 mb-0">Q {{ formatMoney(totalVenta) }}</div>
-                                    <div v-if="form.metodo_pago === 'efectivo' && form.monto_recibido" class="small mt-1">
+                                    <div v-if="form.monto_recibido" class="small mt-1">
                                         Cambio: <strong>Q {{ formatMoney(cambioVenta) }}</strong>
                                     </div>
                                 </div>
@@ -217,7 +228,7 @@
 
 <script setup>
 import { Modal } from 'bootstrap';
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import Multiselect from 'vue-multiselect';
 import 'vue-multiselect/dist/vue-multiselect.css';
 
@@ -234,8 +245,8 @@ const formErrors = ref([]);
 const consumidorFinal = ref(null);
 
 const finder = ref({
-    query: '',
     producto: null,
+    productOptions: [],
     cantidad: 1,
     precio_unitario: 0,
 });
@@ -248,6 +259,7 @@ const emptyForm = () => ({
     cliente: consumidorFinal.value,
     fecha_venta: new Date().toISOString().slice(0, 10),
     metodo_pago: 'efectivo',
+    habilitar_descuento: false,
     descuento: 0,
     monto_recibido: null,
     observaciones: '',
@@ -257,9 +269,19 @@ const emptyForm = () => ({
 const form = ref(emptyForm());
 
 const subtotalVenta = computed(() => form.value.items.reduce((sum, item) => sum + itemSubtotal(item), 0));
-const totalVenta = computed(() => Math.max(0, Number(subtotalVenta.value) - Number(form.value.descuento || 0)));
+const descuentoAplicado = computed(() => (form.value.habilitar_descuento ? Number(form.value.descuento || 0) : 0));
+const totalVenta = computed(() => Math.max(0, Number(subtotalVenta.value) - Number(descuentoAplicado.value || 0)));
 const cambioVenta = computed(() => Math.max(0, Number(form.value.monto_recibido || 0) - Number(totalVenta.value || 0)));
 const actionLocked = computed(() => loading.value || saving.value);
+
+watch(
+    () => form.value.habilitar_descuento,
+    (enabled) => {
+        if (!enabled) {
+            form.value.descuento = 0;
+        }
+    }
+);
 
 onMounted(async () => {
     formModal = new Modal(formModalRef.value);
@@ -286,8 +308,8 @@ async function loadCatalogs() {
 function openCreate() {
     form.value = emptyForm();
     finder.value = {
-        query: '',
         producto: null,
+        productOptions: catalogs.value.productos.slice(0, 100),
         cantidad: 1,
         precio_unitario: 0,
     };
@@ -304,33 +326,46 @@ function productSearchText(producto) {
     return parts.join(' | ');
 }
 
-function resolveFinderProduct() {
-    const query = String(finder.value.query || '').trim().toLowerCase();
+function productOptionLabel(producto) {
+    return producto?.nombre || '';
+}
 
-    if (!query) {
-        finder.value.producto = null;
+function resolveFinderProduct() {
+    const producto = finder.value.producto;
+
+    if (!producto) {
         finder.value.precio_unitario = 0;
         return;
     }
 
-    const exactByCode = catalogs.value.productos.find((p) => (p.codigo_barra || '').toLowerCase() === query);
-    if (exactByCode) {
-        finder.value.producto = exactByCode;
-        finder.value.precio_unitario = Number(exactByCode.precio_venta || 0);
+    finder.value.precio_unitario = Number(producto.precio_venta || 0);
+}
+
+function onFinderSearchChange(search) {
+    const query = String(search || '').trim().toLowerCase();
+
+    if (!query) {
+        finder.value.productOptions = catalogs.value.productos.slice(0, 100);
         return;
     }
 
-    const matches = catalogs.value.productos.filter((p) => {
+    finder.value.productOptions = catalogs.value.productos.filter((p) => {
         const nombre = (p.nombre || '').toLowerCase();
         const codigoBarra = (p.codigo_barra || '').toLowerCase();
         const palabrasClave = (p.palabras_clave || '').toLowerCase();
         return nombre.includes(query) || codigoBarra.includes(query) || palabrasClave.includes(query);
-    });
+    }).slice(0, 100);
+}
 
-    if (matches.length === 1) {
-        finder.value.producto = matches[0];
-        finder.value.precio_unitario = Number(matches[0].precio_venta || 0);
-    }
+function onFinderSelect(producto) {
+    finder.value.producto = producto;
+    resolveFinderProduct();
+}
+
+function onFinderClear() {
+    finder.value.producto = null;
+    finder.value.precio_unitario = 0;
+    finder.value.productOptions = catalogs.value.productos.slice(0, 100);
 }
 
 function quickAddFinder() {
@@ -375,7 +410,7 @@ function quickAddFinder() {
     }
 
     formErrors.value = [];
-    finder.value.query = '';
+    finder.value.productOptions = catalogs.value.productos.slice(0, 100);
     finder.value.producto = null;
     finder.value.cantidad = 1;
     finder.value.precio_unitario = 0;
@@ -397,14 +432,13 @@ async function save() {
         const payload = {
             cliente_id: form.value.cliente?.id ?? null,
             fecha_venta: form.value.fecha_venta,
-            metodo_pago: form.value.metodo_pago,
-            descuento: Number(form.value.descuento || 0),
-            monto_recibido: form.value.metodo_pago === 'efectivo' ? Number(form.value.monto_recibido || 0) : null,
+            metodo_pago: 'efectivo',
+            descuento: form.value.habilitar_descuento ? Number(form.value.descuento || 0) : 0,
+            monto_recibido: Number(form.value.monto_recibido || 0),
             observaciones: form.value.observaciones || null,
             items: form.value.items.map((item) => ({
                 producto_id: item.producto_id,
                 cantidad: Number(item.cantidad || 0),
-                precio_unitario: Number(item.precio_unitario || 0),
             })),
         };
 

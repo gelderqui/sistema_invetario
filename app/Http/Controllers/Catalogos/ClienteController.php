@@ -93,6 +93,12 @@ class ClienteController extends Controller
 
     public function destroy(Cliente $cliente): JsonResponse
     {
+        if ($cliente->ventas()->exists()) {
+            return response()->json([
+                'message' => 'No se puede eliminar este cliente porque tiene ventas registradas. Solo puede desactivarlo.',
+            ], 422);
+        }
+
         $cliente->delete();
 
         return response()->json([

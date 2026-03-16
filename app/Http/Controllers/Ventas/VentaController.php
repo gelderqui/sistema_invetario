@@ -91,7 +91,7 @@ class VentaController extends Controller
                 'clientes' => $clientes,
                 'consumidor_final_id' => $consumidorFinalId,
                 'productos' => $productos,
-                'metodos_pago' => ['efectivo', 'tarjeta', 'transferencia', 'mixto'],
+                'metodos_pago' => ['efectivo'],
             ],
         ]);
     }
@@ -101,15 +101,23 @@ class VentaController extends Controller
         $validated = $request->validate([
             'cliente_id' => ['nullable', Rule::exists('clientes', 'id')],
             'fecha_venta' => ['required', 'date'],
-            'metodo_pago' => ['required', Rule::in(['efectivo', 'tarjeta', 'transferencia', 'mixto'])],
+            'metodo_pago' => ['required', Rule::in(['efectivo'])],
             'descuento' => ['nullable', 'numeric', 'gte:0'],
             'monto_recibido' => ['nullable', 'numeric', 'gte:0'],
             'observaciones' => ['nullable', 'string'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.producto_id' => ['required', Rule::exists('productos', 'id')],
             'items.*.cantidad' => ['required', 'integer', 'min:1'],
-            'items.*.precio_unitario' => ['required', 'numeric', 'gte:0'],
         ]);
+
+        if (! empty($validated['cliente_id'])) {
+            $cliente = Cliente::query()->find($validated['cliente_id']);
+            if ($cliente && ! $cliente->activo) {
+                throw ValidationException::withMessages([
+                    'cliente_id' => ['El cliente seleccionado esta inactivo y no puede usarse en nuevas ventas.'],
+                ]);
+            }
+        }
 
         $result = DB::transaction(function () use ($validated) {
             $numeroVenta = sprintf(
@@ -145,7 +153,7 @@ class VentaController extends Controller
                 }
 
                 $cantidad = toMoney((int) $item['cantidad'], 4);
-                $precio = toMoney($item['precio_unitario'], 4);
+                $precio = toMoney($producto->precio_venta, 4);
                 $lineSubtotal = toMoney($cantidad * $precio, 4);
                 $stockAnterior = (float) $producto->stock_actual;
 

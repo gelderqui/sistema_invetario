@@ -2,6 +2,20 @@
 
 Guia rapida para levantar el proyecto en Windows usando WSL2 (Ubuntu) y Docker Desktop.
 
+## Estado funcional reciente
+
+- Modulos activos en menu: Dashboard, Capital, Caja, Ventas, Compras, Inventario, Catalogo, Configuracion.
+- En caja: el arqueo registra historial; el umbral de faltante bloquea en cierre, no en arqueo.
+- En cierre de caja: si existe arqueo, se usa el monto contado del ultimo arqueo.
+- Configuracion nueva: `caja_aperturas_maximas_por_dia` para controlar aperturas por usuario al dia.
+- Formato monetario frontend estandar: 2 decimales, separador de miles con coma y decimal con punto.
+
+Para detalle operativo y reglas de negocio:
+
+- Ver `README_MANUAL_USUARIO.md`
+- Ver `README_CONTEXT.md`
+- Ver `README_REINSTALL.md`
+
 ## 1. Prerrequisitos en Windows
 
 Instalar Docker Desktop.

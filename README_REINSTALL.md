@@ -88,7 +88,16 @@ Usuario base creado por seed:
 
 Recomendado: cambiar password al primer ingreso.
 
-## 10. Comandos utiles diarios
+## 10. Configuracion inicial recomendada
+
+Despues de sembrar configuraciones, validar en el modulo Configuraciones:
+
+- `caja_alerta_faltante_monto`: umbral para bloquear cierre por faltante.
+- `caja_aperturas_maximas_por_dia`: maximo de aperturas por usuario por dia.
+
+Ejemplo para doble turno: establecer `caja_aperturas_maximas_por_dia = 2`.
+
+## 11. Comandos utiles diarios
 
 Iniciar servicios:
 
@@ -114,7 +123,7 @@ Correr pruebas:
 ./vendor/bin/sail artisan test
 ```
 
-## 11. Problemas comunes
+## 12. Problemas comunes
 
 ### Permisos en storage o bootstrap/cache
 

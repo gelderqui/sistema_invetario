@@ -8,9 +8,9 @@ use App\Models\Categoria;
 use App\Models\CompraDetalle;
 use App\Models\Configuracion;
 use App\Models\Producto;
+use App\Models\ProductoUnidadMedida;
 use App\Models\Proveedor;
 use App\Models\Role;
-use App\Models\UnidadMedida;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -21,7 +21,7 @@ class CompraPricingRulesTest extends TestCase
 
     private User $user;
 
-    private UnidadMedida $unidadMedida;
+    private ProductoUnidadMedida $unidadMedida;
 
     private Categoria $categoria;
 
@@ -49,7 +49,7 @@ class CompraPricingRulesTest extends TestCase
 
         $this->actingAs($this->user, 'sanctum');
 
-        $this->unidadMedida = UnidadMedida::query()->create([
+        $this->unidadMedida = ProductoUnidadMedida::query()->create([
             'nombre' => 'Unidad',
             'abreviatura' => 'und',
             'activo' => true,

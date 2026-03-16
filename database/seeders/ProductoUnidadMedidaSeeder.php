@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
-use App\Models\UnidadMedida;
+use App\Models\ProductoUnidadMedida;
 use Illuminate\Database\Seeder;
 
-class MedidaSeeder extends Seeder
+class ProductoUnidadMedidaSeeder extends Seeder
 {
     public function run(): void
     {
@@ -28,7 +28,7 @@ class MedidaSeeder extends Seeder
         ];
 
         foreach ($items as $item) {
-            UnidadMedida::query()->updateOrCreate(
+            ProductoUnidadMedida::query()->updateOrCreate(
                 ['abreviatura' => $item['abreviatura']],
                 [
                     'nombre' => $item['nombre'],

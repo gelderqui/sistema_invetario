@@ -7,8 +7,8 @@ use App\Http\Middleware\EnsureAjaxRequest;
 use App\Models\Compra;
 use App\Models\CompraDetalle;
 use App\Models\Producto;
+use App\Models\ProductoUnidadMedida;
 use App\Models\Role;
-use App\Models\UnidadMedida;
 use App\Models\User;
 use App\Models\Venta;
 use App\Models\VentaDetalle;
@@ -21,7 +21,7 @@ class ProductoActivationRulesTest extends TestCase
 
     private User $user;
 
-    private UnidadMedida $unidadMedida;
+    private ProductoUnidadMedida $unidadMedida;
 
     protected function setUp(): void
     {
@@ -47,7 +47,7 @@ class ProductoActivationRulesTest extends TestCase
 
         $this->actingAs($this->user, 'sanctum');
 
-        $this->unidadMedida = UnidadMedida::query()->create([
+        $this->unidadMedida = ProductoUnidadMedida::query()->create([
             'nombre' => 'Unidad',
             'abreviatura' => 'und',
             'activo' => true,

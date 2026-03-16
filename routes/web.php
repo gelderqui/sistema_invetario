@@ -7,7 +7,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Caja\CajaController;
 use App\Http\Controllers\Catalogos\CategoriaController;
 use App\Http\Controllers\Catalogos\ClienteController;
-use App\Http\Controllers\Catalogos\MedidaController;
+use App\Http\Controllers\Catalogos\ProductoUnidadMedidaController;
 use App\Http\Controllers\Catalogos\ProveedorController;
 use App\Http\Controllers\Catalogos\ProductoController;
 use App\Http\Controllers\Compras\CompraController;
@@ -99,7 +99,7 @@ Route::prefix('api')->group(function (): void {
         });
 
         Route::prefix('medidas')->group(function (): void {
-            Route::get('/get', [MedidaController::class, 'index'])->middleware('permission:productos');
+            Route::get('/get', [ProductoUnidadMedidaController::class, 'index'])->middleware('permission:productos');
         });
 
         Route::prefix('compras')->group(function (): void {

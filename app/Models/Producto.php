@@ -56,7 +56,7 @@ class Producto extends Model
 
     public function unidadMedida(): BelongsTo
     {
-        return $this->belongsTo(UnidadMedida::class, 'unidad_medida_id');
+        return $this->belongsTo(ProductoUnidadMedida::class, 'unidad_medida_id');
     }
 
     public function inventarioLotes(): HasMany

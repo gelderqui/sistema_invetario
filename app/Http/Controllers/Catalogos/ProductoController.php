@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Catalogos;
 use App\Http\Controllers\Controller;
 use App\Models\Categoria;
 use App\Models\Producto;
-use App\Models\UnidadMedida;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -56,7 +55,7 @@ class ProductoController extends Controller
             'costo_promedio'=> ['nullable', 'numeric', 'gte:0'],
             'stock_actual'  => ['nullable', 'numeric'],
             'stock_minimo'  => ['nullable', 'numeric', 'gte:0'],
-            'unidad_medida_id'  => ['required', Rule::exists('unidades_medida', 'id')->where(fn ($q) => $q->where('activo', true))],
+            'unidad_medida_id'  => ['required', Rule::exists('productos_unidad_medida', 'id')->where(fn ($q) => $q->where('activo', true))],
             'control_vencimiento' => ['sometimes', 'boolean'],
             'dias_alerta_vencimiento' => ['nullable', 'integer', 'min:1', 'max:365'],
             'dias_alerta_vencimiento' => ['nullable', 'integer', 'min:1', 'max:365'],
@@ -110,7 +109,7 @@ class ProductoController extends Controller
             'costo_promedio'=> ['nullable', 'numeric', 'gte:0'],
             'stock_actual'  => ['nullable', 'numeric'],
             'stock_minimo'  => ['nullable', 'numeric', 'gte:0'],
-            'unidad_medida_id'  => ['required', Rule::exists('unidades_medida', 'id')->where(fn ($q) => $q->where('activo', true))],
+            'unidad_medida_id'  => ['required', Rule::exists('productos_unidad_medida', 'id')->where(fn ($q) => $q->where('activo', true))],
             'control_vencimiento' => ['sometimes', 'boolean'],
             'peso_referencial' => ['nullable', 'numeric', 'gte:0'],
             'activo'        => ['required', 'boolean'],

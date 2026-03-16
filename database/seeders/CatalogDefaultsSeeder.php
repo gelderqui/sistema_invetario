@@ -5,8 +5,8 @@ namespace Database\Seeders;
 use App\Models\Categoria;
 use App\Models\Cliente;
 use App\Models\Producto;
+use App\Models\ProductoUnidadMedida;
 use App\Models\Proveedor;
-use App\Models\UnidadMedida;
 use Illuminate\Database\Seeder;
 
 class CatalogDefaultsSeeder extends Seeder
@@ -37,7 +37,7 @@ class CatalogDefaultsSeeder extends Seeder
         );
 
         $proveedorVarios = Proveedor::query()->where('nombre', 'Proveedores varios')->first();
-        $unidadUnidad = UnidadMedida::query()->where('abreviatura', 'und')->first();
+        $unidadUnidad = ProductoUnidadMedida::query()->where('abreviatura', 'und')->first();
 
         Producto::query()->updateOrCreate(
             ['nombre' => 'Producto prueba'],

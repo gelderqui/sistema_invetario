@@ -214,7 +214,7 @@ const routes = [
     {
         path: '/inventario/vencidos',
         name: 'inventario-vencidos',
-        component: InventarioAlertasView,
+        redirect: '/inventario/alertas',
         meta: {
             requiresAuth: true,
         },

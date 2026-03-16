@@ -152,7 +152,7 @@ Route::prefix('api')->group(function (): void {
         Route::prefix('inventario')->group(function (): void {
             Route::get('/existencias/get', [InventarioController::class, 'existencias'])->middleware('permission:inventario');
             Route::get('/movimientos/get', [InventarioController::class, 'movimientos'])->middleware('permission:inventario_movimientos|inventario');
-            Route::get('/alertas/get', [InventarioController::class, 'alertas'])->middleware('permission:inventario_alertas|inventario_vencidos|inventario');
+            Route::get('/alertas/get', [InventarioController::class, 'alertas'])->middleware('permission:inventario_alertas|inventario');
 
             Route::prefix('ajustes')->group(function (): void {
                 Route::get('/get', [AjusteInventarioController::class, 'index'])->middleware('permission:inventario_ajustes');
@@ -162,7 +162,7 @@ Route::prefix('api')->group(function (): void {
         });
     });
 });
-
+ 
 // SPA entry point
 Route::view('/{path?}', 'app')
     ->where('path', '^(?!api|sanctum).*$');

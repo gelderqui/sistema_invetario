@@ -237,6 +237,7 @@ const menuItems = computed(() => {
 
     const groupedModules = [
         { module: 'operaciones', name: 'operaciones', label: 'Operaciones', icon: 'fa-solid fa-briefcase' },
+        { module: 'inventario', name: 'inventario', label: 'Inventario', icon: 'fa-solid fa-warehouse' },
         { module: 'caja', name: 'caja', label: 'Caja', icon: 'fa-solid fa-cash-register' },
         { module: 'ventas', name: 'ventas', label: 'Ventas', icon: 'fa-solid fa-cart-shopping' },
         { module: 'catalogos', name: 'catalogos', label: 'Catalogo', icon: 'fa-solid fa-boxes-stacked' },

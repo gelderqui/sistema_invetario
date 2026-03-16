@@ -13,7 +13,7 @@ class ProveedorController extends Controller
     public function index(): JsonResponse
     {
         $proveedores = Proveedor::query()
-            ->withCount(['compras', 'productos'])
+            ->withCount(['compras'])
             ->orderBy('nombre')
             ->get([
                 'id',

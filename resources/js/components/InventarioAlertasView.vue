@@ -1,7 +1,7 @@
 <template>
     <div>
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="h4 mb-0">Alertas de inventario</h2>
+            <h2 class="h4 mb-0">Alertas y vencimientos</h2>
             <button class="btn btn-outline-brand" :disabled="loading" @click="load">Actualizar</button>
         </div>
 

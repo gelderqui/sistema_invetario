@@ -192,12 +192,14 @@ function inputTypePorCodigo(codigo) {
 
 function inputMinPorCodigo(codigo) {
     if (!esCodigoEntero(codigo)) return undefined;
+    if (codigo === 'caja_aperturas_maximas_por_dia') return 1;
     return codigo === 'devolucion_limite_dias_cajero' ? 2 : 0;
 }
 
 function ayudaPorCodigo(codigo) {
     if (codigo === 'nombre_empresa') return 'Texto requerido.';
     if (codigo === 'devolucion_limite_dias_cajero') return 'Solo entero. Minimo 2.';
+    if (codigo === 'caja_aperturas_maximas_por_dia') return 'Solo entero. Minimo 1.';
     if (codigo === 'porcentaje_utilidad_compra') return 'Porcentaje entero usado en compras para sugerir el precio de venta. Minimo 0.';
     if (esCodigoEntero(codigo)) return 'Solo entero. Minimo 0.';
     return 'Este campo es obligatorio.';

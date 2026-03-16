@@ -23,6 +23,7 @@
         </div>
 
         <div class="alert alert-warning" v-if="!cajaActiva">No hay caja abierta para este usuario.</div>
+        <div class="alert alert-success" v-if="mensajeExitoCaja">{{ mensajeExitoCaja }}</div>
         <div class="alert alert-danger" v-if="alertaCaja">{{ alertaCaja.mensaje }}</div>
 
         <div class="card border-0 shadow-sm mb-3" v-if="section === 'apertura'">
@@ -141,7 +142,7 @@
                 <div class="row g-3 align-items-end">
                     <div class="col-12 col-md-4">
                         <label class="form-label">Monto contado final</label>
-                        <input v-model.number="formCierre.monto_contado" type="number" min="0" step="0.01" class="form-control" />
+                        <input v-model.number="formCierre.monto_contado" type="number" min="0" step="0.01" class="form-control" :disabled="loading || !cajaActiva || !!ultimoArqueoRegistrado" />
                     </div>
                     <div class="col-12 col-md-4">
                         <label class="form-label">Diferencia estimada</label>
@@ -149,6 +150,12 @@
                     </div>
                     <div class="col-12 col-md-4 d-grid">
                         <button class="btn btn-danger" :disabled="loading || !cajaActiva" @click="cerrarCaja">Cerrar caja</button>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <small class="text-muted">{{ ultimoArqueoRegistrado ? 'Este valor se toma del ultimo arqueo registrado.' : 'Si no hay arqueo, este valor puede ingresarse manualmente.' }}</small>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <small class="text-muted">Comparacion entre monto contado final y monto del sistema.</small>
                     </div>
                 </div>
             </div>
@@ -170,6 +177,7 @@ const cajaActiva = ref(null);
 const resumen = ref(null);
 const movimientos = ref([]);
 const alertaCaja = ref(null);
+const mensajeExitoCaja = ref('');
 const catalogs = ref({ tipos_gasto: [] });
 
 const formApertura = ref({
@@ -209,6 +217,8 @@ const section = computed(() => {
     if (path.includes('/cierre')) return 'cierre';
     return 'apertura';
 });
+
+const ultimoArqueoRegistrado = computed(() => cajaActiva.value?.arqueos?.[0] ?? null);
 
 const totalBilletes = computed(() => billetes.value.reduce((acc, row) => acc + Number(row.denominacion) * Number(row.cantidad || 0), 0));
 
@@ -253,7 +263,10 @@ async function loadEstado() {
         const { data } = await axios.get('/caja/get/estado');
         cajaActiva.value = data?.data?.caja_activa ?? null;
         resumen.value = data?.data?.resumen ?? null;
-        if (resumen.value?.monto_sistema != null) {
+        const ultimoArqueo = ultimoArqueoRegistrado.value;
+        if (ultimoArqueo?.monto_contado != null) {
+            formCierre.value.monto_contado = Number(ultimoArqueo.monto_contado);
+        } else if (resumen.value?.monto_sistema != null) {
             formCierre.value.monto_contado = Number(resumen.value.monto_sistema);
         }
     } catch (error) {
@@ -289,6 +302,7 @@ async function loadCatalogs() {
 async function abrirCaja() {
     loading.value = true;
     alertaCaja.value = null;
+    mensajeExitoCaja.value = '';
     try {
         const { data } = await axios.post('/caja/apertura', {
             monto_apertura: Number(formApertura.value.monto_apertura || 0),
@@ -306,6 +320,7 @@ async function abrirCaja() {
 async function registrarAjuste() {
     loading.value = true;
     alertaCaja.value = null;
+    mensajeExitoCaja.value = '';
     try {
         await axios.post('/caja/movimientos/ajuste', {
             ...formAjuste.value,
@@ -326,12 +341,16 @@ async function registrarAjuste() {
 async function registrarArqueo() {
     loading.value = true;
     alertaCaja.value = null;
+    mensajeExitoCaja.value = '';
     try {
         const { data } = await axios.post('/caja/arqueo', {
             monto_contado: Number(formArqueo.value.monto_contado || 0),
             billetes: billetes.value,
         });
-        alertaCaja.value = data?.data?.alerta ?? null;
+        mensajeExitoCaja.value = data?.message || 'Arqueo registrado correctamente.';
+        if (data?.data?.arqueo?.monto_contado != null) {
+            formCierre.value.monto_contado = Number(data.data.arqueo.monto_contado);
+        }
         await loadEstado();
     } catch (error) {
         alertaCaja.value = { mensaje: resolveApiErrorMessage(error, 'No se pudo registrar el arqueo.') };
@@ -340,16 +359,40 @@ async function registrarArqueo() {
     }
 }
 
+function resetFormsAfterCierre() {
+    formApertura.value.monto_apertura = 0;
+
+    formAjuste.value.tipo = 'ingreso';
+    formAjuste.value.monto = null;
+    formAjuste.value.descripcion = '';
+    formAjuste.value.destino = 'banco';
+    formAjuste.value.tipo_gasto_id = null;
+
+    formArqueo.value.monto_contado = null;
+    formCierre.value.monto_contado = null;
+
+    billetes.value = billetes.value.map((row) => ({
+        ...row,
+        cantidad: 0,
+    }));
+
+    movimientos.value = [];
+}
+
 async function cerrarCaja() {
     loading.value = true;
     alertaCaja.value = null;
+    mensajeExitoCaja.value = '';
     try {
         const { data } = await axios.post('/caja/cierre', {
             monto_contado: Number(formCierre.value.monto_contado || 0),
         });
-        alertaCaja.value = data?.data?.alerta ?? null;
+        alertaCaja.value = null;
+        mensajeExitoCaja.value = data?.message || 'Caja cerrada correctamente.';
+        resetFormsAfterCierre();
         await loadEstado();
         await loadMovimientos();
+        goSection('apertura');
     } catch (error) {
         alertaCaja.value = { mensaje: resolveApiErrorMessage(error, 'No se pudo cerrar la caja.') };
     } finally {

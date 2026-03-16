@@ -148,7 +148,13 @@ class ConfiguracionController extends Controller
             ]);
         }
 
-        if ($codigo !== 'devolucion_limite_dias_cajero' && $valorEntero < 0) {
+        if ($codigo === 'caja_aperturas_maximas_por_dia' && $valorEntero < 1) {
+            throw ValidationException::withMessages([
+                'value' => ['La cantidad maxima de aperturas por dia debe ser mayor o igual a 1.'],
+            ]);
+        }
+
+        if (! in_array($codigo, ['devolucion_limite_dias_cajero', 'caja_aperturas_maximas_por_dia'], true) && $valorEntero < 0) {
             throw ValidationException::withMessages([
                 'value' => ['Este valor debe ser mayor o igual a 0.'],
             ]);
@@ -164,6 +170,15 @@ class ConfiguracionController extends Controller
             [
                 'descripcion' => 'Porcentaje de venta en compras para sugerir precio sobre el costo.',
                 'value' => Configuracion::query()->where('codigo', 'porcentaje_utilidad_compra')->value('value') ?? '25',
+                'activo' => true,
+            ]
+        );
+
+        Configuracion::query()->updateOrCreate(
+            ['codigo' => 'caja_aperturas_maximas_por_dia'],
+            [
+                'descripcion' => 'Cantidad maxima de aperturas de caja permitidas por usuario en un dia.',
+                'value' => Configuracion::query()->where('codigo', 'caja_aperturas_maximas_por_dia')->value('value') ?? '1',
                 'activo' => true,
             ]
         );

@@ -32,6 +32,12 @@ class ConfiguracionSeeder extends Seeder
                 'activo' => true,
             ],
             [
+                'codigo' => 'caja_aperturas_maximas_por_dia',
+                'descripcion' => 'Cantidad maxima de aperturas de caja permitidas por usuario en un dia.',
+                'value' => '1',
+                'activo' => true,
+            ],
+            [
                 'codigo' => 'devolucion_limite_dias_cajero',
                 'descripcion' => 'Dias maximos para que cajero registre devoluciones.',
                 'value' => '15',

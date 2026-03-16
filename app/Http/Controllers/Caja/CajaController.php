@@ -109,6 +109,7 @@ class CajaController extends Controller
 
         $user = $request->user();
         $fechaApertura = Carbon::parse((string) ($validated['fecha_apertura'] ?? now()))->toDateString();
+        $maxAperturasPorDia = max(1, (int) Configuracion::valor('caja_aperturas_maximas_por_dia', 1));
 
         $yaAbierta = Caja::query()
             ->where('usuario_id', $user->id)
@@ -121,18 +122,18 @@ class CajaController extends Controller
             ], 422);
         }
 
-        $yaTieneCajaEnFecha = Caja::query()
+        $aperturasEnFecha = Caja::query()
             ->where('usuario_id', $user->id)
             ->whereDate('fecha_apertura', $fechaApertura)
-            ->exists();
+            ->count();
 
-        if ($yaTieneCajaEnFecha) {
+        if ($aperturasEnFecha >= $maxAperturasPorDia) {
             return response()->json([
-                'message' => 'Solo se permite una apertura de caja por usuario por dia.',
+                'message' => 'Se alcanzo el limite de '.$maxAperturasPorDia.' aperturas de caja por usuario para este dia.',
             ], 422);
         }
 
-        $caja = DB::transaction(function () use ($validated, $user) {
+        $caja = DB::transaction(function () use ($validated, $user, $fechaApertura, $maxAperturasPorDia) {
             $fecha = $validated['fecha_apertura'] ?? now()->toDateTimeString();
             $montoApertura = toMoney($validated['monto_apertura'], 4);
             $cajaGeneral = capitalCuentaPorCodigo('caja_general');
@@ -146,6 +147,18 @@ class CajaController extends Controller
             if ($yaAbiertaTransaccion) {
                 throw ValidationException::withMessages([
                     'monto_apertura' => ['Ya existe una caja abierta para este usuario.'],
+                ]);
+            }
+
+            $aperturasEnFechaTransaccion = Caja::query()
+                ->lockForUpdate()
+                ->where('usuario_id', $user->id)
+                ->whereDate('fecha_apertura', $fechaApertura)
+                ->count();
+
+            if ($aperturasEnFechaTransaccion >= $maxAperturasPorDia) {
+                throw ValidationException::withMessages([
+                    'monto_apertura' => ['Se alcanzo el limite de '.$maxAperturasPorDia.' aperturas para este dia.'],
                 ]);
             }
 
@@ -354,14 +367,11 @@ class CajaController extends Controller
             'fecha' => $validated['fecha'] ?? now()->toDateTimeString(),
         ]);
 
-        $alerta = $this->resolverAlertaDiferencia($diferencia);
-
         return response()->json([
             'message' => 'Arqueo registrado correctamente.',
             'data' => [
                 'arqueo' => $arqueo,
                 'resumen' => $this->resumenCaja($caja->id),
-                'alerta' => $alerta,
             ],
         ], 201);
     }
@@ -394,9 +404,13 @@ class CajaController extends Controller
             ->latest('id')
             ->first();
 
-        $montoContadoFinal = array_key_exists('monto_contado', $validated)
-            ? toMoney($validated['monto_contado'], 4)
-            : ($ultimoArqueo ? toMoney($ultimoArqueo->monto_contado, 4) : $resumen['monto_sistema']);
+        if ($ultimoArqueo) {
+            $montoContadoFinal = toMoney($ultimoArqueo->monto_contado, 4);
+        } elseif (array_key_exists('monto_contado', $validated)) {
+            $montoContadoFinal = toMoney($validated['monto_contado'], 4);
+        } else {
+            $montoContadoFinal = $resumen['monto_sistema'];
+        }
 
         $diferencia = toMoney($montoContadoFinal - $resumen['monto_sistema'], 4);
         $alerta = $this->resolverAlertaDiferencia($diferencia);

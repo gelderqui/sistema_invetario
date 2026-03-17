@@ -108,6 +108,7 @@ Infra local:
 - En ventas nuevas, el metodo de pago permitido es solo `efectivo`.
 - En ventas nuevas, el precio unitario se toma siempre del producto en backend (no se acepta override por request).
 - El descuento en UI se habilita manualmente por checkbox.
+- En historial de ventas, `admin` puede ver todas las ventas y filtrar por usuario; los demas roles solo ven sus propios registros.
 
 ### Clientes
 

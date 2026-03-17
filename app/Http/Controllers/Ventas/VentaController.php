@@ -9,6 +9,7 @@ use App\Models\Configuracion;
 use App\Models\InventarioLote;
 use App\Models\InventarioMovimiento;
 use App\Models\Producto;
+use App\Models\User;
 use App\Models\Venta;
 use App\Models\VentaDetalle;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -58,6 +59,76 @@ class VentaController extends Controller
             'meta' => [
                 'desde' => $desde,
                 'hasta' => $hasta,
+            ],
+        ]);
+    }
+
+    public function historial(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'desde' => ['nullable', 'date'],
+            'hasta' => ['nullable', 'date'],
+            'usuario_id' => ['nullable', 'integer', Rule::exists('users', 'id')],
+        ]);
+
+        $user = $request->user()?->loadMissing('role:id,code');
+        $isAdmin = $user?->role?->code === 'admin';
+
+        $desde = ! empty($validated['desde'])
+            ? Carbon::parse((string) $validated['desde'])->toDateString()
+            : Carbon::today()->toDateString();
+        $hasta = ! empty($validated['hasta'])
+            ? Carbon::parse((string) $validated['hasta'])->toDateString()
+            : $desde;
+
+        $ventas = Venta::query()
+            ->with([
+                'cliente:id,nombre',
+                'usuario:id,name,username,activo,deleted_at',
+            ])
+            ->withCount('detalles')
+            ->whereBetween('fecha_venta', [$desde, $hasta])
+            ->when(
+                ! $isAdmin,
+                fn ($query) => $query->where('add_user', (int) $user?->id),
+                function ($query) use ($validated): void {
+                    if (! empty($validated['usuario_id'])) {
+                        $query->where('add_user', (int) $validated['usuario_id']);
+                    }
+                }
+            )
+            ->orderByDesc('fecha_venta')
+            ->orderByDesc('id')
+            ->get([
+                'id',
+                'numero',
+                'cliente_id',
+                'fecha_venta',
+                'estado',
+                'metodo_pago',
+                'subtotal',
+                'descuento',
+                'total',
+                'monto_recibido',
+                'cambio',
+                'created_at',
+                'add_user',
+            ]);
+
+        return response()->json([
+            'data' => $ventas,
+            'meta' => [
+                'desde' => $desde,
+                'hasta' => $hasta,
+                'scope' => $isAdmin ? 'global' : 'user',
+                'can_view_all' => $isAdmin,
+                'usuario_id' => $isAdmin ? ($validated['usuario_id'] ?? null) : (int) $user?->id,
+                'usuarios' => $isAdmin
+                    ? User::query()
+                        ->withTrashed()
+                        ->orderBy('name')
+                        ->get(['id', 'name', 'username', 'activo', 'deleted_at'])
+                    : [],
             ],
         ]);
     }
@@ -404,7 +475,10 @@ class VentaController extends Controller
 
     public function ticket(Request $request, Venta $venta): Response
     {
-        if ((int) $venta->add_user !== (int) $request->user()->id) {
+        $user = $request->user()?->loadMissing('role:id,code');
+        $isAdmin = $user?->role?->code === 'admin';
+
+        if (! $isAdmin && (int) $venta->add_user !== (int) $user?->id) {
             abort(403, 'No autorizado para ver este ticket.');
         }
 

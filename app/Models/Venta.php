@@ -44,6 +44,11 @@ class Venta extends Model
         return $this->belongsTo(Cliente::class, 'cliente_id');
     }
 
+    public function usuario(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'add_user')->withTrashed();
+    }
+
     public function detalles(): HasMany
     {
         return $this->hasMany(VentaDetalle::class, 'venta_id');

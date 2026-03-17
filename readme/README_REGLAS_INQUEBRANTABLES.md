@@ -6,6 +6,7 @@ Este documento define reglas de negocio que no deben romperse. Cualquier cambio 
 
 - La validacion final siempre se hace en backend.
 - Permisos por rol deben respetarse en middleware y controlador.
+- En historial de ventas, solo `admin` puede consultar ventas de todos los usuarios; los demas roles solo consultan su propio historial.
 - Usuario inactivo o eliminado no puede iniciar sesion.
 
 ## 2. Ventas

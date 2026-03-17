@@ -128,7 +128,7 @@ Route::prefix('api')->group(function (): void {
 
         Route::prefix('ventas')->group(function (): void {
             Route::get('/get', [VentaController::class, 'index'])->middleware('permission:ventas');
-            Route::get('/historial/get', [VentaController::class, 'index'])->middleware('permission:historial_ventas|ventas');
+            Route::get('/historial/get', [VentaController::class, 'historial'])->middleware('permission:historial_ventas|ventas');
             Route::get('/get/catalogs', [VentaController::class, 'catalogs'])->middleware('permission:ventas');
             Route::post('/store', [VentaController::class, 'store'])->middleware('permission:ventas');
             Route::patch('/anular/{venta}', [VentaController::class, 'anular'])->middleware('permission:ventas|historial_ventas');

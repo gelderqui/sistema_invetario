@@ -22,6 +22,15 @@
                     <label class="form-label fw-semibold">Hasta</label>
                     <input v-model="filtros.hasta" type="date" class="form-control">
                 </div>
+                <div v-if="filtros.tipo === 'ventas' && esAdmin" class="col-12 col-md-3">
+                    <label class="form-label fw-semibold">Usuario</label>
+                    <select v-model="filtros.usuario_id" class="form-select">
+                        <option value="all">Todos</option>
+                        <option v-for="usuario in usuarios" :key="usuario.id" :value="String(usuario.id)">
+                            {{ labelUsuario(usuario) }}
+                        </option>
+                    </select>
+                </div>
                 <div class="col-12 col-md-3 d-grid">
                     <button class="btn btn-brand" :disabled="loading" @click="load">Filtrar</button>
                 </div>
@@ -34,6 +43,7 @@
                     <thead class="thead-brand">
                         <tr>
                             <th>Numero</th>
+                            <th v-if="esAdmin">Usuario</th>
                             <th>Cliente</th>
                             <th>Fecha</th>
                             <th>Estado</th>
@@ -46,10 +56,11 @@
                     </thead>
                     <tbody>
                         <tr v-if="!rows.length">
-                            <td colspan="9" class="text-center text-body-secondary py-4">Sin ventas registradas.</td>
+                            <td :colspan="esAdmin ? 10 : 9" class="text-center text-body-secondary py-4">Sin ventas registradas.</td>
                         </tr>
                         <tr v-for="venta in rows" :key="venta.id">
                             <td><code>{{ venta.numero }}</code></td>
+                            <td v-if="esAdmin">{{ labelUsuario(venta.usuario) }}</td>
                             <td>{{ venta.cliente?.nombre ?? 'Consumidor final' }}</td>
                             <td>{{ fmtDate(venta.fecha_venta) }}</td>
                             <td>
@@ -68,8 +79,8 @@
                                 <button
                                     type="button"
                                     class="btn btn-sm btn-outline-danger ms-2"
-                                    :disabled="loading || venta.estado !== 'activo' || !esMismoDia(venta.fecha_venta)"
-                                    :title="esMismoDia(venta.fecha_venta) ? 'Anular venta' : 'Solo se anula en el mismo dia'"
+                                    :disabled="loading || venta.estado !== 'activo' || !esMismoDia(venta.fecha_venta) || !puedeAnularVenta(venta)"
+                                    :title="tituloAnularVenta(venta)"
                                     @click="anularVenta(venta.id, venta.numero)"
                                 >
                                     Anular
@@ -132,17 +143,24 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import axios from '@/bootstrap';
+import { useAuthStore } from '@/stores/auth';
 import { formatMoney } from '@/utils/formatters';
 
+const authStore = useAuthStore();
 const loading = ref(false);
 const rows = ref([]);
+const usuarios = ref([]);
 const filtros = ref({
     tipo: 'ventas',
     desde: new Date().toISOString().slice(0, 10),
     hasta: new Date().toISOString().slice(0, 10),
+    usuario_id: 'all',
 });
+
+const esAdmin = computed(() => authStore.user?.role?.code === 'admin');
+const usuarioActualId = computed(() => Number(authStore.user?.id ?? 0));
 
 onMounted(load);
 
@@ -157,10 +175,17 @@ async function load() {
             params: {
                 desde: filtros.value.desde,
                 hasta: filtros.value.hasta,
+                usuario_id: filtros.value.tipo === 'ventas' && esAdmin.value && filtros.value.usuario_id !== 'all'
+                    ? filtros.value.usuario_id
+                    : undefined,
             },
         });
 
         rows.value = data?.data ?? [];
+
+        if (esAdmin.value && filtros.value.tipo === 'ventas') {
+            usuarios.value = data?.meta?.usuarios ?? [];
+        }
     } finally {
         loading.value = false;
     }
@@ -220,5 +245,26 @@ function esMismoDia(value) {
     return fecha.getFullYear() === hoy.getFullYear()
         && fecha.getMonth() === hoy.getMonth()
         && fecha.getDate() === hoy.getDate();
+}
+
+function puedeAnularVenta(venta) {
+    return Number(venta?.add_user ?? 0) === usuarioActualId.value;
+}
+
+function tituloAnularVenta(venta) {
+    if (!esMismoDia(venta?.fecha_venta)) return 'Solo se anula en el mismo dia';
+    if (!puedeAnularVenta(venta)) return 'Solo el usuario que registro la venta puede anularla';
+    return 'Anular venta';
+}
+
+function labelUsuario(usuario) {
+    if (!usuario) return '-';
+
+    const base = usuario.username ? `${usuario.name} (${usuario.username})` : usuario.name;
+
+    if (usuario.deleted_at) return `${base} - Eliminado`;
+    if (usuario.activo === false) return `${base} - Inactivo`;
+
+    return base;
 }
 </script>

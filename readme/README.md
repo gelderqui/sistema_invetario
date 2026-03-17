@@ -17,9 +17,11 @@ Este README explica como se creo y se levanta el proyecto base en entorno local 
 
 - `README.md`: como se creo y se levanta el proyecto base.
 - `README_REINSTALL.md`: guia para que otro programador reinstale todo en su maquina local.
-- `CONTEXT_IA.md`: contexto operativo y de arquitectura para que una IA entienda el sistema.
+- `README_CONTEXT.md`: contexto operativo y de arquitectura para que una IA entienda el sistema.
 - `README_PROGRAMACION.md`: convenciones y estilo de programacion del proyecto.
 - `README_BASE_DATOS.md`: tablas y relaciones actuales de la base de datos.
+- `README_REGLAS_INQUEBRANTABLES.md`: reglas de negocio que no deben romperse.
+- `README_FLUJOS_CRITICOS.md`: flujos operativos criticos punta a punta.
 - `README_MANUAL_USUARIO.md`: manual funcional para usuario final (pantallas, botones y flujo).
 
 ## 1. Prerrequisitos en Windows

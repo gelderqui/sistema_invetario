@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Ventas;
 
 use App\Http\Controllers\Controller;
+use App\Models\Caja;
 use App\Models\Cliente;
 use App\Models\Configuracion;
 use App\Models\InventarioLote;
@@ -117,6 +118,18 @@ class VentaController extends Controller
                     'cliente_id' => ['El cliente seleccionado esta inactivo y no puede usarse en nuevas ventas.'],
                 ]);
             }
+        }
+
+        $cajaActiva = Caja::query()
+            ->where('usuario_id', (int) getUserId())
+            ->where('estado', 'abierta')
+            ->latest('id')
+            ->first(['id']);
+
+        if (! $cajaActiva) {
+            throw ValidationException::withMessages([
+                'caja' => ['Debe tener una caja abierta para registrar ventas.'],
+            ]);
         }
 
         $result = DB::transaction(function () use ($validated) {
@@ -260,7 +273,7 @@ class VentaController extends Controller
             ]);
 
             if ($venta->metodo_pago === 'efectivo' && getUserId()) {
-                registrarMovimientoCajaAutomatico(
+                $movimientoCaja = registrarMovimientoCajaAutomatico(
                     getUserId(),
                     'venta',
                     $total,
@@ -269,6 +282,12 @@ class VentaController extends Controller
                     'venta',
                     $venta->id
                 );
+
+                if (! $movimientoCaja) {
+                    throw ValidationException::withMessages([
+                        'caja' => ['Debe tener una caja abierta para registrar ventas.'],
+                    ]);
+                }
             }
 
             return $venta->load(['cliente:id,nombre', 'detalles.producto:id,nombre']);

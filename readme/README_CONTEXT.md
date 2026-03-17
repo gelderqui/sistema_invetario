@@ -1,6 +1,6 @@
-# IA Project Context - Sistema Inventario
+# README Context - Sistema Inventario
 
-Documento de contexto rapido para cualquier agente IA que entre a este repositorio.
+Este documento es el contexto principal para IA: resume arquitectura, reglas operativas y decisiones funcionales para entender el sistema antes de modificar codigo.
 
 ## 1) Objetivo del proyecto
 
@@ -104,6 +104,7 @@ Infra local:
 
 - No se eliminan ventas/compras/devoluciones fisicamente para anular.
 - Se usa `estado` (`activo` o `anulada`) y se registra compensacion en inventario/caja.
+- En ventas nuevas, el usuario debe tener caja abierta para poder registrar la venta.
 - En ventas nuevas, el metodo de pago permitido es solo `efectivo`.
 - En ventas nuevas, el precio unitario se toma siempre del producto en backend (no se acepta override por request).
 - El descuento en UI se habilita manualmente por checkbox.

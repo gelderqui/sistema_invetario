@@ -132,14 +132,12 @@ Route::prefix('api')->group(function (): void {
             Route::get('/get/catalogs', [VentaController::class, 'catalogs'])->middleware('permission:ventas');
             Route::post('/store', [VentaController::class, 'store'])->middleware('permission:ventas');
             Route::patch('/anular/{venta}', [VentaController::class, 'anular'])->middleware('permission:ventas|historial_ventas');
-            Route::get('/{venta}/ticket', [VentaController::class, 'ticket'])->middleware('permission:ventas|historial_ventas');
 
             Route::prefix('devoluciones')->group(function (): void {
                 Route::get('/get', [DevolucionController::class, 'index'])->middleware('permission:devoluciones');
                 Route::get('/get/catalogs', [DevolucionController::class, 'catalogs'])->middleware('permission:devoluciones');
                 Route::post('/store', [DevolucionController::class, 'store'])->middleware('permission:devoluciones');
                 Route::patch('/anular/{devolucion}', [DevolucionController::class, 'anular'])->middleware('permission:devoluciones|historial_ventas');
-                Route::get('/{devolucion}/ticket', [DevolucionController::class, 'ticket'])->middleware('permission:devoluciones|historial_ventas');
             });
         });
 
@@ -158,6 +156,17 @@ Route::prefix('api')->group(function (): void {
                 Route::get('/get', [AjusteInventarioController::class, 'index'])->middleware('permission:inventario_ajustes');
                 Route::get('/get/catalogs', [AjusteInventarioController::class, 'catalogs'])->middleware('permission:inventario_ajustes');
                 Route::post('/store', [AjusteInventarioController::class, 'store'])->middleware('permission:inventario_ajustes');
+            });
+        });
+    });
+
+    // Tickets PDF deben poder abrirse en iframe/window.open, por eso no usan middleware ajax.
+    Route::middleware(['auth:sanctum', 'permission'])->group(function (): void {
+        Route::prefix('ventas')->group(function (): void {
+            Route::get('/{venta}/ticket', [VentaController::class, 'ticket'])->middleware('permission:ventas|historial_ventas');
+
+            Route::prefix('devoluciones')->group(function (): void {
+                Route::get('/{devolucion}/ticket', [DevolucionController::class, 'ticket'])->middleware('permission:devoluciones|historial_ventas');
             });
         });
     });

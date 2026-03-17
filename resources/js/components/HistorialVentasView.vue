@@ -173,12 +173,12 @@ function fmtDate(value) {
 
 function imprimirVenta(id) {
     if (!id) return;
-    window.open(`/ventas/${id}/ticket`, '_blank', 'noopener');
+    window.open(`/api/ventas/${id}/ticket`, '_blank', 'noopener');
 }
 
 function imprimirDevolucion(id) {
     if (!id) return;
-    window.open(`/ventas/devoluciones/${id}/ticket`, '_blank', 'noopener');
+    window.open(`/api/ventas/devoluciones/${id}/ticket`, '_blank', 'noopener');
 }
 
 async function anularVenta(id, numero) {

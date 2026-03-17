@@ -62,6 +62,7 @@ Submodulos relevantes:
 
 Reglas operativas de POS:
 
+- Para registrar una venta, el usuario debe tener una caja abierta.
 - Metodo de pago permitido para venta nueva: solo `efectivo`.
 - El precio unitario en venta no es editable a nivel de negocio: backend toma siempre el precio vigente del producto.
 - Para ajustes comerciales se usa `descuento` (habilitado por checkbox en UI).

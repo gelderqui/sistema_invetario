@@ -446,7 +446,7 @@ async function save() {
         ventas.value.unshift(data.data);
         formModal.hide();
 
-        const ticketUrl = `/ventas/${data.data.id}/ticket`;
+        const ticketUrl = `/api/ventas/${data.data.id}/ticket`;
         receiptModalRef.value?.open(ticketUrl);
     } catch (error) {
         const errors = error.response?.data?.errors;

@@ -194,7 +194,7 @@ async function guardar() {
         form.value.items = [];
         await reloadAll();
 
-        const ticketUrl = `/ventas/devoluciones/${data.data.id}/ticket`;
+        const ticketUrl = `/api/ventas/devoluciones/${data.data.id}/ticket`;
         receiptModalRef.value?.open(ticketUrl);
     } catch (error) {
         const backend = error.response?.data?.errors;
@@ -211,7 +211,7 @@ function fmtDate(value) {
 
 function openTicket(id) {
     if (!id) return;
-    receiptModalRef.value?.open(`/ventas/devoluciones/${id}/ticket`);
+    receiptModalRef.value?.open(`/api/ventas/devoluciones/${id}/ticket`);
 }
 
 async function anularDevolucion(item) {

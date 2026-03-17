@@ -26,6 +26,7 @@ Orden principal:
 6. Inventario
 7. Catalogo
 8. Configuracion
+9. Manual (solo admin)
 
 Submodulos relevantes:
 
@@ -35,6 +36,7 @@ Submodulos relevantes:
 - Compras: Compras y proveedores
 - Inventario: Existencias, lotes, movimientos y ajustes
 - Catalogo: Productos, Categorias, Proveedores, otros catalogos
+- Manual: Visualizacion del manual operativo en pantalla (sin acciones de edicion)
 
 ## 2. Reglas generales de seguridad y consistencia
 

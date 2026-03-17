@@ -24,11 +24,16 @@ class DevolucionController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $desde = $request->filled('desde')
-            ? Carbon::parse((string) $request->input('desde'))->toDateString()
+        $validated = $request->validate([
+            'desde' => ['nullable', 'date'],
+            'hasta' => ['nullable', 'date', 'after_or_equal:desde'],
+        ]);
+
+        $desde = ! empty($validated['desde'])
+            ? Carbon::parse((string) $validated['desde'])->toDateString()
             : Carbon::today()->toDateString();
-        $hasta = $request->filled('hasta')
-            ? Carbon::parse((string) $request->input('hasta'))->toDateString()
+        $hasta = ! empty($validated['hasta'])
+            ? Carbon::parse((string) $validated['hasta'])->toDateString()
             : $desde;
 
         $items = Devolucion::query()
@@ -75,17 +80,21 @@ class DevolucionController extends Controller
             ->limit(120)
             ->get(['id', 'numero', 'cliente_id', 'fecha_venta', 'total']);
 
-        $ventas->each(function (Venta $venta): void {
-            $detalleIds = $venta->detalles->pluck('id');
+        $detalleIds = $ventas->flatMap(fn (Venta $venta) => $venta->detalles->pluck('id'))->unique()->values();
+
+        $devueltoByDetalle = collect();
+        if ($detalleIds->isNotEmpty()) {
             $devueltoByDetalle = DetalleDevolucion::query()
-                ->select('venta_detalle_id', DB::raw('SUM(cantidad) as total_devuelto'))
                 ->whereIn('venta_detalle_id', $detalleIds)
                 ->whereHas('devolucion', fn ($q) => $q->where('estado', 'activo'))
+                ->get(['venta_detalle_id', 'cantidad'])
                 ->groupBy('venta_detalle_id')
-                ->pluck('total_devuelto', 'venta_detalle_id');
+                ->map(fn ($rows) => (float) $rows->sum('cantidad'));
+        }
 
+        $ventas->each(function (Venta $venta) use ($devueltoByDetalle): void {
             $venta->detalles->transform(function ($detalle) use ($devueltoByDetalle) {
-                $devuelto = (float) ($devueltoByDetalle[$detalle->id] ?? 0);
+                $devuelto = (float) ($devueltoByDetalle->get($detalle->id, 0));
                 $detalle->setAttribute('cantidad_devuelta', toMoney($devuelto, 4));
                 $detalle->setAttribute('cantidad_disponible_devolucion', toMoney((float) $detalle->cantidad - $devuelto, 4));
                 return $detalle;

@@ -15,7 +15,6 @@ class RoleManagementController extends Controller
         $roles = Role::query()
             ->with(['permissions:id,name,code,module'])
             ->withCount('users')
-            ->orderByRaw("CASE code WHEN 'admin' THEN 1 WHEN 'operador' THEN 2 WHEN 'cajero' THEN 3 ELSE 4 END")
             ->orderBy('name')
             ->get([
                 'id',
@@ -25,7 +24,18 @@ class RoleManagementController extends Controller
                 'activo',
                 'is_system',
                 'created_at',
-            ]);
+            ])
+            ->sortBy(function (Role $role): string {
+                $priority = match ($role->code) {
+                    'admin' => '1',
+                    'operador' => '2',
+                    'cajero' => '3',
+                    default => '4',
+                };
+
+                return $priority.'-'.mb_strtolower((string) $role->name);
+            })
+            ->values();
 
         return response()->json([
             'data' => $roles,

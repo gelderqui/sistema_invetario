@@ -122,3 +122,20 @@ Este documento describe las tablas actuales y sus relaciones principales.
 - Para anulaciones se usa `estado` y movimientos de compensacion.
 - El precio en venta se toma en backend desde `productos.precio_venta`.
 - En caja, cierre puede depender del ultimo arqueo y umbral configurado.
+
+## 4. Indices de rendimiento adicionales
+
+Migracion: `2026_03_17_120000_add_performance_indexes_for_historial_and_inventario.php`
+
+- `ventas_user_fecha_id_idx` en `ventas(add_user, fecha_venta, id)`:
+	- acelera historial de ventas por usuario y rango de fecha.
+- `ventas_user_estado_fecha_id_idx` en `ventas(add_user, estado, fecha_venta, id)`:
+	- acelera catalogos de devolucion y reportes filtrados por usuario + estado.
+- `devoluciones_usuario_fecha_id_idx` en `devoluciones(usuario_id, fecha, id)`:
+	- acelera historial de devoluciones por usuario y rango.
+- `detalle_devoluciones_venta_detalle_idx` en `detalle_devoluciones(venta_detalle_id)`:
+	- acelera sumatorias de cantidades devueltas por detalle de venta.
+- `lotes_fifo_stock_idx` en `inventario_lotes(producto_id, cantidad_disponible, fecha_entrada)`:
+	- acelera consumo FIFO de lotes con stock disponible.
+- `inventario_movimientos_user_producto_idx` en `inventario_movimientos(add_user, producto_id)`:
+	- acelera filtros de dashboard por usuario sobre productos movidos.

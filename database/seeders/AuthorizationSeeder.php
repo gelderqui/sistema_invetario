@@ -35,6 +35,7 @@ class AuthorizationSeeder extends Seeder
             ['name' => 'Usuarios',     'code' => 'users',      'module' => 'configuracion', 'module_label' => 'Configuracion', 'module_icono' => 'fa-solid fa-gears',          'ruta' => '/usuarios',       'icono' => 'fa-solid fa-users',           'orden' => 80],
             ['name' => 'Roles',        'code' => 'roles',      'module' => 'configuracion', 'module_label' => 'Configuracion', 'module_icono' => 'fa-solid fa-gears',          'ruta' => '/roles',          'icono' => 'fa-solid fa-user-shield',     'orden' => 81],
             ['name' => 'Configuraciones', 'code' => 'configuraciones', 'module' => 'configuracion', 'module_label' => 'Configuracion', 'module_icono' => 'fa-solid fa-gears',  'ruta' => '/configuraciones','icono' => 'fa-solid fa-sliders',         'orden' => 82],
+            ['name' => 'Manual de usuario', 'code' => 'manual_usuario', 'module' => 'configuracion', 'module_label' => 'Configuracion', 'module_icono' => 'fa-solid fa-gears', 'ruta' => '/manual/usuario', 'icono' => 'fa-solid fa-book-open-reader', 'orden' => 83],
         ];
 
         foreach ($permissions as $permissionData) {
@@ -61,7 +62,7 @@ class AuthorizationSeeder extends Seeder
                 'name' => 'Operador',
                 'description' => 'Acceso general excepto configuracion.',
                 'permissions' => $allPermissionCodes
-                    ->reject(fn (string $code): bool => in_array($code, ['users', 'roles', 'configuraciones'], true))
+                    ->reject(fn (string $code): bool => in_array($code, ['users', 'roles', 'configuraciones', 'manual_usuario'], true))
                     ->values()
                     ->all(),
             ],
@@ -69,7 +70,7 @@ class AuthorizationSeeder extends Seeder
                 'name' => 'Cajero',
                 'description' => 'Acceso a todo excepto configuracion y capital.',
                 'permissions' => $allPermissionCodes
-                    ->reject(fn (string $code): bool => in_array($code, ['users', 'roles', 'configuraciones', 'capital'], true))
+                    ->reject(fn (string $code): bool => in_array($code, ['users', 'roles', 'configuraciones', 'manual_usuario', 'capital'], true))
                     ->values()
                     ->all(),
             ],

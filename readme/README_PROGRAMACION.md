@@ -34,6 +34,23 @@ Regla del proyecto:
 - Validar request en controlador o Request class.
 - Mantener respuestas JSON consistentes (`message`, `data`).
 
+Politica de acceso a datos:
+
+- Evitar `DB::table`, `join`, `whereRaw`, `orderByRaw` y SQL crudo en controladores de negocio siempre que exista alternativa con Eloquent.
+- Excepciones permitidas: operaciones de infraestructura sin modelo Eloquent directo (ejemplo: limpieza de tabla de sesiones por nombre dinamico de configuracion).
+- Si una excepcion es necesaria, documentar la razon en PR/README y mantener la consulta parametrizada.
+
+Politica de validaciones:
+
+- Prioridad alta: toda validacion de seguridad y negocio debe existir en backend.
+- Frontend replica validaciones de UX (required, rangos, formato) para mejor experiencia, pero nunca reemplaza backend.
+- En filtros de fecha usar regla backend `after_or_equal` para evitar rangos invalidos.
+
+Politica de modelos:
+
+- Todo modelo de dominio debe definir `fillable` para controlar asignacion masiva.
+- Evitar `$guarded = []` en modelos del sistema.
+
 ## Reutilizacion de logica
 
 - Si una funcion se reutiliza en varios modulos: mover a helper.

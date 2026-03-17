@@ -19,6 +19,7 @@ Estado funcional actual:
   - Inventario
   - Catalogo
   - Configuracion
+  - Manual (solo admin)
 
 ## 2) Stack y herramientas
 
@@ -142,6 +143,7 @@ Compensaciones:
 - Usuarios eliminados/inactivos no pueden iniciar sesion.
 - En edicion de usuario, `username` se muestra como lectura en UI.
 - Cambio de contrasena de un usuario desde admin cierra solo las sesiones de ese usuario (no de otros).
+- El modulo `Manual de Usuario` es solo de visualizacion y su acceso esta restringido a rol admin mediante permiso `manual_usuario`.
 
 ### Roles
 

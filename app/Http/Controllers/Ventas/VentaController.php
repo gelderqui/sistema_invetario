@@ -67,7 +67,7 @@ class VentaController extends Controller
     {
         $validated = $request->validate([
             'desde' => ['nullable', 'date'],
-            'hasta' => ['nullable', 'date'],
+            'hasta' => ['nullable', 'date', 'after_or_equal:desde'],
             'usuario_id' => ['nullable', 'integer', Rule::exists('users', 'id')],
         ]);
 

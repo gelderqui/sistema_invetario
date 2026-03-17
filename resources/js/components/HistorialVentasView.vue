@@ -32,9 +32,13 @@
                     </select>
                 </div>
                 <div class="col-12 col-md-3 d-grid">
-                    <button class="btn btn-brand" :disabled="loading" @click="load">Filtrar</button>
+                    <button class="btn btn-brand" :disabled="loading || rangoFechasInvalido" @click="load">Filtrar</button>
                 </div>
             </div>
+        </div>
+
+        <div v-if="rangoFechasInvalido" class="alert alert-warning py-2 px-3 mb-3" role="alert">
+            El rango de fechas es invalido: "Hasta" no puede ser menor que "Desde".
         </div>
 
         <div class="card border-0 shadow-sm">
@@ -161,10 +165,16 @@ const filtros = ref({
 
 const esAdmin = computed(() => authStore.user?.role?.code === 'admin');
 const usuarioActualId = computed(() => Number(authStore.user?.id ?? 0));
+const rangoFechasInvalido = computed(() => {
+    if (!filtros.value.desde || !filtros.value.hasta) return false;
+    return filtros.value.hasta < filtros.value.desde;
+});
 
 onMounted(load);
 
 async function load() {
+    if (rangoFechasInvalido.value) return;
+
     loading.value = true;
     try {
         const endpoint = filtros.value.tipo === 'ventas'

@@ -17,6 +17,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Gastos\GastoController;
 use App\Http\Controllers\Inventario\InventarioController;
 use App\Http\Controllers\Inventario\AjusteInventarioController;
+use App\Http\Controllers\ManualController;
 use App\Http\Controllers\Ventas\DevolucionController;
 use App\Http\Controllers\Ventas\VentaController;
 use Illuminate\Support\Facades\Route;
@@ -157,6 +158,10 @@ Route::prefix('api')->group(function (): void {
                 Route::get('/get/catalogs', [AjusteInventarioController::class, 'catalogs'])->middleware('permission:inventario_ajustes');
                 Route::post('/store', [AjusteInventarioController::class, 'store'])->middleware('permission:inventario_ajustes');
             });
+        });
+
+        Route::prefix('manual')->group(function (): void {
+            Route::get('/usuario/get', [ManualController::class, 'usuario'])->middleware('permission:manual_usuario');
         });
     });
 

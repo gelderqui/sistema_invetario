@@ -17,6 +17,7 @@ import InventarioAlertasView from '@/components/InventarioAlertasView.vue';
 import InventarioAjustesView from '@/components/InventarioAjustesView.vue';
 import InventarioView from '@/components/InventarioView.vue';
 import LoginView from '@/components_public/LoginView.vue';
+import ManualUsuarioView from '@/components/ManualUsuarioView.vue';
 import ProveedoresView from '@/components/ProveedoresView.vue';
 import ProductosView from '@/components/ProductosView.vue';
 import RolesView from '@/components/RolesView.vue';
@@ -231,6 +232,14 @@ const routes = [
         path: '/gastos',
         name: 'gastos',
         component: GastosView,
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
+        path: '/manual/usuario',
+        name: 'manual-usuario',
+        component: ManualUsuarioView,
         meta: {
             requiresAuth: true,
         },

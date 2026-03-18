@@ -211,7 +211,7 @@
         </div>
     </main>
 
-    <LoadingOverlay :show="isAppLoading" />
+    <LoadingOverlay :show="showLoadingOverlay" />
 </template>
 
 <script setup>
@@ -273,6 +273,7 @@ const emptyPasswordForm = () => ({
 const passwordForm = ref(emptyPasswordForm());
 
 const showShell = computed(() => authStore.isAuthenticated && route.name !== 'login');
+const showLoadingOverlay = computed(() => isAppLoading.value && route.name !== 'login');
 
 const openGroups = ref([]);
 

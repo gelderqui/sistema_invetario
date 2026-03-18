@@ -16,6 +16,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
@@ -526,12 +527,24 @@ class DevolucionController extends Controller
         ]);
     }
 
-    public function ticket(Request $request, Devolucion $devolucion): Response
+    public function ticketSignedUrl(Request $request, Devolucion $devolucion): JsonResponse
     {
         if ((int) $devolucion->usuario_id !== (int) $request->user()->id) {
-            abort(403, 'No autorizado para ver este ticket.');
+            return response()->json(['message' => 'No autorizado para ver este ticket.'], 403);
         }
 
+        $url = URL::temporarySignedRoute(
+            'api.ventas.devoluciones.ticket',
+            now()->addMinutes(30),
+            ['devolucion' => $devolucion->id],
+            absolute: false
+        );
+
+        return response()->json(['url' => $url]);
+    }
+
+    public function ticket(Request $request, Devolucion $devolucion): Response
+    {
         $devolucion->loadMissing([
             'venta:id,numero,fecha_venta',
             'usuario:id,name,username',

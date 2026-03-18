@@ -222,14 +222,20 @@ function fmtDate(value) {
     return new Date(value).toLocaleString('es-GT');
 }
 
-function imprimirVenta(id) {
+async function imprimirVenta(id) {
     if (!id) return;
-    window.open(`/api/ventas/${id}/ticket`, '_blank', 'noopener');
+    const { data } = await axios.get(`/ventas/${id}/ticket/signed-url`);
+    if (data?.url) {
+        window.open(data.url, '_blank', 'noopener');
+    }
 }
 
-function imprimirDevolucion(id) {
+async function imprimirDevolucion(id) {
     if (!id) return;
-    window.open(`/api/ventas/devoluciones/${id}/ticket`, '_blank', 'noopener');
+    const { data } = await axios.get(`/ventas/devoluciones/${id}/ticket/signed-url`);
+    if (data?.url) {
+        window.open(data.url, '_blank', 'noopener');
+    }
 }
 
 async function anularVenta(id, numero) {

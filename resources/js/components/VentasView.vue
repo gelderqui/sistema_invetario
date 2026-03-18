@@ -2,10 +2,14 @@
     <div>
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="h4 mb-0">Ventas (POS)</h2>
-            <button class="btn btn-brand" :disabled="actionLocked" @click="openCreate">
+            <button class="btn btn-brand" :disabled="actionLocked || !hasOpenCaja" @click="openCreate">
                 <FontAwesomeIcon icon="fa-solid fa-cash-register" class="me-2" />
                 Nueva venta
             </button>
+        </div>
+
+        <div v-if="!loading && !hasOpenCaja" class="alert alert-warning py-2">
+            Debe tener una caja abierta (del usuario actual) para registrar ventas.
         </div>
 
         <div v-if="loading" class="text-center py-5">
@@ -139,7 +143,7 @@
                                             step="0.0001"
                                             min="0"
                                             class="form-control"
-                                            readonly
+                                            disabled
                                         >
                                     </div>
 
@@ -173,7 +177,7 @@
                                                 <input v-model.number="item.cantidad" type="number" step="1" min="1" class="form-control form-control-sm">
                                             </td>
                                             <td>
-                                                <input v-model.number="item.precio_unitario" type="number" step="0.0001" min="0" class="form-control form-control-sm" readonly>
+                                                <input v-model.number="item.precio_unitario" type="number" step="0.0001" min="0" class="form-control form-control-sm" disabled>
                                             </td>
                                             <td class="fw-semibold">Q {{ formatMoney(itemSubtotal(item)) }}</td>
                                             <td>
@@ -245,7 +249,7 @@ import TicketReceiptModal from '@/components/TicketReceiptModal.vue';
 import { formatMoney } from '@/utils/formatters';
 
 const ventas = ref([]);
-const catalogs = ref({ clientes: [], productos: [], metodos_pago: [] });
+const catalogs = ref({ clientes: [], productos: [], metodos_pago: [], caja_activa: null });
 const loading = ref(true);
 const saving = ref(false);
 const formErrors = ref([]);
@@ -282,6 +286,7 @@ const descuentoAplicado = computed(() => (form.value.habilitar_descuento ? Numbe
 const totalVenta = computed(() => Math.max(0, Number(subtotalVenta.value) - Number(descuentoAplicado.value || 0)));
 const cambioVenta = computed(() => Math.max(0, Number(form.value.monto_recibido || 0) - Number(totalVenta.value || 0)));
 const actionLocked = computed(() => loading.value || saving.value);
+const hasOpenCaja = computed(() => Boolean(catalogs.value.caja_activa?.id));
 const totalVentas = computed(() => ventas.value.length);
 const totalPagesVentas = computed(() => Math.max(1, Math.ceil(totalVentas.value / perPageVentas.value)));
 const safePageVentas = computed(() => Math.min(Math.max(pageVentas.value, 1), totalPagesVentas.value));
@@ -322,6 +327,11 @@ async function loadCatalogs() {
 }
 
 function openCreate() {
+    if (!hasOpenCaja.value) {
+        formErrors.value = ['Debe tener una caja abierta (del usuario actual) para registrar ventas.'];
+        return;
+    }
+
     form.value = emptyForm();
     finder.value = {
         producto: null,
@@ -441,6 +451,11 @@ function itemSubtotal(item) {
 }
 
 async function save() {
+    if (!hasOpenCaja.value) {
+        formErrors.value = ['Debe tener una caja abierta (del usuario actual) para registrar ventas.'];
+        return;
+    }
+
     saving.value = true;
     formErrors.value = [];
 
@@ -462,8 +477,8 @@ async function save() {
         ventas.value.unshift(data.data);
         formModal.hide();
 
-        const ticketUrl = `/api/ventas/${data.data.id}/ticket`;
-        receiptModalRef.value?.open(ticketUrl);
+        const { data: ticketData } = await axios.get(`/ventas/${data.data.id}/ticket/signed-url`);
+        receiptModalRef.value?.open(ticketData.url);
     } catch (error) {
         const errors = error.response?.data?.errors;
         formErrors.value = errors ? Object.values(errors).flat() : [error.response?.data?.message ?? 'No se pudo registrar la venta.'];

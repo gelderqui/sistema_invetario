@@ -305,6 +305,7 @@
                                                     min="0"
                                                     class="form-control form-control-sm"
                                                     @input="handleSalePriceInput(item, $event)"
+                                                    @blur="handleSalePriceBlur(item)"
                                                 >
                                             </td>
                                             <td>
@@ -622,12 +623,21 @@ function handleSalePriceInput(item, event) {
     const rawValue = String(event?.target?.value ?? '').trim();
 
     if (rawValue === '') {
-        item.precio_venta_manual = false;
-        syncSuggestedSalePrice(item, true);
+        // Permite limpiar y volver a escribir sin que el sugerido reaparezca en cada tecla.
+        item.precio_venta_manual = true;
         return;
     }
 
     item.precio_venta_manual = true;
+}
+
+function handleSalePriceBlur(item) {
+    const value = Number(item.precio_venta);
+
+    if (!Number.isFinite(value) || value <= 0) {
+        item.precio_venta_manual = false;
+        syncSuggestedSalePrice(item, true);
+    }
 }
 
 function normalizeQuantityInput(item) {

@@ -181,14 +181,23 @@ Route::prefix('api')->group(function (): void {
         });
     });
 
-    // Tickets PDF deben poder abrirse en iframe/window.open, por eso no usan middleware ajax.
-    Route::middleware(['auth:sanctum', 'permission'])->group(function (): void {
+    // Endpoints AJAX autenticados para generar URLs firmadas de tickets (seguras para iframe).
+    Route::middleware(['auth:sanctum', 'ajax'])->group(function (): void {
         Route::prefix('ventas')->group(function (): void {
-            Route::get('/{venta}/ticket', [VentaController::class, 'ticket'])->middleware('permission:ventas|historial_ventas');
+            Route::get('/{venta}/ticket/signed-url', [VentaController::class, 'ticketSignedUrl']);
 
             Route::prefix('devoluciones')->group(function (): void {
-                Route::get('/{devolucion}/ticket', [DevolucionController::class, 'ticket'])->middleware('permission:devoluciones|historial_ventas');
+                Route::get('/{devolucion}/ticket/signed-url', [DevolucionController::class, 'ticketSignedUrl']);
             });
+        });
+    });
+
+    // Tickets PDF accedidos via URL firmada (sin middleware auth para permitir iframe/window.open).
+    Route::prefix('ventas')->group(function (): void {
+        Route::get('/{venta}/ticket', [VentaController::class, 'ticket'])->middleware('signed:relative')->name('api.ventas.ticket');
+
+        Route::prefix('devoluciones')->group(function (): void {
+            Route::get('/{devolucion}/ticket', [DevolucionController::class, 'ticket'])->middleware('signed:relative')->name('api.ventas.devoluciones.ticket');
         });
     });
 });

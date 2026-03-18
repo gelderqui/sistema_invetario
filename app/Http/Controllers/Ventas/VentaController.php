@@ -17,6 +17,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
@@ -133,7 +134,7 @@ class VentaController extends Controller
         ]);
     }
 
-    public function catalogs(): JsonResponse
+    public function catalogs(Request $request): JsonResponse
     {
         $clientes = Cliente::query()
             ->where('activo', true)
@@ -158,12 +159,19 @@ class VentaController extends Controller
                 'unidad_medida_id',
             ]);
 
+        $cajaActiva = Caja::query()
+            ->where('usuario_id', (int) $request->user()->id)
+            ->where('estado', 'abierta')
+            ->latest('id')
+            ->first(['id']);
+
         return response()->json([
             'data' => [
                 'clientes' => $clientes,
                 'consumidor_final_id' => $consumidorFinalId,
                 'productos' => $productos,
                 'metodos_pago' => ['efectivo'],
+                'caja_activa' => $cajaActiva,
             ],
         ]);
     }
@@ -546,15 +554,27 @@ class VentaController extends Controller
         ]);
     }
 
-    public function ticket(Request $request, Venta $venta): Response
+    public function ticketSignedUrl(Request $request, Venta $venta): JsonResponse
     {
         $user = $request->user()?->loadMissing('role:id,code');
         $isAdmin = $user?->role?->code === 'admin';
 
         if (! $isAdmin && (int) $venta->add_user !== (int) $user?->id) {
-            abort(403, 'No autorizado para ver este ticket.');
+            return response()->json(['message' => 'No autorizado para ver este ticket.'], 403);
         }
 
+        $url = URL::temporarySignedRoute(
+            'api.ventas.ticket',
+            now()->addMinutes(30),
+            ['venta' => $venta->id],
+            absolute: false
+        );
+
+        return response()->json(['url' => $url]);
+    }
+
+    public function ticket(Request $request, Venta $venta): Response
+    {
         $venta->loadMissing([
             'cliente:id,nombre,nit',
             'detalles.producto:id,nombre',

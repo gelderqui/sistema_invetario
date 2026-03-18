@@ -210,8 +210,8 @@ async function guardar() {
         form.value.items = [];
         await reloadAll();
 
-        const ticketUrl = `/api/ventas/devoluciones/${data.data.id}/ticket`;
-        receiptModalRef.value?.open(ticketUrl);
+        const { data: ticketData } = await axios.get(`/ventas/devoluciones/${data.data.id}/ticket/signed-url`);
+        receiptModalRef.value?.open(ticketData.url);
     } catch (error) {
         const backend = error.response?.data?.errors;
         errors.value = backend ? Object.values(backend).flat() : [error.response?.data?.message ?? 'No se pudo guardar la devolucion.'];
@@ -225,9 +225,10 @@ function fmtDate(value) {
     return new Date(value).toLocaleString('es-GT');
 }
 
-function openTicket(id) {
+async function openTicket(id) {
     if (!id) return;
-    receiptModalRef.value?.open(`/api/ventas/devoluciones/${id}/ticket`);
+    const { data } = await axios.get(`/ventas/devoluciones/${id}/ticket/signed-url`);
+    receiptModalRef.value?.open(data.url);
 }
 
 async function anularDevolucion(item) {

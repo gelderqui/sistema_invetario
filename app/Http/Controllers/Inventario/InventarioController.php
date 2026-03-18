@@ -98,6 +98,7 @@ class InventarioController extends Controller
             ->with([
                 'producto:id,nombre',
                 'compra:id,numero',
+                'lote:id,fecha_entrada,fecha_vencimiento',
             ])
             ->orderByDesc('id');
 
@@ -122,6 +123,7 @@ class InventarioController extends Controller
             'id',
             'producto_id',
             'compra_id',
+            'lote_id',
             'tipo',
             'cantidad',
             'stock_anterior',

@@ -21,6 +21,7 @@ return new class extends Migration
             $table->foreign('usuario_id')->references('id')->on('users')->restrictOnDelete();
             $table->index(['fecha', 'id']);
             $table->index('estado');
+            $table->index(['usuario_id', 'fecha', 'id'], 'devoluciones_usuario_fecha_id_idx');
         });
 
         Schema::create('detalle_devoluciones', function (Blueprint $table): void {
@@ -38,6 +39,7 @@ return new class extends Migration
             $table->foreign('venta_detalle_id')->references('id')->on('venta_detalles')->nullOnDelete();
             $table->foreign('producto_id')->references('id')->on('productos')->restrictOnDelete();
             $table->index(['producto_id', 'devolucion_id']);
+            $table->index('venta_detalle_id', 'detalle_devoluciones_venta_detalle_idx');
         });
     }
 

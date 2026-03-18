@@ -31,6 +31,10 @@
                     <input v-model.number="form.costo_unitario" type="number" step="0.0001" min="0" class="form-control">
                 </div>
                 <div class="col-12 col-md-2">
+                    <label class="form-label fw-semibold">Precio venta</label>
+                    <input v-model.number="form.precio_venta" type="number" step="0.0001" min="0.0001" class="form-control">
+                </div>
+                <div class="col-12 col-md-2">
                     <label class="form-label fw-semibold">Fecha entrada</label>
                     <input v-model="form.fecha_entrada" type="date" class="form-control">
                 </div>
@@ -57,6 +61,7 @@
                             <th>Producto</th>
                             <th>Cantidad</th>
                             <th>Costo unitario</th>
+                            <th>Precio venta</th>
                             <th>Stock anterior</th>
                             <th>Stock nuevo</th>
                             <th>Referencia</th>
@@ -65,13 +70,14 @@
                     </thead>
                     <tbody>
                         <tr v-if="!totalMovimientosIniciales">
-                            <td colspan="8" class="text-center text-body-secondary py-3">Sin cargas iniciales registradas.</td>
+                            <td colspan="9" class="text-center text-body-secondary py-3">Sin cargas iniciales registradas.</td>
                         </tr>
                         <tr v-for="m in paginatedMovimientosIniciales" :key="m.id">
                             <td>{{ fmtDateTime(m.created_at) }}</td>
                             <td>{{ m.producto?.nombre || '-' }}</td>
                             <td class="text-success">{{ Number(m.cantidad || 0).toFixed(0) }}</td>
                             <td>Q {{ Number(m.costo_unitario || 0).toFixed(2) }}</td>
+                            <td>Q {{ Number(m.precio_venta || 0).toFixed(2) }}</td>
                             <td>{{ Number(m.stock_anterior || 0).toFixed(0) }}</td>
                             <td>{{ Number(m.stock_nuevo || 0).toFixed(0) }}</td>
                             <td>{{ m.referencia || '-' }}</td>
@@ -140,6 +146,7 @@ async function guardar() {
             producto_id: form.value.producto_id,
             cantidad: Math.trunc(Number(form.value.cantidad || 0)),
             costo_unitario: Number(form.value.costo_unitario || 0),
+            precio_venta: Number(form.value.precio_venta || 0),
             fecha_entrada: form.value.fecha_entrada,
             fecha_vencimiento: form.value.fecha_vencimiento || null,
             observacion: form.value.observacion || null,
@@ -164,6 +171,7 @@ function emptyForm() {
         producto_id: null,
         cantidad: null,
         costo_unitario: null,
+        precio_venta: null,
         fecha_entrada: new Date().toISOString().slice(0, 10),
         fecha_vencimiento: null,
         observacion: '',

@@ -29,6 +29,7 @@ class InventarioInicialController extends Controller
                 'stock_anterior',
                 'stock_nuevo',
                 'costo_unitario',
+                'precio_venta',
                 'referencia',
                 'nota',
                 'add_user',
@@ -52,6 +53,8 @@ class InventarioInicialController extends Controller
                 'nombre',
                 'stock_actual',
                 'costo_promedio',
+                'precio_venta',
+                'precio_venta_promedio',
                 'control_vencimiento',
             ]);
 
@@ -68,6 +71,7 @@ class InventarioInicialController extends Controller
             'producto_id' => ['required', Rule::exists('productos', 'id')],
             'cantidad' => ['required', 'integer', 'min:1'],
             'costo_unitario' => ['required', 'numeric', 'gte:0'],
+            'precio_venta' => ['required', 'numeric', 'gt:0'],
             'fecha_entrada' => ['required', 'date'],
             'fecha_vencimiento' => ['nullable', 'date', 'after_or_equal:fecha_entrada'],
             'observacion' => ['nullable', 'string', 'max:255'],
@@ -92,6 +96,7 @@ class InventarioInicialController extends Controller
 
             $cantidad = (float) toMoney((int) $validated['cantidad'], 4);
             $costoUnitario = (float) toMoney($validated['costo_unitario'], 4);
+            $precioVenta = (float) toMoney($validated['precio_venta'], 4);
             $stockAnterior = (float) $producto->stock_actual;
             $stockNuevo = (float) toMoney($stockAnterior + $cantidad, 4);
 
@@ -101,6 +106,14 @@ class InventarioInicialController extends Controller
             $totalCostoNuevo = (float) toMoney($totalCostoAnterior + $totalCostoEntrada, 4);
             $costoPromedioNuevo = $stockNuevo > 0
                 ? (float) toMoney($totalCostoNuevo / $stockNuevo, 4)
+                : 0.0;
+
+            $precioVentaPromedioAnterior = (float) $producto->precio_venta_promedio;
+            $totalPrecioVentaAnterior = (float) toMoney($stockAnterior * $precioVentaPromedioAnterior, 4);
+            $totalPrecioVentaEntrada = (float) toMoney($cantidad * $precioVenta, 4);
+            $totalPrecioVentaNuevo = (float) toMoney($totalPrecioVentaAnterior + $totalPrecioVentaEntrada, 4);
+            $precioVentaPromedioNuevo = $stockNuevo > 0
+                ? (float) toMoney($totalPrecioVentaNuevo / $stockNuevo, 4)
                 : 0.0;
 
             InventarioLote::query()->create([
@@ -117,6 +130,8 @@ class InventarioInicialController extends Controller
                 'stock_actual' => $stockNuevo,
                 'costo_promedio' => $costoPromedioNuevo,
                 'costo_ultimo' => $costoUnitario,
+                'precio_venta' => $precioVenta,
+                'precio_venta_promedio' => $precioVentaPromedioNuevo,
                 'mod_user' => $userId,
             ]);
 
@@ -127,6 +142,7 @@ class InventarioInicialController extends Controller
                 'stock_anterior' => $stockAnterior,
                 'stock_nuevo' => $stockNuevo,
                 'costo_unitario' => $costoUnitario,
+                'precio_venta' => $precioVenta,
                 'referencia' => 'INI-'.now()->format('YmdHis'),
                 'nota' => $validated['observacion'] ?? 'Carga de inventario inicial',
                 'add_user' => $userId,

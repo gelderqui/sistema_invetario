@@ -157,7 +157,7 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white">
                     <h6 class="mb-1">Inventario valorizado</h6>
-                    <small class="text-body-secondary">Valorizado con stock actual por costo promedio vigente.</small>
+                    <small class="text-body-secondary">Valorizado por lotes disponibles (cantidad remanente por costo unitario).</small>
                 </div>
                 <div class="card-body">
                     <div class="row g-3 mb-4">
@@ -210,7 +210,7 @@
                                             <th>Producto</th>
                                             <th>Categoria</th>
                                             <th class="text-end">Stock</th>
-                                            <th class="text-end">Costo prom.</th>
+                                            <th class="text-end">Costo unit.</th>
                                             <th class="text-end">Valor</th>
                                         </tr>
                                     </thead>
@@ -222,7 +222,7 @@
                                             <td>{{ item.nombre }}</td>
                                             <td>{{ item.categoria }}</td>
                                             <td class="text-end">{{ Number(item.stock_actual || 0).toFixed(0) }}</td>
-                                            <td class="text-end">Q {{ formatMoney(item.costo_promedio) }}</td>
+                                            <td class="text-end">Q {{ formatMoney(item.costo_unitario_valorizacion ?? item.costo_promedio) }}</td>
                                             <td class="text-end fw-semibold">Q {{ formatMoney(item.valor_total) }}</td>
                                         </tr>
                                     </tbody>

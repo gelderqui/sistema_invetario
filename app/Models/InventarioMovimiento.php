@@ -15,11 +15,13 @@ class InventarioMovimiento extends Model
         'compra_detalle_id',
         'venta_id',
         'venta_detalle_id',
+        'lote_id',
         'tipo',
         'cantidad',
         'stock_anterior',
         'stock_nuevo',
         'costo_unitario',
+        'precio_venta',
         'referencia',
         'nota',
         'add_user',
@@ -32,6 +34,7 @@ class InventarioMovimiento extends Model
             'stock_anterior' => 'decimal:4',
             'stock_nuevo' => 'decimal:4',
             'costo_unitario' => 'decimal:4',
+            'precio_venta' => 'decimal:4',
         ];
     }
 
@@ -58,5 +61,10 @@ class InventarioMovimiento extends Model
     public function ventaDetalle(): BelongsTo
     {
         return $this->belongsTo(VentaDetalle::class, 'venta_detalle_id');
+    }
+
+    public function lote(): BelongsTo
+    {
+        return $this->belongsTo(InventarioLote::class, 'lote_id');
     }
 }

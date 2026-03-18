@@ -31,6 +31,8 @@ return new class extends Migration
             $table->index(['fecha_venta', 'id']);
             $table->index('estado');
             $table->index('metodo_pago');
+            $table->index(['add_user', 'fecha_venta', 'id'], 'ventas_user_fecha_id_idx');
+            $table->index(['add_user', 'estado', 'fecha_venta', 'id'], 'ventas_user_estado_fecha_id_idx');
         });
     }
 

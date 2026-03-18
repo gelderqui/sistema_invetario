@@ -7,6 +7,7 @@ use App\Models\CapitalCuenta;
 use App\Models\CapitalMovimiento;
 use App\Models\Devolucion;
 use App\Models\Gasto;
+use App\Models\InventarioLote;
 use App\Models\InventarioMovimiento;
 use App\Models\MovimientoCaja;
 use App\Models\Producto;
@@ -113,18 +114,40 @@ class ReporteController extends Controller
                 'activo',
             ]);
 
+        $lotesPorProducto = InventarioLote::query()
+            ->where('cantidad_disponible', '>', 0)
+            ->selectRaw('producto_id, COALESCE(SUM(cantidad_disponible), 0) as stock_lotes')
+            ->selectRaw('COALESCE(SUM(cantidad_disponible * costo_unitario), 0) as valor_lotes')
+            ->groupBy('producto_id')
+            ->get()
+            ->keyBy('producto_id');
+
         $inventarioValorizado = $productosInventario
-            ->map(function (Producto $producto): array {
-                $valor = toMoney((float) $producto->stock_actual * (float) $producto->costo_promedio, 4);
+            ->map(function (Producto $producto) use ($lotesPorProducto): array {
+                $resumenLotes = $lotesPorProducto->get($producto->id);
+
+                $stockLotes = (float) ($resumenLotes->stock_lotes ?? 0);
+                $valorLotes = (float) ($resumenLotes->valor_lotes ?? 0);
+
+                $usaLotes = $stockLotes > 0;
+                $stockValorizado = $usaLotes ? toMoney($stockLotes, 4) : toMoney((float) $producto->stock_actual, 4);
+                $valor = $usaLotes
+                    ? toMoney($valorLotes, 4)
+                    : toMoney((float) $producto->stock_actual * (float) $producto->costo_promedio, 4);
+                $costoUnitarioValorizacion = $stockValorizado > 0
+                    ? toMoney($valor / $stockValorizado, 4)
+                    : 0.0;
 
                 return [
                     'id' => $producto->id,
                     'nombre' => $producto->nombre,
                     'categoria' => $producto->categoria?->nombre ?? 'Sin categoria',
-                    'stock_actual' => (float) $producto->stock_actual,
-                    'costo_promedio' => (float) $producto->costo_promedio,
+                    'stock_actual' => (float) $stockValorizado,
+                    'costo_promedio' => (float) $costoUnitarioValorizacion,
+                    'costo_unitario_valorizacion' => (float) $costoUnitarioValorizacion,
                     'valor_total' => $valor,
                     'activo' => (bool) $producto->activo,
+                    'metodo_valorizacion' => $usaLotes ? 'lotes' : 'fallback_promedio',
                 ];
             })
             ->sortByDesc('valor_total')

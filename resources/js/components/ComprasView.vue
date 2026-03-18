@@ -178,7 +178,7 @@
                                     <label class="form-label fw-semibold">Fecha compra *</label>
                                     <input v-model="form.fecha_compra" type="date" class="form-control" required>
                                 </div>
-                                <div class="col-12 col-md-8">
+                                <div class="col-12 col-md-4">
                                     <label class="form-label fw-semibold">Proveedor *</label>
                                     <Multiselect
                                         v-model="form.proveedor"

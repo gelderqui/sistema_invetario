@@ -108,12 +108,6 @@ class AjusteInventarioController extends Controller
                 ]);
             }
 
-            if ($cantidad < 0) {
-                $this->descontarLotes($producto, abs($cantidad), $validated['lote_id'] ?? null);
-            } else {
-                $this->incrementarLote($producto, $cantidad, $validated['fecha']);
-            }
-
             $ajuste = AjusteInventario::query()->create([
                 'producto_id' => $producto->id,
                 'cantidad' => $cantidad,
@@ -124,21 +118,59 @@ class AjusteInventarioController extends Controller
                 'observacion' => $validated['observacion'] ?? null,
             ]);
 
+            $notaMovimiento = $motivo->nombre.(empty($validated['observacion']) ? '' : ': '.$validated['observacion']);
+            $stockCursor = (float) $stockAnterior;
+
+            if ($cantidad < 0) {
+                $consumos = $this->descontarLotes($producto, abs($cantidad), $validated['lote_id'] ?? null);
+
+                foreach ($consumos as $consumo) {
+                    $cantidadConsumida = toMoney((float) $consumo['cantidad'], 4);
+                    $stockDespues = toMoney($stockCursor - $cantidadConsumida, 4);
+
+                    InventarioMovimiento::query()->create([
+                        'producto_id' => $producto->id,
+                        'lote_id' => (int) $consumo['lote_id'],
+                        'tipo' => 'ajuste_inventario',
+                        'cantidad' => toMoney(-1 * $cantidadConsumida, 4),
+                        'stock_anterior' => $stockCursor,
+                        'stock_nuevo' => $stockDespues,
+                        'costo_unitario' => toMoney((float) $consumo['costo_unitario'], 4),
+                        'referencia' => 'AJU-'.$ajuste->id,
+                        'nota' => $notaMovimiento,
+                        'add_user' => $userId,
+                    ]);
+
+                    $stockCursor = (float) $stockDespues;
+                }
+            } else {
+                $loteEntrada = $this->incrementarLote($producto, $cantidad, $validated['fecha']);
+                $stockDespues = toMoney($stockCursor + $cantidad, 4);
+
+                if ((int) ($ajuste->lote_id ?? 0) === 0) {
+                    $ajuste->update([
+                        'lote_id' => (int) $loteEntrada->id,
+                    ]);
+                }
+
+                InventarioMovimiento::query()->create([
+                    'producto_id' => $producto->id,
+                    'lote_id' => (int) $loteEntrada->id,
+                    'tipo' => 'ajuste_inventario',
+                    'cantidad' => $cantidad,
+                    'stock_anterior' => $stockCursor,
+                    'stock_nuevo' => $stockDespues,
+                    'costo_unitario' => toMoney((float) $loteEntrada->costo_unitario, 4),
+                    'referencia' => 'AJU-'.$ajuste->id,
+                    'nota' => $notaMovimiento,
+                    'add_user' => $userId,
+                ]);
+
+                $stockCursor = (float) $stockDespues;
+            }
             $producto->update([
                 'stock_actual' => $stockNuevo,
                 'mod_user' => $userId,
-            ]);
-
-            InventarioMovimiento::query()->create([
-                'producto_id' => $producto->id,
-                'tipo' => 'ajuste_inventario',
-                'cantidad' => $cantidad,
-                'stock_anterior' => $stockAnterior,
-                'stock_nuevo' => $stockNuevo,
-                'costo_unitario' => $producto->costo_promedio,
-                'referencia' => 'AJU-'.$ajuste->id,
-                'nota' => $motivo->nombre.($ajuste->observacion ? ': '.$ajuste->observacion : ''),
-                'add_user' => $userId,
             ]);
 
             return $ajuste;
@@ -155,9 +187,10 @@ class AjusteInventarioController extends Controller
         ], 201);
     }
 
-    private function descontarLotes(Producto $producto, float $cantidad, ?int $loteId = null): void
+    private function descontarLotes(Producto $producto, float $cantidad, ?int $loteId = null): array
     {
         $remaining = toMoney($cantidad, 4);
+        $consumos = [];
 
         $query = InventarioLote::query()
             ->where('producto_id', $producto->id)
@@ -167,9 +200,7 @@ class AjusteInventarioController extends Controller
         if ($loteId) {
             $query->where('id', $loteId);
         } else {
-            $query->orderByRaw('fecha_vencimiento IS NULL')
-                ->orderBy('fecha_vencimiento')
-                ->orderBy('fecha_entrada')
+            $query->orderBy('fecha_entrada')
                 ->orderBy('id');
         }
 
@@ -190,6 +221,12 @@ class AjusteInventarioController extends Controller
                 'cantidad_disponible' => toMoney($disponible - $usar, 4),
             ]);
 
+            $consumos[] = [
+                'lote_id' => (int) $lote->id,
+                'cantidad' => (float) toMoney($usar, 4),
+                'costo_unitario' => (float) toMoney($lote->costo_unitario, 4),
+            ];
+
             $remaining = toMoney($remaining - $usar, 4);
         }
 
@@ -198,15 +235,13 @@ class AjusteInventarioController extends Controller
                 'cantidad' => ['No hay lotes suficientes para realizar el ajuste de salida.'],
             ]);
         }
+
+        return $consumos;
     }
 
-    private function incrementarLote(Producto $producto, float $cantidad, string $fecha): void
+    private function incrementarLote(Producto $producto, float $cantidad, string $fecha): InventarioLote
     {
-        if (! $producto->control_vencimiento) {
-            return;
-        }
-
-        InventarioLote::query()->create([
+        return InventarioLote::query()->create([
             'producto_id' => $producto->id,
             'compra_detalle_id' => null,
             'cantidad_inicial' => $cantidad,

@@ -8,7 +8,7 @@ Este manual esta pensado para operar el negocio en orden, sin romper reglas y si
 
 Este es el orden recomendado cuando empiezas a usar el sistema:
 
-1. Ingresa tu capital inicial en `Configuraciones` (`inversion_inicial`).
+1. Ingresa tu capital inicial en `Capital` (`ingreso_capital`).
 2. Crea categorias de producto.
 3. Crea productos y define su unidad, costo y precio.
 4. Carga inventario inicial (no como compra) en `Inventario -> Inventario inicial`.

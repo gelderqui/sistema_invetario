@@ -23,11 +23,20 @@ return new class extends Migration
             $table->foreign('compra_detalle_id')->references('id')->on('compra_detalles')->nullOnDelete();
             $table->index(['producto_id', 'fecha_entrada'], 'lotes_fifo_idx');
             $table->index(['producto_id', 'fecha_vencimiento'], 'lotes_vencimiento_idx');
+            $table->index(['producto_id', 'cantidad_disponible', 'fecha_entrada'], 'lotes_fifo_stock_idx');
+        });
+
+        Schema::table('inventario_movimientos', function (Blueprint $table): void {
+            $table->foreign('lote_id')->references('id')->on('inventario_lotes')->nullOnDelete();
         });
     }
 
     public function down(): void
     {
+        Schema::table('inventario_movimientos', function (Blueprint $table): void {
+            $table->dropForeign(['lote_id']);
+        });
+
         Schema::dropIfExists('inventario_lotes');
     }
 };

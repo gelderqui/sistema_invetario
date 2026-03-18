@@ -248,6 +248,7 @@ class VentaController extends Controller
                 }
 
                 $remaining = $cantidad;
+                $consumosLote = [];
                 $lotes = InventarioLote::query()
                     ->where('producto_id', $producto->id)
                     ->where('cantidad_disponible', '>', 0)
@@ -270,6 +271,12 @@ class VentaController extends Controller
                     $lote->update([
                         'cantidad_disponible' => toMoney($disponible - $usar, 4),
                     ]);
+
+                    $consumosLote[] = [
+                        'lote_id' => (int) $lote->id,
+                        'cantidad' => (float) toMoney($usar, 4),
+                        'costo_unitario' => (float) toMoney($lote->costo_unitario, 4),
+                    ];
 
                     $remaining = toMoney($remaining - $usar, 4);
                 }
@@ -296,19 +303,28 @@ class VentaController extends Controller
 
                 $stockNuevo = toMoney($stockAnterior - $cantidad, 4);
 
-                InventarioMovimiento::query()->create([
-                    'producto_id' => $producto->id,
-                    'venta_id' => $venta->id,
-                    'venta_detalle_id' => $detalle->id,
-                    'tipo' => 'salida_venta',
-                    'cantidad' => toMoney(-1 * $cantidad, 4),
-                    'stock_anterior' => $stockAnterior,
-                    'stock_nuevo' => $stockNuevo,
-                    'costo_unitario' => $producto->costo_promedio,
-                    'referencia' => $venta->numero,
-                    'nota' => 'Venta registrada',
-                    'add_user' => getUserId(),
-                ]);
+                $stockCursor = (float) $stockAnterior;
+                foreach ($consumosLote as $consumoLote) {
+                    $cantidadConsumida = toMoney((float) $consumoLote['cantidad'], 4);
+                    $stockDespues = toMoney($stockCursor - $cantidadConsumida, 4);
+
+                    InventarioMovimiento::query()->create([
+                        'producto_id' => $producto->id,
+                        'venta_id' => $venta->id,
+                        'venta_detalle_id' => $detalle->id,
+                        'lote_id' => (int) $consumoLote['lote_id'],
+                        'tipo' => 'salida_venta',
+                        'cantidad' => toMoney(-1 * $cantidadConsumida, 4),
+                        'stock_anterior' => $stockCursor,
+                        'stock_nuevo' => $stockDespues,
+                        'costo_unitario' => (float) $consumoLote['costo_unitario'],
+                        'referencia' => $venta->numero,
+                        'nota' => 'Venta registrada',
+                        'add_user' => getUserId(),
+                    ]);
+
+                    $stockCursor = (float) $stockDespues;
+                }
 
                 $producto->update([
                     'stock_actual' => $stockNuevo,
@@ -415,37 +431,94 @@ class VentaController extends Controller
                 $cantidad = toMoney($detalle->cantidad, 4);
 
                 $stockAnterior = (float) $producto->stock_actual;
-                $stockNuevo = toMoney($stockAnterior + $cantidad, 4);
+                $movimientosSalida = InventarioMovimiento::query()
+                    ->where('tipo', 'salida_venta')
+                    ->where('venta_detalle_id', $detalle->id)
+                    ->whereNotNull('lote_id')
+                    ->orderBy('id')
+                    ->get(['lote_id', 'cantidad', 'costo_unitario']);
+
+                $consumoTrazado = (float) $movimientosSalida->sum(fn ($mov) => abs((float) $mov->cantidad));
+                $usarTrazabilidadLote = $movimientosSalida->isNotEmpty() && abs($consumoTrazado - (float) $cantidad) <= 0.0001;
+
+                if ($usarTrazabilidadLote) {
+                    $stockCursor = (float) $stockAnterior;
+
+                    foreach ($movimientosSalida as $movSalida) {
+                        $cantidadReponer = toMoney(abs((float) $movSalida->cantidad), 4);
+                        if ($cantidadReponer <= 0) {
+                            continue;
+                        }
+
+                        $lote = InventarioLote::query()->lockForUpdate()->find($movSalida->lote_id);
+                        if (! $lote) {
+                            throw ValidationException::withMessages([
+                                'venta' => ['No se encontro el lote original consumido para anular esta venta.'],
+                            ]);
+                        }
+
+                        $disponible = (float) $lote->cantidad_disponible;
+                        $lote->update([
+                            'cantidad_disponible' => toMoney($disponible + $cantidadReponer, 4),
+                        ]);
+
+                        $stockDespues = toMoney($stockCursor + $cantidadReponer, 4);
+
+                        InventarioMovimiento::query()->create([
+                            'producto_id' => $producto->id,
+                            'venta_id' => $venta->id,
+                            'venta_detalle_id' => $detalle->id,
+                            'lote_id' => (int) $movSalida->lote_id,
+                            'tipo' => 'anulacion_venta',
+                            'cantidad' => $cantidadReponer,
+                            'stock_anterior' => $stockCursor,
+                            'stock_nuevo' => $stockDespues,
+                            'costo_unitario' => toMoney((float) $movSalida->costo_unitario, 4),
+                            'referencia' => $venta->numero,
+                            'nota' => 'Anulacion de venta',
+                            'add_user' => $userId,
+                        ]);
+
+                        $stockCursor = (float) $stockDespues;
+                    }
+
+                    $stockNuevo = toMoney($stockCursor, 4);
+                } else {
+                    $stockNuevo = toMoney($stockAnterior + $cantidad, 4);
+                    $loteCreadoId = null;
+
+                    if ((bool) $producto->control_vencimiento) {
+                        $lote = InventarioLote::query()->create([
+                            'producto_id' => $producto->id,
+                            'compra_detalle_id' => null,
+                            'cantidad_inicial' => $cantidad,
+                            'cantidad_disponible' => $cantidad,
+                            'costo_unitario' => toMoney($producto->costo_promedio, 4),
+                            'fecha_vencimiento' => null,
+                            'fecha_entrada' => now()->toDateString(),
+                        ]);
+                        $loteCreadoId = (int) $lote->id;
+                    }
+
+                    InventarioMovimiento::query()->create([
+                        'producto_id' => $producto->id,
+                        'venta_id' => $venta->id,
+                        'venta_detalle_id' => $detalle->id,
+                        'lote_id' => $loteCreadoId,
+                        'tipo' => 'anulacion_venta',
+                        'cantidad' => $cantidad,
+                        'stock_anterior' => $stockAnterior,
+                        'stock_nuevo' => $stockNuevo,
+                        'costo_unitario' => $producto->costo_promedio,
+                        'referencia' => $venta->numero,
+                        'nota' => 'Anulacion de venta',
+                        'add_user' => $userId,
+                    ]);
+                }
 
                 $producto->update([
                     'stock_actual' => $stockNuevo,
                     'mod_user' => $userId,
-                ]);
-
-                if ((bool) $producto->control_vencimiento) {
-                    InventarioLote::query()->create([
-                        'producto_id' => $producto->id,
-                        'compra_detalle_id' => null,
-                        'cantidad_inicial' => $cantidad,
-                        'cantidad_disponible' => $cantidad,
-                        'costo_unitario' => toMoney($producto->costo_promedio, 4),
-                        'fecha_vencimiento' => null,
-                        'fecha_entrada' => now()->toDateString(),
-                    ]);
-                }
-
-                InventarioMovimiento::query()->create([
-                    'producto_id' => $producto->id,
-                    'venta_id' => $venta->id,
-                    'venta_detalle_id' => $detalle->id,
-                    'tipo' => 'anulacion_venta',
-                    'cantidad' => $cantidad,
-                    'stock_anterior' => $stockAnterior,
-                    'stock_nuevo' => $stockNuevo,
-                    'costo_unitario' => $producto->costo_promedio,
-                    'referencia' => $venta->numero,
-                    'nota' => 'Anulacion de venta',
-                    'add_user' => $userId,
                 ]);
             }
 

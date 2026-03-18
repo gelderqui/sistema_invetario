@@ -87,8 +87,40 @@
 
         <div v-if="showMovimientos" class="card border-0 shadow-sm">
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">Movimientos recientes</h6>
+                <h6 class="mb-0">{{ movimientosTitle }}</h6>
                 <button class="btn btn-outline-brand btn-sm" :disabled="loading" @click="loadMovimientos">Recargar</button>
+            </div>
+            <div class="card-body row g-3 align-items-end border-top">
+                <div class="col-12 col-md-2">
+                    <label class="form-label fw-semibold">Fecha desde</label>
+                    <input v-model="movFechaDesde" type="date" class="form-control" />
+                </div>
+                <div class="col-12 col-md-2">
+                    <label class="form-label fw-semibold">Fecha hasta</label>
+                    <input v-model="movFechaHasta" type="date" class="form-control" />
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label fw-semibold">Categoria</label>
+                    <select v-model="movCategoriaId" class="form-select" @change="onMovCategoriaChange">
+                        <option :value="null">Todas</option>
+                        <option v-for="categoria in movCategorias" :key="categoria.id" :value="categoria.id">
+                            {{ categoria.nombre }}
+                        </option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label fw-semibold">Producto</label>
+                    <select v-model="movProductoId" class="form-select">
+                        <option :value="null">Todos</option>
+                        <option v-for="producto in movProductos" :key="producto.id" :value="producto.id">
+                            {{ producto.nombre }}
+                        </option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-2 d-grid gap-2">
+                    <button class="btn btn-brand" :disabled="loading" @click="loadMovimientos">Filtrar</button>
+                    <button class="btn btn-outline-brand" :disabled="loading" @click="resetMovimientosFiltros">Limpiar</button>
+                </div>
             </div>
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">
@@ -105,10 +137,10 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-if="!movimientos.length">
+                        <tr v-if="!totalMovimientosInventario">
                             <td colspan="8" class="text-center text-body-secondary py-3">Sin movimientos.</td>
                         </tr>
-                        <tr v-for="mov in movimientos" :key="mov.id">
+                        <tr v-for="mov in paginatedMovimientos" :key="mov.id">
                             <td>{{ formatDateTime(mov.created_at) }}</td>
                             <td>{{ mov.producto?.nombre ?? '-' }}</td>
                             <td><span class="badge text-bg-light border text-uppercase">{{ mov.tipo }}</span></td>
@@ -121,6 +153,12 @@
                     </tbody>
                 </table>
             </div>
+
+            <TablePagination
+                v-model:page="pageMovimientos"
+                v-model:perPage="perPageMovimientos"
+                :total-items="totalMovimientosInventario"
+            />
         </div>
     </div>
 </template>
@@ -130,6 +168,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 
 import axios from '@/bootstrap';
+import TablePagination from '@/components/components_ui/TablePagination.vue';
 import { formatMoney } from '@/utils/formatters';
 
 const loading = ref(true);
@@ -139,11 +178,31 @@ const soloBajoStock = ref(false);
 const existencias = ref([]);
 const categorias = ref([]);
 const movimientos = ref([]);
+const movCategorias = ref([]);
+const movProductos = ref([]);
+const movCategoriaId = ref(null);
+const movProductoId = ref(null);
+const movFechaDesde = ref(defaultMovFechaDesde());
+const movFechaHasta = ref(defaultMovFechaHasta());
+const pageMovimientos = ref(1);
+const perPageMovimientos = ref(10);
 const route = useRoute();
 
 const showStock = computed(() => route.path !== '/inventario/movimientos');
 const showMovimientos = computed(() => route.path !== '/inventario/stock');
 const pageTitle = computed(() => (route.path === '/inventario/movimientos' ? 'Inventario - Movimientos' : 'Inventario - Stock'));
+const movimientosTitle = computed(() => {
+    const desde = movFechaDesde.value ? formatDate(movFechaDesde.value) : 'inicio';
+    const hasta = movFechaHasta.value ? formatDate(movFechaHasta.value) : 'hoy';
+    return `Movimientos (${desde} a ${hasta})`;
+});
+const totalMovimientosInventario = computed(() => movimientos.value.length);
+const totalPagesMovimientos = computed(() => Math.max(1, Math.ceil(totalMovimientosInventario.value / perPageMovimientos.value)));
+const safePageMovimientos = computed(() => Math.min(Math.max(pageMovimientos.value, 1), totalPagesMovimientos.value));
+const paginatedMovimientos = computed(() => {
+    const start = (safePageMovimientos.value - 1) * perPageMovimientos.value;
+    return movimientos.value.slice(start, start + perPageMovimientos.value);
+});
 
 onMounted(async () => {
     await Promise.all([loadExistencias(), loadMovimientos()]);
@@ -167,8 +226,52 @@ async function loadExistencias() {
 }
 
 async function loadMovimientos() {
-    const { data } = await axios.get('/inventario/movimientos/get');
+    const { data } = await axios.get('/inventario/movimientos/get', {
+        params: {
+            fecha_desde: movFechaDesde.value || null,
+            fecha_hasta: movFechaHasta.value || null,
+            categoria_id: movCategoriaId.value || null,
+            producto_id: movProductoId.value || null,
+        },
+    });
     movimientos.value = data.data;
+    movCategorias.value = data.categorias ?? [];
+    movProductos.value = data.productos ?? [];
+}
+
+function resetMovimientosFiltros() {
+    movCategoriaId.value = null;
+    movProductoId.value = null;
+    movFechaDesde.value = defaultMovFechaDesde();
+    movFechaHasta.value = defaultMovFechaHasta();
+    loadMovimientos();
+}
+
+function onMovCategoriaChange() {
+    movProductoId.value = null;
+    loadMovimientos();
+}
+
+function defaultMovFechaHasta() {
+    return toISODate(new Date());
+}
+
+function defaultMovFechaDesde() {
+    const fecha = new Date();
+    fecha.setDate(fecha.getDate() - 30);
+    return toISODate(fecha);
+}
+
+function toISODate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function formatDate(value) {
+    if (!value) return '-';
+    return new Date(`${value}T00:00:00`).toLocaleDateString('es-GT');
 }
 
 function formatDateTime(value) {

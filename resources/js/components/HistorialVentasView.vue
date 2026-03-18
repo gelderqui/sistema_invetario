@@ -59,10 +59,10 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-if="!rows.length">
+                        <tr v-if="!totalRows">
                             <td :colspan="esAdmin ? 10 : 9" class="text-center text-body-secondary py-4">Sin ventas registradas.</td>
                         </tr>
-                        <tr v-for="venta in rows" :key="venta.id">
+                        <tr v-for="venta in paginatedRows" :key="venta.id">
                             <td><code>{{ venta.numero }}</code></td>
                             <td v-if="esAdmin">{{ labelUsuario(venta.usuario) }}</td>
                             <td>{{ venta.cliente?.nombre ?? 'Consumidor final' }}</td>
@@ -110,10 +110,10 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-if="!rows.length">
+                        <tr v-if="!totalRows">
                             <td colspan="8" class="text-center text-body-secondary py-4">Sin devoluciones registradas.</td>
                         </tr>
-                        <tr v-for="row in rows" :key="row.id">
+                        <tr v-for="row in paginatedRows" :key="row.id">
                             <td>#{{ row.id }}</td>
                             <td>{{ row.venta?.numero || '-' }}</td>
                             <td>{{ fmtDate(row.fecha) }}</td>
@@ -142,6 +142,12 @@
                     </tbody>
                 </table>
             </div>
+
+            <TablePagination
+                v-model:page="pageHistorial"
+                v-model:perPage="perPageHistorial"
+                :total-items="totalRows"
+            />
         </div>
     </div>
 </template>
@@ -149,6 +155,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import axios from '@/bootstrap';
+import TablePagination from '@/components/components_ui/TablePagination.vue';
 import { useAuthStore } from '@/stores/auth';
 import { formatMoney } from '@/utils/formatters';
 
@@ -156,6 +163,8 @@ const authStore = useAuthStore();
 const loading = ref(false);
 const rows = ref([]);
 const usuarios = ref([]);
+const pageHistorial = ref(1);
+const perPageHistorial = ref(10);
 const filtros = ref({
     tipo: 'ventas',
     desde: new Date().toISOString().slice(0, 10),
@@ -168,6 +177,13 @@ const usuarioActualId = computed(() => Number(authStore.user?.id ?? 0));
 const rangoFechasInvalido = computed(() => {
     if (!filtros.value.desde || !filtros.value.hasta) return false;
     return filtros.value.hasta < filtros.value.desde;
+});
+const totalRows = computed(() => rows.value.length);
+const totalPagesRows = computed(() => Math.max(1, Math.ceil(totalRows.value / perPageHistorial.value)));
+const safePageRows = computed(() => Math.min(Math.max(pageHistorial.value, 1), totalPagesRows.value));
+const paginatedRows = computed(() => {
+    const start = (safePageRows.value - 1) * perPageHistorial.value;
+    return rows.value.slice(start, start + perPageHistorial.value);
 });
 
 onMounted(load);

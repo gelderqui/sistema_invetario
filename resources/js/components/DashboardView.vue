@@ -43,7 +43,7 @@
                     </div>
                 </div>
 
-                <div class="col-12 col-md-6 col-xl-3">
+                <div v-if="stats.scope !== 'global'" class="col-12 col-md-6 col-xl-3">
                     <div class="card h-100 border-0 shadow-sm">
                         <div class="card-body">
                             <div class="small text-uppercase text-body-secondary mb-1">Ganancia estimada</div>
@@ -59,7 +59,9 @@
                 <div class="col-12 col-lg-6">
                     <div class="card border-0 shadow-sm h-100">
                         <div class="card-body">
-                            <h3 class="h5 mb-3">Productos</h3>
+                            <h3 class="h5 mb-3">
+                                <RouterLink class="text-decoration-none" to="/inventario/alertas">Productos</RouterLink>
+                            </h3>
                             <div class="d-flex justify-content-between align-items-center border-bottom py-2">
                                 <span>Productos con stock bajo</span>
                                 <strong>{{ stats.productos.bajo_stock }}</strong>
@@ -75,7 +77,9 @@
                 <div class="col-12 col-lg-6">
                     <div class="card border-0 shadow-sm h-100">
                         <div class="card-body">
-                            <h3 class="h5 mb-3">Ventas</h3>
+                            <h3 class="h5 mb-3">
+                                <RouterLink class="text-decoration-none" to="/ventas/historial">Ventas</RouterLink>
+                            </h3>
                             <div class="d-flex justify-content-between align-items-center border-bottom py-2">
                                 <span>Ventas del día</span>
                                 <strong>{{ stats.ventas.del_dia }}</strong>
@@ -98,6 +102,7 @@
 
 <script setup>
 import { onMounted, ref } from 'vue';
+import { RouterLink } from 'vue-router';
 
 import axios from '@/bootstrap';
 import { formatMoney } from '@/utils/formatters';

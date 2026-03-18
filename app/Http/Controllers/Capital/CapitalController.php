@@ -103,7 +103,10 @@ class CapitalController extends Controller
                 cuentaOrigenId: null,
                 cuentaDestinoId: $validated['cuenta_destino_id'] ?? null,
                 descripcion: $validated['descripcion'],
-                fecha: $fecha
+                fecha: $fecha,
+                meta: [
+                    'clasificacion' => $this->clasificacionIngresoCapital(),
+                ]
             ),
             'retiro' => registrarMovimientoCapital(
                 tipo: 'retiro_capital',
@@ -135,5 +138,16 @@ class CapitalController extends Controller
             'message' => 'Movimiento de capital registrado correctamente.',
             'data' => $movimiento,
         ], 201);
+    }
+
+    private function clasificacionIngresoCapital(): string
+    {
+        $firstIngreso = CapitalMovimiento::query()
+            ->where('tipo', 'ingreso_capital')
+            ->orderBy('fecha')
+            ->orderBy('id')
+            ->first(['id']);
+
+        return $firstIngreso ? 'inyeccion_capital' : 'capital_inicial';
     }
 }

@@ -15,11 +15,14 @@ import GastosView from '@/components/GastosView.vue';
 import HistorialVentasView from '@/components/HistorialVentasView.vue';
 import InventarioAlertasView from '@/components/InventarioAlertasView.vue';
 import InventarioAjustesView from '@/components/InventarioAjustesView.vue';
+import InventarioInicialView from '@/components/InventarioInicialView.vue';
 import InventarioView from '@/components/InventarioView.vue';
 import LoginView from '@/components_public/LoginView.vue';
 import ManualUsuarioView from '@/components/ManualUsuarioView.vue';
+import MedidasView from '@/components/MedidasView.vue';
 import ProveedoresView from '@/components/ProveedoresView.vue';
 import ProductosView from '@/components/ProductosView.vue';
+import ReportesView from '@/components/ReportesView.vue';
 import RolesView from '@/components/RolesView.vue';
 import UnauthorizedView from '@/components/UnauthorizedView.vue';
 import UsersView from '@/components/UsersView.vue';
@@ -90,6 +93,14 @@ const routes = [
         path: '/productos',
         name: 'productos',
         component: ProductosView,
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
+        path: '/categorias/medidas',
+        name: 'medidas',
+        component: MedidasView,
         meta: {
             requiresAuth: true,
         },
@@ -189,6 +200,14 @@ const routes = [
         },
     },
     {
+        path: '/inventario/inicial',
+        name: 'inventario-inicial',
+        component: InventarioInicialView,
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
         path: '/inventario/stock',
         name: 'inventario',
         component: InventarioView,
@@ -232,6 +251,14 @@ const routes = [
         path: '/gastos',
         name: 'gastos',
         component: GastosView,
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
+        path: '/reportes',
+        name: 'reportes',
+        component: ReportesView,
         meta: {
             requiresAuth: true,
         },

@@ -7,7 +7,9 @@ Este documento define reglas de negocio que no deben romperse. Cualquier cambio 
 - La validacion final siempre se hace en backend.
 - Permisos por rol deben respetarse en middleware y controlador.
 - En historial de ventas, solo `admin` puede consultar ventas de todos los usuarios; los demas roles solo consultan su propio historial.
-- El `Manual de Usuario` solo puede ser consultado por rol `admin` mediante permiso `manual_usuario`.
+- El modulo de `Manual` usa una sola pantalla con contenido por rol.
+- admin visualiza manual completo.
+- operador/cajero visualizan manual operativo.
 - Usuario inactivo o eliminado no puede iniciar sesion.
 
 ## 2. Ventas
@@ -24,6 +26,15 @@ Este documento define reglas de negocio que no deben romperse. Cualquier cambio 
 - Producto inactivo no puede comprarse.
 - Cantidad en compras debe ser entera mayor a 0.
 - Movimientos de inventario deben reflejar compra, venta, devolucion y anulaciones.
+- Inventario inicial no debe registrarse como compra.
+- Inventario inicial debe registrar movimiento tipo `inventario_inicial` y lote sin `compra_detalle_id`.
+
+## 3.1 Reportes financieros
+
+- El estado general del negocio se calcula como `efectivo_total + inventario_valorizado`.
+- El resultado se compara contra `inversion_inicial`.
+- `inversion_inicial` se toma del primer movimiento `ingreso_capital` en orden cronologico.
+- `inversion_inicial` no debe alterarse automaticamente por compras, ventas o ajustes.
 
 ## 4. Caja
 

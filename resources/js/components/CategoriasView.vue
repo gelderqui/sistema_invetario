@@ -49,10 +49,10 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-if="!displayedCategorias.length">
+                        <tr v-if="!totalCategorias">
                             <td colspan="6" class="text-center text-body-secondary py-4">Sin registros</td>
                         </tr>
-                        <tr v-for="cat in displayedCategorias" :key="cat.id">
+                        <tr v-for="cat in paginatedCategorias" :key="cat.id">
                             <td class="fw-semibold">{{ cat.nombre }}</td>
                             <td class="text-body-secondary">{{ cat.descripcion ?? '—' }}</td>
                             <td>
@@ -102,6 +102,12 @@
                     </tbody>
                 </table>
             </div>
+
+            <TablePagination
+                v-model:page="pageCategorias"
+                v-model:perPage="perPageCategorias"
+                :total-items="totalCategorias"
+            />
         </div>
 
         <!-- Modal crear / editar -->
@@ -188,6 +194,7 @@ import { computed, onMounted, ref } from 'vue';
 
 import axios from '@/bootstrap';
 import ModalConfirm from '@/components/components_ui/ModalConfirm.vue';
+import TablePagination from '@/components/components_ui/TablePagination.vue';
 
 const categorias = ref([]);
 const loading = ref(true);
@@ -201,6 +208,8 @@ const deleteError = ref('');
 const confirmMode = ref('toggle');
 const statusFilter = ref('todos');
 const nameFilter = ref('');
+const pageCategorias = ref(1);
+const perPageCategorias = ref(10);
 
 const formModalRef = ref(null);
 const confirmModalRef = ref(null);
@@ -248,6 +257,13 @@ const displayedCategorias = computed(() => {
             return String(item.nombre ?? '').toLowerCase().includes(query);
         })
         .sort((a, b) => String(a.nombre ?? '').localeCompare(String(b.nombre ?? ''), 'es', { sensitivity: 'base' }));
+});
+const totalCategorias = computed(() => displayedCategorias.value.length);
+const totalPagesCategorias = computed(() => Math.max(1, Math.ceil(totalCategorias.value / perPageCategorias.value)));
+const safePageCategorias = computed(() => Math.min(Math.max(pageCategorias.value, 1), totalPagesCategorias.value));
+const paginatedCategorias = computed(() => {
+    const start = (safePageCategorias.value - 1) * perPageCategorias.value;
+    return displayedCategorias.value.slice(start, start + perPageCategorias.value);
 });
 
 async function loadCategorias() {

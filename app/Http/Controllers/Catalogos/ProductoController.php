@@ -43,7 +43,7 @@ class ProductoController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'categoria_id'  => ['nullable', Rule::exists('categorias', 'id')],
+            'categoria_id'  => ['required', Rule::exists('categorias', 'id')],
             'nombre'        => ['required', 'string', 'max:255'],
             'codigo_barra'  => ['nullable', 'string', 'max:100', 'unique:productos,codigo_barra'],
             'palabras_clave'=> ['nullable', 'string', 'max:500'],
@@ -58,6 +58,8 @@ class ProductoController extends Controller
             'peso_referencial' => ['nullable', 'numeric', 'gte:0'],
             'activo'        => ['sometimes', 'boolean'],
         ], [
+            'categoria_id.required' => 'La categoria es obligatoria.',
+            'categoria_id.exists' => 'La categoria seleccionada no es valida.',
             'stock_minimo.required' => 'El stock minimo es obligatorio.',
             'stock_minimo.integer' => 'El stock minimo debe ser un numero entero.',
             'stock_minimo.min' => 'El stock minimo debe ser mayor a 0.',
@@ -99,7 +101,7 @@ class ProductoController extends Controller
     public function update(Request $request, Producto $producto): JsonResponse
     {
         $validated = $request->validate([
-            'categoria_id'  => ['nullable', Rule::exists('categorias', 'id')],
+            'categoria_id'  => ['required', Rule::exists('categorias', 'id')],
             'nombre'        => ['required', 'string', 'max:255'],
             'codigo_barra'  => ['nullable', 'string', 'max:100', Rule::unique('productos', 'codigo_barra')->ignore($producto->id)],
             'palabras_clave'=> ['nullable', 'string', 'max:500'],
@@ -112,6 +114,8 @@ class ProductoController extends Controller
             'peso_referencial' => ['nullable', 'numeric', 'gte:0'],
             'activo'        => ['required', 'boolean'],
         ], [
+            'categoria_id.required' => 'La categoria es obligatoria.',
+            'categoria_id.exists' => 'La categoria seleccionada no es valida.',
             'stock_minimo.required' => 'El stock minimo es obligatorio.',
             'stock_minimo.integer' => 'El stock minimo debe ser un numero entero.',
             'stock_minimo.min' => 'El stock minimo debe ser mayor a 0.',

@@ -1,35 +1,35 @@
 <template>
   <div>
     <div class="d-flex justify-content-between align-items-center mb-4">
-      <h2 class="h4 mb-0">Proveedores</h2>
+      <h2 class="h4 mb-0">Unidades de medida</h2>
       <button class="btn btn-brand" :disabled="actionLocked" @click="openCreate">
         <FontAwesomeIcon icon="fa-solid fa-plus" class="me-2" />
-        Nuevo
+        Nueva
       </button>
     </div>
 
     <div v-if="loading" class="text-center py-5">
-      <p class="text-body-secondary mb-0">Cargando información...</p>
+      <p class="text-body-secondary mb-0">Cargando informacion...</p>
     </div>
 
     <div v-else class="card border-0 shadow-sm">
       <div class="px-3 pt-3">
         <div class="d-flex align-items-center gap-2 flex-wrap">
-          <label class="form-label fw-semibold mb-0" for="filtro-estado-proveedor">Filtrar estado:</label>
-          <select id="filtro-estado-proveedor" v-model="statusFilter" class="form-select form-select-sm w-auto">
+          <label class="form-label fw-semibold mb-0" for="filtro-estado-medida">Filtrar estado:</label>
+          <select id="filtro-estado-medida" v-model="statusFilter" class="form-select form-select-sm w-auto">
             <option value="todos">Todos</option>
             <option value="activo">Activo</option>
             <option value="inactivo">Inactivo</option>
           </select>
 
-          <label class="form-label fw-semibold mb-0 ms-sm-2" for="filtro-nombre-proveedor">Nombre:</label>
+          <label class="form-label fw-semibold mb-0 ms-sm-2" for="filtro-nombre-medida">Nombre:</label>
           <input
-            id="filtro-nombre-proveedor"
+            id="filtro-nombre-medida"
             v-model.trim="nameFilter"
             type="text"
             class="form-control form-control-sm"
             style="max-width: 260px;"
-            placeholder="Buscar por nombre"
+            placeholder="Buscar por nombre o abreviatura"
           >
         </div>
       </div>
@@ -39,46 +39,44 @@
           <thead class="thead-brand">
             <tr>
               <th>Nombre</th>
-              <th>Contacto</th>
-              <th>Telefono</th>
-              <th>Email</th>
+              <th>Abreviatura</th>
+              <th>Productos</th>
               <th>Estado</th>
               <th>Creado</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            <tr v-if="!totalProveedores">
-              <td colspan="7" class="text-center text-body-secondary py-4">Sin registros</td>
+            <tr v-if="!totalMedidas">
+              <td colspan="6" class="text-center text-body-secondary py-4">Sin registros</td>
             </tr>
-            <tr v-for="p in paginatedProveedores" :key="p.id">
-              <td class="fw-semibold">{{ p.nombre }}</td>
-              <td>{{ p.contacto || '-' }}</td>
-              <td>{{ p.telefono || '-' }}</td>
-              <td>{{ p.email || '-' }}</td>
+            <tr v-for="item in paginatedMedidas" :key="item.id">
+              <td class="fw-semibold">{{ item.nombre }}</td>
+              <td><span class="badge text-bg-light border">{{ item.abreviatura }}</span></td>
+              <td>{{ item.productos_count ?? 0 }}</td>
               <td>
-                <span class="badge" :class="p.activo ? 'text-bg-success' : 'text-bg-secondary'">
-                  {{ p.activo ? 'Activo' : 'Inactivo' }}
+                <span class="badge" :class="item.activo ? 'text-bg-success' : 'text-bg-secondary'">
+                  {{ item.activo ? 'Activo' : 'Inactivo' }}
                 </span>
               </td>
-              <td class="text-body-secondary small">{{ formatDate(p.created_at) }}</td>
+              <td class="text-body-secondary small">{{ formatDate(item.created_at) }}</td>
               <td>
                 <div class="d-flex gap-1">
-                  <button class="btn btn-sm btn-action-brand" title="Editar" :disabled="actionLocked" @click="openEdit(p)">
+                  <button class="btn btn-sm btn-action-brand" title="Editar" :disabled="actionLocked" @click="openEdit(item)">
                     <FontAwesomeIcon icon="fa-solid fa-pencil" class="icon-action-edit" />
                   </button>
                   <button
                     class="btn btn-sm btn-action-brand"
-                    :title="p.activo ? 'Desactivar' : 'Activar'"
+                    :title="item.activo ? 'Desactivar' : 'Activar'"
                     :disabled="actionLocked"
-                    @click="openToggle(p)"
+                    @click="openToggle(item)"
                   >
                     <FontAwesomeIcon
-                      :icon="p.activo ? 'fa-solid fa-ban' : 'fa-solid fa-check'"
-                      :class="p.activo ? 'icon-action-disable' : 'icon-action-enable'"
+                      :icon="item.activo ? 'fa-solid fa-ban' : 'fa-solid fa-check'"
+                      :class="item.activo ? 'icon-action-disable' : 'icon-action-enable'"
                     />
                   </button>
-                  <button class="btn btn-sm btn-action-brand" title="Eliminar" :disabled="actionLocked" @click="openDelete(p)">
+                  <button class="btn btn-sm btn-action-brand" title="Eliminar" :disabled="actionLocked" @click="openDelete(item)">
                     <FontAwesomeIcon icon="fa-solid fa-trash" class="icon-action-delete" />
                   </button>
                 </div>
@@ -89,9 +87,9 @@
       </div>
 
       <TablePagination
-        v-model:page="pageProveedores"
-        v-model:perPage="perPageProveedores"
-        :total-items="totalProveedores"
+        v-model:page="pageMedidas"
+        v-model:perPage="perPageMedidas"
+        :total-items="totalMedidas"
       />
     </div>
 
@@ -99,7 +97,7 @@
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header modal-header-brand">
-            <h5 class="modal-title">{{ editingId ? 'Editar proveedor' : 'Nuevo proveedor' }}</h5>
+            <h5 class="modal-title">{{ editingId ? 'Editar unidad de medida' : 'Nueva unidad de medida' }}</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" />
           </div>
 
@@ -113,29 +111,13 @@
               </div>
 
               <div>
-                <label class="form-label fw-semibold">Contacto</label>
-                <input v-model="form.contacto" type="text" class="form-control">
-              </div>
-
-              <div class="row g-3">
-                <div class="col-12 col-sm-6">
-                  <label class="form-label fw-semibold">Telefono</label>
-                  <input v-model="form.telefono" type="text" class="form-control">
-                </div>
-                <div class="col-12 col-sm-6">
-                  <label class="form-label fw-semibold">Email</label>
-                  <input v-model="form.email" type="email" class="form-control">
-                </div>
-              </div>
-
-              <div>
-                <label class="form-label fw-semibold">Direccion</label>
-                <input v-model="form.direccion" type="text" class="form-control">
+                <label class="form-label fw-semibold">Abreviatura *</label>
+                <input v-model="form.abreviatura" type="text" class="form-control" required maxlength="10">
               </div>
 
               <div class="form-check form-switch">
-                <input id="prov-activo" v-model="form.activo" type="checkbox" class="form-check-input">
-                <label class="form-check-label" for="prov-activo">Activo</label>
+                <input id="medida-activo" v-model="form.activo" type="checkbox" class="form-check-input">
+                <label class="form-check-label" for="medida-activo">Activo</label>
               </div>
             </div>
 
@@ -167,11 +149,11 @@ import { Modal } from 'bootstrap';
 import { computed, onMounted, ref } from 'vue';
 
 import axios from '@/bootstrap';
-import ModalConfirm from '@/components/components_ui/ModalConfirm.vue';
 import FormErrors from '@/components/FormErrors.vue';
+import ModalConfirm from '@/components/components_ui/ModalConfirm.vue';
 import TablePagination from '@/components/components_ui/TablePagination.vue';
 
-const proveedores = ref([]);
+const medidas = ref([]);
 const loading = ref(true);
 const saving = ref(false);
 const toggling = ref(false);
@@ -183,8 +165,8 @@ const confirmMode = ref('toggle');
 const confirmError = ref('');
 const statusFilter = ref('todos');
 const nameFilter = ref('');
-const pageProveedores = ref(1);
-const perPageProveedores = ref(10);
+const pageMedidas = ref(1);
+const perPageMedidas = ref(10);
 
 const formModalRef = ref(null);
 const confirmModalRef = ref(null);
@@ -193,10 +175,7 @@ let formModal = null;
 
 const emptyForm = () => ({
   nombre: '',
-  contacto: '',
-  email: '',
-  telefono: '',
-  direccion: '',
+  abreviatura: '',
   activo: true,
 });
 
@@ -204,21 +183,21 @@ const form = ref(emptyForm());
 
 onMounted(async () => {
   formModal = new Modal(formModalRef.value);
-  await loadProveedores();
+  await loadMedidas();
 });
 
-const confirmTitle = computed(() => (confirmMode.value === 'delete' ? 'Eliminar proveedor' : 'Confirmar estado'));
+const confirmTitle = computed(() => (confirmMode.value === 'delete' ? 'Eliminar unidad de medida' : 'Confirmar estado'));
 const confirmMessage = computed(() => {
-  if (confirmMode.value === 'delete') return `¿Eliminar a <strong>${selected.value?.nombre ?? ''}</strong>?`;
-  return `¿Cambiar estado del proveedor <strong>${selected.value?.nombre ?? ''}</strong>?`;
+  if (confirmMode.value === 'delete') return `¿Eliminar la unidad <strong>${selected.value?.nombre ?? ''}</strong>?`;
+  return `¿Cambiar estado de la unidad <strong>${selected.value?.nombre ?? ''}</strong>?`;
 });
 const confirmConfirmText = computed(() => (confirmMode.value === 'delete' ? 'Eliminar' : 'Confirmar'));
 const confirmLoading = computed(() => (confirmMode.value === 'delete' ? deleting.value : toggling.value));
 const actionLocked = computed(() => loading.value || saving.value || toggling.value || deleting.value);
-const displayedProveedores = computed(() => {
+const displayedMedidas = computed(() => {
   const query = String(nameFilter.value ?? '').trim().toLowerCase();
 
-  return [...proveedores.value]
+  return [...medidas.value]
     .filter((item) => {
       if (statusFilter.value === 'todos') return true;
       if (statusFilter.value === 'activo') return Boolean(item.activo);
@@ -227,24 +206,25 @@ const displayedProveedores = computed(() => {
     })
     .filter((item) => {
       if (!query) return true;
-
-      return String(item.nombre ?? '').toLowerCase().includes(query);
+      const nombre = String(item.nombre ?? '').toLowerCase();
+      const abrev = String(item.abreviatura ?? '').toLowerCase();
+      return nombre.includes(query) || abrev.includes(query);
     })
     .sort((a, b) => String(a.nombre ?? '').localeCompare(String(b.nombre ?? ''), 'es', { sensitivity: 'base' }));
 });
-const totalProveedores = computed(() => displayedProveedores.value.length);
-const totalPagesProveedores = computed(() => Math.max(1, Math.ceil(totalProveedores.value / perPageProveedores.value)));
-const safePageProveedores = computed(() => Math.min(Math.max(pageProveedores.value, 1), totalPagesProveedores.value));
-const paginatedProveedores = computed(() => {
-  const start = (safePageProveedores.value - 1) * perPageProveedores.value;
-  return displayedProveedores.value.slice(start, start + perPageProveedores.value);
+const totalMedidas = computed(() => displayedMedidas.value.length);
+const totalPagesMedidas = computed(() => Math.max(1, Math.ceil(totalMedidas.value / perPageMedidas.value)));
+const safePageMedidas = computed(() => Math.min(Math.max(pageMedidas.value, 1), totalPagesMedidas.value));
+const paginatedMedidas = computed(() => {
+  const start = (safePageMedidas.value - 1) * perPageMedidas.value;
+  return displayedMedidas.value.slice(start, start + perPageMedidas.value);
 });
 
-async function loadProveedores() {
+async function loadMedidas() {
   loading.value = true;
   try {
-    const { data } = await axios.get('/proveedores/get');
-    proveedores.value = data.data;
+    const { data } = await axios.get('/medidas/get');
+    medidas.value = data.data;
   } finally {
     loading.value = false;
   }
@@ -261,10 +241,7 @@ function openEdit(item) {
   editingId.value = item.id;
   form.value = {
     nombre: item.nombre,
-    contacto: item.contacto ?? '',
-    email: item.email ?? '',
-    telefono: item.telefono ?? '',
-    direccion: item.direccion ?? '',
+    abreviatura: item.abreviatura,
     activo: item.activo,
   };
   formErrors.value = [];
@@ -299,26 +276,24 @@ async function save() {
   formErrors.value = [];
   try {
     const payload = {
-      ...form.value,
-      contacto: form.value.contacto || null,
-      email: form.value.email || null,
-      telefono: form.value.telefono || null,
-      direccion: form.value.direccion || null,
+      nombre: String(form.value.nombre || '').trim(),
+      abreviatura: String(form.value.abreviatura || '').trim(),
+      activo: Boolean(form.value.activo),
     };
 
     if (editingId.value) {
-      const { data } = await axios.put(`/proveedores/update/${editingId.value}`, payload);
-      const idx = proveedores.value.findIndex((x) => x.id === editingId.value);
-      if (idx !== -1) proveedores.value[idx] = data.data;
+      const { data } = await axios.put(`/medidas/update/${editingId.value}`, payload);
+      const idx = medidas.value.findIndex((x) => x.id === editingId.value);
+      if (idx !== -1) medidas.value[idx] = { ...medidas.value[idx], ...data.data };
     } else {
-      const { data } = await axios.post('/proveedores/store', payload);
-      proveedores.value.push(data.data);
+      const { data } = await axios.post('/medidas/store', payload);
+      medidas.value.push({ ...data.data, productos_count: 0 });
     }
 
     formModal.hide();
   } catch (error) {
     const errors = error.response?.data?.errors;
-    formErrors.value = errors ? Object.values(errors).flat() : [error.response?.data?.message ?? 'Error al guardar proveedor.'];
+    formErrors.value = errors ? Object.values(errors).flat() : [error.response?.data?.message ?? 'Error al guardar unidad de medida.'];
   } finally {
     saving.value = false;
   }
@@ -327,10 +302,12 @@ async function save() {
 async function confirmToggle() {
   toggling.value = true;
   try {
-    const { data } = await axios.patch(`/proveedores/toggle/${selected.value.id}`);
-    const idx = proveedores.value.findIndex((x) => x.id === selected.value.id);
-    if (idx !== -1) proveedores.value[idx] = { ...proveedores.value[idx], activo: data.data.activo };
+    const { data } = await axios.patch(`/medidas/toggle/${selected.value.id}`);
+    const idx = medidas.value.findIndex((x) => x.id === selected.value.id);
+    if (idx !== -1) medidas.value[idx] = { ...medidas.value[idx], activo: data.data.activo };
     confirmModalRef.value?.close();
+  } catch (error) {
+    confirmError.value = error.response?.data?.message ?? 'No se pudo cambiar estado.';
   } finally {
     toggling.value = false;
   }
@@ -339,11 +316,11 @@ async function confirmToggle() {
 async function confirmDelete() {
   deleting.value = true;
   try {
-    await axios.delete(`/proveedores/destroy/${selected.value.id}`);
-    proveedores.value = proveedores.value.filter((x) => x.id !== selected.value.id);
+    await axios.delete(`/medidas/destroy/${selected.value.id}`);
+    medidas.value = medidas.value.filter((x) => x.id !== selected.value.id);
     confirmModalRef.value?.close();
   } catch (error) {
-    confirmError.value = error.response?.data?.message ?? 'No se pudo eliminar el proveedor.';
+    confirmError.value = error.response?.data?.message ?? 'No se pudo eliminar la unidad de medida.';
   } finally {
     deleting.value = false;
   }

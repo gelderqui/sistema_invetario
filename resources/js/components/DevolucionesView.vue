@@ -81,10 +81,10 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-if="!devoluciones.length">
+                        <tr v-if="!totalDevoluciones">
                             <td colspan="7" class="text-center text-body-secondary py-3">Sin devoluciones registradas.</td>
                         </tr>
-                        <tr v-for="d in devoluciones" :key="d.id">
+                        <tr v-for="d in paginatedDevoluciones" :key="d.id">
                             <td>#{{ d.id }}</td>
                             <td>{{ d.venta?.numero || '-' }}</td>
                             <td>{{ fmtDate(d.fecha) }}</td>
@@ -113,6 +113,12 @@
                     </tbody>
                 </table>
             </div>
+
+            <TablePagination
+                v-model:page="pageDevoluciones"
+                v-model:perPage="perPageDevoluciones"
+                :total-items="totalDevoluciones"
+            />
         </div>
 
         <TicketReceiptModal ref="receiptModalRef" title="Recibo de devolucion" />
@@ -123,6 +129,7 @@
 import { computed, onMounted, ref } from 'vue';
 import axios from '@/bootstrap';
 import FormErrors from '@/components/FormErrors.vue';
+import TablePagination from '@/components/components_ui/TablePagination.vue';
 import TicketReceiptModal from '@/components/TicketReceiptModal.vue';
 import { formatMoney } from '@/utils/formatters';
 
@@ -133,6 +140,8 @@ const ventasCatalogo = ref([]);
 const devoluciones = ref([]);
 const selectedVentaId = ref(null);
 const receiptModalRef = ref(null);
+const pageDevoluciones = ref(1);
+const perPageDevoluciones = ref(10);
 
 const form = ref({
     fecha: new Date().toISOString().slice(0, 10),
@@ -142,6 +151,13 @@ const form = ref({
 const detallesVenta = computed(() => {
     const venta = ventasCatalogo.value.find((v) => v.id === Number(selectedVentaId.value));
     return venta?.detalles ?? [];
+});
+const totalDevoluciones = computed(() => devoluciones.value.length);
+const totalPagesDevoluciones = computed(() => Math.max(1, Math.ceil(totalDevoluciones.value / perPageDevoluciones.value)));
+const safePageDevoluciones = computed(() => Math.min(Math.max(pageDevoluciones.value, 1), totalPagesDevoluciones.value));
+const paginatedDevoluciones = computed(() => {
+    const start = (safePageDevoluciones.value - 1) * perPageDevoluciones.value;
+    return devoluciones.value.slice(start, start + perPageDevoluciones.value);
 });
 
 onMounted(reloadAll);

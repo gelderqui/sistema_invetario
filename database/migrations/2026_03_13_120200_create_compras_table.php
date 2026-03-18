@@ -14,6 +14,7 @@ return new class extends Migration
             $table->unsignedBigInteger('proveedor_id');
             $table->date('fecha_compra');
             $table->string('estado')->default('activo');
+            $table->string('metodo_pago', 20)->default('caja_general');
             $table->decimal('total', 12, 4)->default(0);
             $table->string('tipo_documento', 20)->nullable();
             $table->string('numero_documento', 100)->nullable();
@@ -25,6 +26,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['fecha_compra', 'proveedor_id']);
+            $table->index('metodo_pago');
         });
     }
 

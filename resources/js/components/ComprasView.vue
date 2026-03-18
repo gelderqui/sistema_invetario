@@ -28,10 +28,10 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-if="!compras.length">
+                        <tr v-if="!totalCompras">
                             <td colspan="8" class="text-center text-body-secondary py-4">Sin compras registradas</td>
                         </tr>
-                        <tr v-for="compra in compras" :key="compra.id">
+                        <tr v-for="compra in paginatedCompras" :key="compra.id">
                             <td><code>{{ compra.numero }}</code></td>
                             <td>{{ compra.proveedor?.nombre ?? '-' }}</td>
                             <td>{{ formatDate(compra.fecha_compra) }}</td>
@@ -67,6 +67,12 @@
                     </tbody>
                 </table>
             </div>
+
+            <TablePagination
+                v-model:page="pageCompras"
+                v-model:perPage="perPageCompras"
+                :total-items="totalCompras"
+            />
         </div>
 
         <div ref="detailModalRef" class="modal fade" tabindex="-1" aria-hidden="true">
@@ -188,6 +194,18 @@
                                         selected-label="Seleccionado"
                                         deselect-label="Quitar"
                                     />
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label fw-semibold">Metodo de pago *</label>
+                                    <select v-model="form.metodo_pago" class="form-select" required>
+                                        <option
+                                            v-for="option in catalogs.metodos_pago"
+                                            :key="option.value"
+                                            :value="option.value"
+                                        >
+                                            {{ option.label }}
+                                        </option>
+                                    </select>
                                 </div>
                                 <div class="col-12 col-md-4">
                                     <label class="form-label fw-semibold">Tipo documento</label>
@@ -360,10 +378,11 @@ import 'vue-multiselect/dist/vue-multiselect.css';
 import axios from '@/bootstrap';
 import FormErrors from '@/components/FormErrors.vue';
 import ModalConfirm from '@/components/components_ui/ModalConfirm.vue';
+import TablePagination from '@/components/components_ui/TablePagination.vue';
 import { formatMoney } from '@/utils/formatters';
 
 const compras = ref([]);
-const catalogs = ref({ categorias: [], proveedores: [], productos: [] });
+const catalogs = ref({ categorias: [], proveedores: [], productos: [], metodos_pago: [] });
 const proveedorGeneral = ref(null);
 const loading = ref(true);
 const saving = ref(false);
@@ -375,6 +394,8 @@ const selectedCompra = ref(null);
 const detalleLoading = ref(false);
 const detalleError = ref('');
 const detalleCompra = ref(null);
+const pageCompras = ref(1);
+const perPageCompras = ref(10);
 
 const formModalRef = ref(null);
 const anularModalRef = ref(null);
@@ -397,6 +418,7 @@ const emptyItem = () => ({
 const emptyForm = () => ({
     proveedor: proveedorGeneral.value,
     fecha_compra: new Date().toISOString().slice(0, 10),
+    metodo_pago: 'caja_general',
     tipo_documento: 'sin_documento',
     numero_documento: '',
     items: [emptyItem()],
@@ -407,6 +429,13 @@ const form = ref(emptyForm());
 const totalCompra = computed(() => form.value.items.reduce((sum, item) => sum + itemSubtotal(item), 0));
 const actionLocked = computed(() => loading.value || saving.value);
 const anularMessage = computed(() => `¿Deseas anular la compra <strong>${selectedCompra.value?.numero ?? ''}</strong>?`);
+const totalCompras = computed(() => compras.value.length);
+const totalPagesCompras = computed(() => Math.max(1, Math.ceil(totalCompras.value / perPageCompras.value)));
+const safePageCompras = computed(() => Math.min(Math.max(pageCompras.value, 1), totalPagesCompras.value));
+const paginatedCompras = computed(() => {
+    const start = (safePageCompras.value - 1) * perPageCompras.value;
+    return compras.value.slice(start, start + perPageCompras.value);
+});
 
 onMounted(async () => {
     formModal = new Modal(formModalRef.value);
@@ -431,6 +460,12 @@ async function loadCompras() {
 async function loadCatalogs() {
     const { data } = await axios.get('/compras/get/catalogs');
     catalogs.value = data.data;
+    if (!catalogs.value.metodos_pago?.length) {
+        catalogs.value.metodos_pago = [
+            { value: 'caja_general', label: 'Caja general' },
+            { value: 'banco', label: 'Banco' },
+        ];
+    }
     porcentajeUtilidadCompra.value = Number(data.data.porcentaje_utilidad_compra ?? 25);
     const generalId = data.data.proveedor_general_id;
     if (generalId) {
@@ -621,6 +656,10 @@ async function save() {
         validationErrors.push('Seleccione un proveedor válido de la lista.');
     }
 
+    if (!['caja_general', 'banco'].includes(String(form.value.metodo_pago || ''))) {
+        validationErrors.push('Seleccione un metodo de pago valido.');
+    }
+
     if (form.value.tipo_documento !== 'sin_documento' && !String(form.value.numero_documento || '').trim()) {
         validationErrors.push('Debe ingresar el numero de documento cuando el tipo es recibo o factura.');
     }
@@ -651,6 +690,7 @@ async function save() {
         const payload = {
             proveedor_id: form.value.proveedor.id,
             fecha_compra: form.value.fecha_compra,
+            metodo_pago: form.value.metodo_pago,
             tipo_documento: form.value.tipo_documento,
             numero_documento: form.value.tipo_documento === 'sin_documento' ? null : (form.value.numero_documento || null),
             items: form.value.items.map((item) => ({

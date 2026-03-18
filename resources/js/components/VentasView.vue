@@ -28,10 +28,10 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-if="!ventas.length">
+                        <tr v-if="!totalVentas">
                             <td colspan="8" class="text-center text-body-secondary py-4">Sin ventas registradas</td>
                         </tr>
-                        <tr v-for="venta in ventas" :key="venta.id">
+                        <tr v-for="venta in paginatedVentas" :key="venta.id">
                             <td><code>{{ venta.numero }}</code></td>
                             <td>{{ venta.cliente?.nombre ?? 'Consumidor final' }}</td>
                             <td>{{ formatDate(venta.fecha_venta) }}</td>
@@ -48,6 +48,12 @@
                     </tbody>
                 </table>
             </div>
+
+            <TablePagination
+                v-model:page="pageVentas"
+                v-model:perPage="perPageVentas"
+                :total-items="totalVentas"
+            />
         </div>
 
         <div ref="formModalRef" class="modal fade" tabindex="-1" aria-hidden="true">
@@ -234,6 +240,7 @@ import 'vue-multiselect/dist/vue-multiselect.css';
 
 import axios from '@/bootstrap';
 import FormErrors from '@/components/FormErrors.vue';
+import TablePagination from '@/components/components_ui/TablePagination.vue';
 import TicketReceiptModal from '@/components/TicketReceiptModal.vue';
 import { formatMoney } from '@/utils/formatters';
 
@@ -243,6 +250,8 @@ const loading = ref(true);
 const saving = ref(false);
 const formErrors = ref([]);
 const consumidorFinal = ref(null);
+const pageVentas = ref(1);
+const perPageVentas = ref(10);
 
 const finder = ref({
     producto: null,
@@ -273,6 +282,13 @@ const descuentoAplicado = computed(() => (form.value.habilitar_descuento ? Numbe
 const totalVenta = computed(() => Math.max(0, Number(subtotalVenta.value) - Number(descuentoAplicado.value || 0)));
 const cambioVenta = computed(() => Math.max(0, Number(form.value.monto_recibido || 0) - Number(totalVenta.value || 0)));
 const actionLocked = computed(() => loading.value || saving.value);
+const totalVentas = computed(() => ventas.value.length);
+const totalPagesVentas = computed(() => Math.max(1, Math.ceil(totalVentas.value / perPageVentas.value)));
+const safePageVentas = computed(() => Math.min(Math.max(pageVentas.value, 1), totalPagesVentas.value));
+const paginatedVentas = computed(() => {
+    const start = (safePageVentas.value - 1) * perPageVentas.value;
+    return ventas.value.slice(start, start + perPageVentas.value);
+});
 
 watch(
     () => form.value.habilitar_descuento,

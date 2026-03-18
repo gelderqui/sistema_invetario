@@ -57,10 +57,10 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-if="!displayedProductos.length">
+                        <tr v-if="!totalProductos">
                             <td colspan="5" class="text-center text-body-secondary py-4">Sin registros</td>
                         </tr>
-                        <tr v-for="prod in displayedProductos" :key="prod.id">
+                        <tr v-for="prod in paginatedProductos" :key="prod.id">
                             <td class="fw-semibold">{{ prod.nombre }}</td>
                             <td>
                                 <span v-if="prod.categoria" class="badge text-bg-light border">
@@ -112,6 +112,12 @@
                     </tbody>
                 </table>
             </div>
+
+            <TablePagination
+                v-model:page="pageProductos"
+                v-model:perPage="perPageProductos"
+                :total-items="totalProductos"
+            />
         </div>
 
         <!-- Modal crear / editar -->
@@ -298,6 +304,7 @@ import 'vue-multiselect/dist/vue-multiselect.css';
 
 import axios from '@/bootstrap';
 import ModalConfirm from '@/components/components_ui/ModalConfirm.vue';
+import TablePagination from '@/components/components_ui/TablePagination.vue';
 
 const productos = ref([]);
 const categoriasActivas = ref([]);
@@ -313,6 +320,8 @@ const confirmMode = ref('toggle');
 const statusFilter = ref('todos');
 const categoryFilter = ref('todas');
 const nameFilter = ref('');
+const pageProductos = ref(1);
+const perPageProductos = ref(10);
 
 const formModalRef = ref(null);
 const confirmModalRef = ref(null);
@@ -326,8 +335,8 @@ const emptyForm = () => ({
     nombre: '',
     codigo_barra: '',
     palabras_clave: '',
-    unidad_medida_id: medidasActivas.value[0]?.id ?? null,
-    stock_minimo: 1,
+    unidad_medida_id: medidasActivas.value.find(m => m.nombre.toLowerCase() === 'unidad')?.id ?? medidasActivas.value[0]?.id ?? null,
+    stock_minimo: null,
     control_vencimiento: false,
     dias_alerta_vencimiento: 15,
     activo: true,
@@ -415,6 +424,13 @@ const displayedProductos = computed(() => {
         })
         .sort((a, b) => String(a.nombre ?? '').localeCompare(String(b.nombre ?? ''), 'es', { sensitivity: 'base' }));
 });
+const totalProductos = computed(() => displayedProductos.value.length);
+const totalPagesProductos = computed(() => Math.max(1, Math.ceil(totalProductos.value / perPageProductos.value)));
+const safePageProductos = computed(() => Math.min(Math.max(pageProductos.value, 1), totalPagesProductos.value));
+const paginatedProductos = computed(() => {
+    const start = (safePageProductos.value - 1) * perPageProductos.value;
+    return displayedProductos.value.slice(start, start + perPageProductos.value);
+});
 
 async function loadProductos() {
     loading.value = true;
@@ -432,7 +448,11 @@ async function loadCategorias() {
 }
 
 async function loadMedidas() {
-    const { data } = await axios.get('/medidas/get');
+    const { data } = await axios.get('/medidas/get', {
+        params: {
+            solo_activas: 1,
+        },
+    });
     medidasActivas.value = data.data ?? [];
 }
 

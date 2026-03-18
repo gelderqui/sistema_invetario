@@ -11,6 +11,7 @@ class ConfiguracionSeeder extends Seeder
     {
         Configuracion::query()->where('codigo', 'locale')->delete();
         Configuracion::query()->where('codigo', 'devolucion_limite_minutos_cajero')->delete();
+        Configuracion::query()->where('codigo', 'inversion_inicial')->delete();
 
         $items = [
             [

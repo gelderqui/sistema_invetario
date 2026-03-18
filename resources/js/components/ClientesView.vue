@@ -27,10 +27,10 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-if="!clientes.length">
+            <tr v-if="!totalClientes">
               <td colspan="7" class="text-center text-body-secondary py-4">Sin registros</td>
             </tr>
-            <tr v-for="c in clientes" :key="c.id">
+            <tr v-for="c in paginatedClientes" :key="c.id">
               <td class="fw-semibold">{{ c.nombre }}</td>
               <td>{{ c.nit || '-' }}</td>
               <td>{{ c.telefono || '-' }}</td>
@@ -66,6 +66,12 @@
           </tbody>
         </table>
       </div>
+
+      <TablePagination
+        v-model:page="pageClientes"
+        v-model:perPage="perPageClientes"
+        :total-items="totalClientes"
+      />
     </div>
 
     <div ref="formModalRef" class="modal fade" tabindex="-1" aria-hidden="true">
@@ -141,6 +147,7 @@ import { computed, onMounted, ref } from 'vue';
 import axios from '@/bootstrap';
 import ModalConfirm from '@/components/components_ui/ModalConfirm.vue';
 import FormErrors from '@/components/FormErrors.vue';
+import TablePagination from '@/components/components_ui/TablePagination.vue';
 
 const clientes = ref([]);
 const loading = ref(true);
@@ -151,6 +158,8 @@ const editingId = ref(null);
 const selected = ref(null);
 const formErrors = ref([]);
 const confirmMode = ref('toggle');
+const pageClientes = ref(1);
+const perPageClientes = ref(10);
 
 const formModalRef = ref(null);
 const confirmModalRef = ref(null);
@@ -181,6 +190,13 @@ const confirmMessage = computed(() => {
 const confirmConfirmText = computed(() => (confirmMode.value === 'delete' ? 'Eliminar' : 'Confirmar'));
 const confirmLoading = computed(() => (confirmMode.value === 'delete' ? deleting.value : toggling.value));
 const actionLocked = computed(() => loading.value || saving.value || toggling.value || deleting.value);
+const totalClientes = computed(() => clientes.value.length);
+const totalPagesClientes = computed(() => Math.max(1, Math.ceil(totalClientes.value / perPageClientes.value)));
+const safePageClientes = computed(() => Math.min(Math.max(pageClientes.value, 1), totalPagesClientes.value));
+const paginatedClientes = computed(() => {
+  const start = (safePageClientes.value - 1) * perPageClientes.value;
+  return clientes.value.slice(start, start + perPageClientes.value);
+});
 
 async function loadClientes() {
   loading.value = true;

@@ -98,10 +98,10 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-if="!movimientos.length">
+                        <tr v-if="!totalMovimientosCapital">
                             <td colspan="7" class="text-center text-muted py-3">Sin movimientos registrados.</td>
                         </tr>
-                        <tr v-for="item in movimientos" :key="item.id">
+                        <tr v-for="item in paginatedMovimientosCapital" :key="item.id">
                             <td class="px-3">{{ dateTime(item.fecha) }}</td>
                             <td>{{ labelTipo(item.tipo) }}</td>
                             <td>{{ item.cuenta_origen?.nombre || '-' }}</td>
@@ -113,6 +113,12 @@
                     </tbody>
                 </table>
             </div>
+
+            <TablePagination
+                v-model:page="pageCapital"
+                v-model:perPage="perPageCapital"
+                :total-items="totalMovimientosCapital"
+            />
         </div>
     </div>
 </template>
@@ -120,6 +126,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
 import axios from '@/bootstrap';
+import TablePagination from '@/components/components_ui/TablePagination.vue';
 import { formatMoney } from '@/utils/formatters';
 
 const loading = ref(false);
@@ -127,6 +134,8 @@ const cuentas = ref([]);
 const movimientos = ref([]);
 const resumen = ref({ saldo_total: 0 });
 const catalogs = ref({ cuentas: [], tipos_movimiento: [] });
+const pageCapital = ref(1);
+const perPageCapital = ref(10);
 
 const emptyForm = () => ({
     tipo: 'transferencia',
@@ -150,6 +159,13 @@ const destinationAccounts = computed(() => {
     const selectedOrigen = form.value.cuenta_origen_id;
 
     return catalogs.value.cuentas.filter((cuenta) => cuenta.id !== selectedOrigen);
+});
+const totalMovimientosCapital = computed(() => movimientos.value.length);
+const totalPagesCapital = computed(() => Math.max(1, Math.ceil(totalMovimientosCapital.value / perPageCapital.value)));
+const safePageCapital = computed(() => Math.min(Math.max(pageCapital.value, 1), totalPagesCapital.value));
+const paginatedMovimientosCapital = computed(() => {
+    const start = (safePageCapital.value - 1) * perPageCapital.value;
+    return movimientos.value.slice(start, start + perPageCapital.value);
 });
 
 watch(() => form.value.cuenta_origen_id, (newValue) => {

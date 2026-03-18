@@ -88,6 +88,9 @@ class InventarioController extends Controller
     public function movimientos(Request $request): JsonResponse
     {
         $validated = $request->validate([
+            'fecha_desde' => ['nullable', 'date'],
+            'fecha_hasta' => ['nullable', 'date', 'after_or_equal:fecha_desde'],
+            'categoria_id' => ['nullable', 'integer', 'exists:categorias,id'],
             'producto_id' => ['nullable', 'integer', 'exists:productos,id'],
         ]);
 
@@ -97,6 +100,19 @@ class InventarioController extends Controller
                 'compra:id,numero',
             ])
             ->orderByDesc('id');
+
+        if (! empty($validated['fecha_desde'])) {
+            $query->whereDate('created_at', '>=', (string) $validated['fecha_desde']);
+        }
+
+        if (! empty($validated['fecha_hasta'])) {
+            $query->whereDate('created_at', '<=', (string) $validated['fecha_hasta']);
+        }
+
+        if (! empty($validated['categoria_id'])) {
+            $categoriaId = (int) $validated['categoria_id'];
+            $query->whereHas('producto', fn ($q) => $q->where('categoria_id', $categoriaId));
+        }
 
         if (! empty($validated['producto_id'])) {
             $query->where('producto_id', (int) $validated['producto_id']);
@@ -116,8 +132,26 @@ class InventarioController extends Controller
             'created_at',
         ]);
 
+        $categorias = Categoria::query()
+            ->where('activo', true)
+            ->orderBy('nombre')
+            ->get(['id', 'nombre']);
+
+        $productosQuery = Producto::query()
+            ->where('activo', true)
+            ->whereHas('movimientosInventario')
+            ->orderBy('nombre');
+
+        if (! empty($validated['categoria_id'])) {
+            $productosQuery->where('categoria_id', (int) $validated['categoria_id']);
+        }
+
+        $productos = $productosQuery->get(['id', 'nombre']);
+
         return response()->json([
             'data' => $movimientos,
+            'categorias' => $categorias,
+            'productos' => $productos,
         ]);
     }
 

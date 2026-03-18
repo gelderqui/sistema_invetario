@@ -13,6 +13,7 @@ Estado funcional actual:
 - Modulos activos y orden de menu:
   - Dashboard
   - Capital
+  - Reportes
   - Caja
   - Ventas
   - Compras
@@ -78,6 +79,8 @@ Infra local:
   - `resources/js/components/DevolucionesView.vue`
   - `resources/js/components/ComprasView.vue`
   - `resources/js/components/InventarioAlertasView.vue`
+  - `resources/js/components/InventarioInicialView.vue`
+  - `resources/js/components/ReportesView.vue`
   - `resources/js/components/CapitalView.vue`
   - `resources/js/components/UsersView.vue`
   - `resources/js/components/ConfiguracionesView.vue`
@@ -100,6 +103,8 @@ Infra local:
 
 - Transferencias entre cuentas: no se permite seleccionar la misma cuenta en origen y destino.
 - En formulario de capital no se ingresa fecha manual; se usa fecha actual del sistema.
+- El primer movimiento de `ingreso_capital` se considera capital inicial del negocio.
+- Los ingresos de capital posteriores se consideran inyecciones de capital.
 
 ### Ventas, devoluciones y anulaciones
 
@@ -136,6 +141,36 @@ Compensaciones:
 - Venta y devolucion generan ticket PDF (tamano pequeno) con opcion de imprimir.
 - Disponible al guardar y desde historial.
 
+### Reportes
+
+- Existe un modulo `Reportes` con cuatro bloques: estado general, utilidad, flujo de caja e inventario valorizado.
+- Estado general del negocio:
+  - Caja POS abierta: suma de movimientos de cajas en estado abierta
+  - Caja general y banco: saldos actuales de cuentas de capital
+  - Inversion inicial: primer movimiento `ingreso_capital` (por fecha/id)
+  - Total negocio: `efectivo_total + inventario_valorizado`
+  - Resultado: `total_negocio - inversion_inicial`
+- Utilidad del periodo:
+  - Ventas brutas: `ventas.total` activas en rango
+  - Devoluciones: `devoluciones.total` activas en rango
+  - Costo de ventas: `inventario_movimientos` tipo `salida_venta`
+  - Reversion de costo por devoluciones: `inventario_movimientos` tipo `devolucion_venta`
+  - Perdidas de inventario: ajustes negativos desde `inventario_movimientos` tipo `ajuste_inventario`
+- Flujo de caja:
+  - Se consolida desde `movimientos_caja` del rango seleccionado.
+- Inventario valorizado:
+  - Se calcula como `stock_actual * costo_promedio` por producto con stock positivo.
+
+### Inventario inicial
+
+- Existe el modulo `Inventario inicial` para cargar existencias de arranque sin registrar compras.
+- Cada registro:
+  - incrementa `stock_actual`
+  - actualiza `costo_promedio` y `costo_ultimo`
+  - crea lote en `inventario_lotes`
+  - registra trazabilidad en `inventario_movimientos` con tipo `inventario_inicial`
+- Este flujo no crea compras ni debe tratarse como gasto operativo.
+
 ### Usuarios y seguridad
 
 - Usuario admin principal no se puede eliminar.
@@ -143,7 +178,9 @@ Compensaciones:
 - Usuarios eliminados/inactivos no pueden iniciar sesion.
 - En edicion de usuario, `username` se muestra como lectura en UI.
 - Cambio de contrasena de un usuario desde admin cierra solo las sesiones de ese usuario (no de otros).
-- El modulo `Manual de Usuario` es solo de visualizacion y su acceso esta restringido a rol admin mediante permiso `manual_usuario`.
+- El modulo `Manual` es solo de visualizacion y usa la misma pantalla para todos los roles con contenido diferenciado por rol:
+  - admin: manual completo
+  - operador/cajero: manual operativo resumido
 
 ### Roles
 

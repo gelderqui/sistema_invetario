@@ -15,6 +15,7 @@ class Compra extends Model
         'proveedor_id',
         'fecha_compra',
         'estado',
+        'metodo_pago',
         'total',
         'tipo_documento',
         'numero_documento',
@@ -26,6 +27,7 @@ class Compra extends Model
     {
         return [
             'fecha_compra' => 'date',
+            'metodo_pago' => 'string',
             'total' => 'decimal:4',
             'tipo_documento' => 'string',
             'numero_documento' => 'string',

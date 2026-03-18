@@ -55,10 +55,10 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-if="!ajustes.length">
+                        <tr v-if="!totalAjustes">
                             <td colspan="6" class="text-center text-body-secondary py-3">Sin ajustes registrados.</td>
                         </tr>
-                        <tr v-for="a in ajustes" :key="a.id">
+                        <tr v-for="a in paginatedAjustes" :key="a.id">
                             <td>{{ fmtDate(a.fecha) }}</td>
                             <td>{{ a.producto?.nombre || '-' }}</td>
                             <td>{{ a.motivo?.nombre || '-' }}</td>
@@ -69,14 +69,21 @@
                     </tbody>
                 </table>
             </div>
+
+            <TablePagination
+                v-model:page="pageAjustes"
+                v-model:perPage="perPageAjustes"
+                :total-items="totalAjustes"
+            />
         </div>
     </div>
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import axios from '@/bootstrap';
 import FormErrors from '@/components/FormErrors.vue';
+import TablePagination from '@/components/components_ui/TablePagination.vue';
 
 const loading = ref(false);
 const saving = ref(false);
@@ -84,6 +91,15 @@ const errors = ref([]);
 const productos = ref([]);
 const motivos = ref([]);
 const ajustes = ref([]);
+const pageAjustes = ref(1);
+const perPageAjustes = ref(10);
+const totalAjustes = computed(() => ajustes.value.length);
+const totalPagesAjustes = computed(() => Math.max(1, Math.ceil(totalAjustes.value / perPageAjustes.value)));
+const safePageAjustes = computed(() => Math.min(Math.max(pageAjustes.value, 1), totalPagesAjustes.value));
+const paginatedAjustes = computed(() => {
+    const start = (safePageAjustes.value - 1) * perPageAjustes.value;
+    return ajustes.value.slice(start, start + perPageAjustes.value);
+});
 
 const form = ref({
     producto_id: null,

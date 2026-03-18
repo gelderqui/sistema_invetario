@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('productos', function (Blueprint $table): void {
             $table->id();
-            $table->unsignedBigInteger('categoria_id')->nullable();
-            $table->foreign('categoria_id')->references('id')->on('categorias')->nullOnDelete();
+            $table->unsignedBigInteger('categoria_id');
+            $table->foreign('categoria_id')->references('id')->on('categorias')->restrictOnDelete();
             $table->string('nombre');
             $table->string('codigo_barra')->nullable()->unique();
             $table->text('palabras_clave')->nullable();

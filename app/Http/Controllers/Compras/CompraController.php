@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Compras;
 
 use App\Http\Controllers\Controller;
 use App\Models\Categoria;
+use App\Models\CapitalCuenta;
 use App\Models\Compra;
 use App\Models\CompraDetalle;
 use App\Models\Configuracion;
@@ -32,6 +33,7 @@ class CompraController extends Controller
                 'proveedor_id',
                 'fecha_compra',
                 'estado',
+                'metodo_pago',
                 'total',
                 'tipo_documento',
                 'numero_documento',
@@ -82,6 +84,15 @@ class CompraController extends Controller
                 'proveedores'         => $proveedores,
                 'proveedor_general_id' => $proveedorGeneral,
                 'porcentaje_utilidad_compra' => (int) Configuracion::valor('porcentaje_utilidad_compra', 25),
+                'metodos_pago' => [
+                    ['value' => 'caja_general', 'label' => 'Caja general'],
+                    ['value' => 'banco', 'label' => 'Banco'],
+                ],
+                'capital_cuentas' => CapitalCuenta::query()
+                    ->whereIn('codigo', ['caja_general', 'banco'])
+                    ->where('activo', true)
+                    ->orderBy('id')
+                    ->get(['id', 'codigo', 'nombre', 'saldo_actual']),
                 'productos'           => $productos,
             ],
         ]);
@@ -106,6 +117,7 @@ class CompraController extends Controller
             [
                 'proveedor_id' => ['required', Rule::exists('proveedores', 'id')],
                 'fecha_compra' => ['required', 'date'],
+                'metodo_pago' => ['required', Rule::in(['caja_general', 'banco'])],
                 'tipo_documento' => ['nullable', Rule::in(['sin_documento', 'recibo', 'factura'])],
                 'numero_documento' => ['nullable', 'string', 'max:100'],
                 'items' => ['required', 'array', 'min:1'],
@@ -157,6 +169,7 @@ class CompraController extends Controller
                 'proveedor_id' => $validated['proveedor_id'],
                 'fecha_compra' => $validated['fecha_compra'],
                 'estado' => 'activo',
+                'metodo_pago' => $validated['metodo_pago'],
                 'total' => 0,
                 'tipo_documento' => $validated['tipo_documento'] ?? null,
                 'numero_documento' => $validated['numero_documento'] ?? null,
@@ -258,6 +271,28 @@ class CompraController extends Controller
                 'mod_user' => $userId,
             ]);
 
+            $cuentaCapital = capitalCuentaPorCodigo((string) $compra->metodo_pago);
+            if (! $cuentaCapital) {
+                throw ValidationException::withMessages([
+                    'metodo_pago' => ['No existe una cuenta activa para el metodo de pago seleccionado.'],
+                ]);
+            }
+
+            registrarMovimientoCapital(
+                tipo: 'compra',
+                monto: (float) $compra->total,
+                usuarioId: $userId,
+                cuentaOrigenId: (int) $cuentaCapital->id,
+                cuentaDestinoId: null,
+                descripcion: 'Salida por compra '.$compra->numero,
+                fecha: $compra->fecha_compra?->toDateTimeString() ?? now()->toDateTimeString(),
+                referenciaTipo: 'compra',
+                referenciaId: (int) $compra->id,
+                meta: [
+                    'metodo_pago' => $compra->metodo_pago,
+                ]
+            );
+
             return [
                 'compra' => $compra->load(['proveedor:id,nombre', 'detalles.producto:id,nombre'])->loadCount('detalles'),
                 'alerts' => $alerts,
@@ -354,6 +389,29 @@ class CompraController extends Controller
                 'estado' => 'anulada',
                 'mod_user' => $userId,
             ]);
+
+            $metodoPago = (string) ($compra->metodo_pago ?: 'caja_general');
+            $cuentaCapital = capitalCuentaPorCodigo($metodoPago);
+            if (! $cuentaCapital) {
+                throw ValidationException::withMessages([
+                    'metodo_pago' => ['No existe una cuenta activa para revertir la anulacion de compra.'],
+                ]);
+            }
+
+            registrarMovimientoCapital(
+                tipo: 'anulacion_compra',
+                monto: (float) $compra->total,
+                usuarioId: $userId,
+                cuentaOrigenId: null,
+                cuentaDestinoId: (int) $cuentaCapital->id,
+                descripcion: 'Reversion por anulacion de compra '.$compra->numero,
+                fecha: now()->toDateTimeString(),
+                referenciaTipo: 'compra',
+                referenciaId: (int) $compra->id,
+                meta: [
+                    'metodo_pago' => $metodoPago,
+                ]
+            );
         });
 
         return response()->json([

@@ -4,12 +4,15 @@ Este README explica como se creo y se levanta el proyecto base en entorno local 
 
 ## Estado funcional reciente
 
-- Modulos activos en menu: Dashboard, Capital, Caja, Ventas, Compras, Inventario, Catalogo, Configuracion.
+- Modulos activos en menu: Dashboard, Capital, Reportes, Caja, Ventas, Compras, Inventario, Catalogo, Configuracion.
 - En caja: el arqueo registra historial; el umbral de faltante bloquea en cierre, no en arqueo.
 - En cierre de caja: si existe arqueo, se usa el monto contado del ultimo arqueo.
 - Configuracion nueva: `caja_aperturas_maximas_por_dia` para controlar aperturas por usuario al dia.
 - En ventas: metodo de pago solo efectivo, precio tomado del producto en backend y descuento controlado por checkbox.
 - En clientes: inactivo no puede vender y con historial de ventas no se elimina.
+- En reportes: estado general del negocio + utilidad + flujo de caja + inventario valorizado.
+- En reportes: la inversion inicial se toma del primer ingreso registrado en Capital.
+- Inventario inicial: carga de existencias de arranque sin registrarlo como compra.
 - Formato monetario frontend estandar: 2 decimales, separador de miles con coma y decimal con punto.
 - Reloj de header sincronizado desde backend al login y resincronizado cada 30 minutos.
 

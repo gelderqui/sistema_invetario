@@ -16,8 +16,10 @@ use App\Http\Controllers\ConfiguracionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Gastos\GastoController;
 use App\Http\Controllers\Inventario\InventarioController;
+use App\Http\Controllers\Inventario\InventarioInicialController;
 use App\Http\Controllers\Inventario\AjusteInventarioController;
 use App\Http\Controllers\ManualController;
+use App\Http\Controllers\Reportes\ReporteController;
 use App\Http\Controllers\Ventas\DevolucionController;
 use App\Http\Controllers\Ventas\VentaController;
 use Illuminate\Support\Facades\Route;
@@ -100,7 +102,11 @@ Route::prefix('api')->group(function (): void {
         });
 
         Route::prefix('medidas')->group(function (): void {
-            Route::get('/get', [ProductoUnidadMedidaController::class, 'index'])->middleware('permission:productos');
+            Route::get('/get', [ProductoUnidadMedidaController::class, 'index'])->middleware('permission:productos|medidas');
+            Route::post('/store', [ProductoUnidadMedidaController::class, 'store'])->middleware('permission:medidas');
+            Route::put('/update/{medida}', [ProductoUnidadMedidaController::class, 'update'])->middleware('permission:medidas');
+            Route::patch('/toggle/{medida}', [ProductoUnidadMedidaController::class, 'toggle'])->middleware('permission:medidas');
+            Route::delete('/destroy/{medida}', [ProductoUnidadMedidaController::class, 'destroy'])->middleware('permission:medidas');
         });
 
         Route::prefix('compras')->group(function (): void {
@@ -153,6 +159,12 @@ Route::prefix('api')->group(function (): void {
             Route::get('/movimientos/get', [InventarioController::class, 'movimientos'])->middleware('permission:inventario_movimientos|inventario');
             Route::get('/alertas/get', [InventarioController::class, 'alertas'])->middleware('permission:inventario_alertas|inventario');
 
+            Route::prefix('inicial')->group(function (): void {
+                Route::get('/get', [InventarioInicialController::class, 'index'])->middleware('permission:inventario_inicial|inventario');
+                Route::get('/get/catalogs', [InventarioInicialController::class, 'catalogs'])->middleware('permission:inventario_inicial|inventario');
+                Route::post('/store', [InventarioInicialController::class, 'store'])->middleware('permission:inventario_inicial');
+            });
+
             Route::prefix('ajustes')->group(function (): void {
                 Route::get('/get', [AjusteInventarioController::class, 'index'])->middleware('permission:inventario_ajustes');
                 Route::get('/get/catalogs', [AjusteInventarioController::class, 'catalogs'])->middleware('permission:inventario_ajustes');
@@ -162,6 +174,10 @@ Route::prefix('api')->group(function (): void {
 
         Route::prefix('manual')->group(function (): void {
             Route::get('/usuario/get', [ManualController::class, 'usuario'])->middleware('permission:manual_usuario');
+        });
+
+        Route::prefix('reportes')->group(function (): void {
+            Route::get('/get', [ReporteController::class, 'index'])->middleware('permission:reportes');
         });
     });
 

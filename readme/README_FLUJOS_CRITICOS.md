@@ -4,13 +4,21 @@ Este documento describe flujos operativos punta a punta que impactan dinero, inv
 
 ## 1. Flujo maestro de operacion diaria
 
-1. Crear catalogos base: categorias, productos, proveedores, clientes.
-2. Registrar compras para ingresar stock y costo.
-3. Abrir caja del turno.
-4. Registrar ventas en POS.
-5. Registrar movimientos y arqueos de caja durante jornada.
-6. Cerrar caja.
-7. Verificar impactos en capital y reportes operativos.
+1. Configuracion inicial: inversion inicial, categorias, productos y proveedores.
+2. Carga de inventario inicial en `Inventario inicial` (sin compras).
+3. Registrar compras reales para reposicion.
+4. Abrir caja del turno.
+5. Registrar ventas en POS.
+6. Registrar movimientos y arqueos de caja durante jornada.
+7. Cerrar caja.
+8. Verificar impactos en capital y reportes (estado general + utilidad).
+
+## 1.1 Flujo de arranque (primera vez)
+
+1. Registrar primer ingreso de capital (se considera capital inicial).
+2. Cargar saldo financiero de cuentas de capital (caja_general/banco) segun operacion.
+3. Registrar inventario inicial por producto con cantidad y costo.
+4. Confirmar en Reportes que `total_negocio` refleja efectivo + inventario.
 
 ## 2. Compra -> inventario
 
@@ -19,6 +27,14 @@ Este documento describe flujos operativos punta a punta que impactan dinero, inv
 3. Se crean lotes en `inventario_lotes`.
 4. Se registran entradas en `inventario_movimientos`.
 5. Se recalculan datos de producto (stock/costos/precio sugerido segun regla vigente).
+
+## 2.1 Inventario inicial -> inventario (sin compra)
+
+1. Se registra carga inicial en `Inventario inicial`.
+2. Se crea lote con `compra_detalle_id = null`.
+3. Se registra movimiento `inventario_inicial` en inventario.
+4. Se actualiza stock y costos del producto.
+5. No se crea compra ni se afecta historial de proveedores.
 
 ## 3. Venta -> inventario -> caja
 

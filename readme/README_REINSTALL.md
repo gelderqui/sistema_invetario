@@ -149,6 +149,28 @@ chmod -R u+rwX storage bootstrap/cache
 ./vendor/bin/sail artisan optimize:clear
 ```
 
+### Hosting con `public_html` y tickets PDF (DomPDF)
+
+Si en servidor aparece `RuntimeException: Cannot resolve public path`, el sistema ya incluye fallback automatico de ruta publica para DomPDF.
+
+Orden de resolucion aplicado:
+
+- `base_path/public`
+- `base_path/public_html`
+- `dirname(base_path)/public_html`
+- `$_SERVER['DOCUMENT_ROOT']`
+
+Despues de desplegar cambios, limpiar cache de configuracion/rutas:
+
+```bash
+php artisan optimize:clear
+php artisan config:clear
+php artisan route:clear
+php artisan view:clear
+php artisan config:cache
+php artisan route:cache
+```
+
 ### Reinicio limpio de BD local (pierde datos)
 
 ```bash

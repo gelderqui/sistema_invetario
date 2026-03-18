@@ -62,6 +62,16 @@ Politica de modelos:
 - Backend debe devolver errores claros para UI.
 - Frontend debe mostrar errores globales y locales segun accion.
 
+## DomPDF y ruta publica
+
+- Para tickets PDF, DomPDF no debe depender de una unica carpeta publica.
+- Mantener fallback de ruta publica en `AppServiceProvider` para compatibilidad local/hosting:
+	- `base_path/public`
+	- `base_path/public_html`
+	- `dirname(base_path)/public_html`
+	- `$_SERVER['DOCUMENT_ROOT']`
+- Objetivo: evitar `RuntimeException: Cannot resolve public path` en servidores con `public_html`.
+
 ## Documentacion al entregar cambios
 
 Cada cambio funcional debe actualizar:

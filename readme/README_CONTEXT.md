@@ -140,6 +140,13 @@ Compensaciones:
 
 - Venta y devolucion generan ticket PDF (tamano pequeno) con opcion de imprimir.
 - Disponible al guardar y desde historial.
+- DomPDF resuelve ruta publica con fallback automatico para entornos mixtos:
+  - `base_path/public`
+  - `base_path/public_html`
+  - `dirname(base_path)/public_html`
+  - `$_SERVER['DOCUMENT_ROOT']`
+- Si una ruta no existe, intenta la siguiente hasta encontrar una valida.
+- Esto evita errores `Cannot resolve public path` en hosting compartido (ejemplo: Hostinger) sin romper entorno local.
 
 ### Reportes
 

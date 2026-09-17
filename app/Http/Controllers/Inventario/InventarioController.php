@@ -13,7 +13,7 @@ use Illuminate\Http\Request;
 
 class InventarioController extends Controller
 {
-    public function existencias(Request $request): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'solo_bajo_stock' => ['nullable', 'boolean'],

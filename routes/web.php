@@ -120,7 +120,7 @@ Route::prefix('api')->group(function (): void {
         });
 
         Route::prefix('caja')->group(function (): void {
-            Route::get('/get/estado', [CajaController::class, 'estado'])->middleware('permission:caja_movimientos|caja_arqueo|caja_cierre|caja_apertura');
+            Route::get('/get', [CajaController::class, 'index'])->middleware('permission:caja_movimientos|caja_arqueo|caja_cierre|caja_apertura');
             Route::get('/get/movimientos', [CajaController::class, 'movimientos'])->middleware('permission:caja_movimientos');
             Route::get('/get/catalogs', [CajaController::class, 'catalogs'])->middleware('permission:caja_movimientos');
             Route::post('/apertura', [CajaController::class, 'apertura'])->middleware('permission:caja_apertura');
@@ -177,7 +177,7 @@ Route::prefix('api')->group(function (): void {
         });
 
         Route::prefix('inventario')->group(function (): void {
-            Route::get('/existencias/get', [InventarioController::class, 'existencias'])->middleware('permission:inventario');
+            Route::get('/get', [InventarioController::class, 'index'])->middleware('permission:inventario');
             Route::get('/movimientos/get', [InventarioController::class, 'movimientos'])->middleware('permission:inventario_movimientos|inventario');
             Route::get('/alertas/get', [InventarioController::class, 'alertas'])->middleware('permission:inventario_alertas|inventario');
 

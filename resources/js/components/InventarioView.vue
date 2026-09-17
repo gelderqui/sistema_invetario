@@ -2,7 +2,7 @@
     <div>
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="h4 mb-0">{{ pageTitle }}</h2>
-            <button class="btn btn-outline-brand" :disabled="loading" @click="loadExistencias">Actualizar</button>
+            <button class="btn btn-outline-brand" :disabled="loading" @click="loadCurrentSection">Actualizar</button>
         </div>
 
         <div v-if="showStock" class="card border-0 shadow-sm mb-3">
@@ -164,7 +164,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import axios from '@/bootstrap';
@@ -189,7 +189,7 @@ const perPageMovimientos = ref(10);
 const route = useRoute();
 
 const showStock = computed(() => route.path !== '/inventario/movimientos');
-const showMovimientos = computed(() => route.path !== '/inventario/stock');
+const showMovimientos = computed(() => route.path === '/inventario/movimientos');
 const pageTitle = computed(() => (route.path === '/inventario/movimientos' ? 'Inventario - Movimientos' : 'Inventario - Stock'));
 const movimientosTitle = computed(() => {
     const desde = movFechaDesde.value ? formatDate(movFechaDesde.value) : 'inicio';
@@ -204,14 +204,23 @@ const paginatedMovimientos = computed(() => {
     return movimientos.value.slice(start, start + perPageMovimientos.value);
 });
 
-onMounted(async () => {
-    await Promise.all([loadExistencias(), loadMovimientos()]);
-});
+onMounted(loadCurrentSection);
+
+watch(() => route.path, loadCurrentSection);
+
+async function loadCurrentSection() {
+    if (showStock.value) {
+        await loadExistencias();
+        return;
+    }
+
+    await loadMovimientos();
+}
 
 async function loadExistencias() {
     loading.value = true;
     try {
-        const { data } = await axios.get('/inventario/existencias/get', {
+        const { data } = await axios.get('/inventario/get', {
             params: {
                 search: search.value || null,
                 categoria_id: categoriaId.value || null,
@@ -226,17 +235,22 @@ async function loadExistencias() {
 }
 
 async function loadMovimientos() {
-    const { data } = await axios.get('/inventario/movimientos/get', {
-        params: {
-            fecha_desde: movFechaDesde.value || null,
-            fecha_hasta: movFechaHasta.value || null,
-            categoria_id: movCategoriaId.value || null,
-            producto_id: movProductoId.value || null,
-        },
-    });
-    movimientos.value = data.data;
-    movCategorias.value = data.categorias ?? [];
-    movProductos.value = data.productos ?? [];
+    loading.value = true;
+    try {
+        const { data } = await axios.get('/inventario/movimientos/get', {
+            params: {
+                fecha_desde: movFechaDesde.value || null,
+                fecha_hasta: movFechaHasta.value || null,
+                categoria_id: movCategoriaId.value || null,
+                producto_id: movProductoId.value || null,
+            },
+        });
+        movimientos.value = data.data;
+        movCategorias.value = data.categorias ?? [];
+        movProductos.value = data.productos ?? [];
+    } finally {
+        loading.value = false;
+    }
 }
 
 function resetMovimientosFiltros() {

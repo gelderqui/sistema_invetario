@@ -211,7 +211,7 @@ const billetes = ref([
 ]);
 
 const section = computed(() => {
-    const path = route.path || '/caja/apertura';
+    const path = route.path || '/caja';
     if (path.includes('/movimientos')) return 'movimientos';
     if (path.includes('/arqueo')) return 'arqueo';
     if (path.includes('/cierre')) return 'cierre';
@@ -244,7 +244,7 @@ function dateTime(value) {
 }
 
 function goSection(name) {
-    router.push(`/caja/${name}`);
+    router.push(name === 'apertura' ? '/caja' : `/caja/${name}`);
 }
 
 function resolveApiErrorMessage(error, fallback) {
@@ -260,7 +260,7 @@ function resolveApiErrorMessage(error, fallback) {
 async function loadEstado() {
     loading.value = true;
     try {
-        const { data } = await axios.get('/caja/get/estado');
+        const { data } = await axios.get('/caja/get');
         cajaActiva.value = data?.data?.caja_activa ?? null;
         resumen.value = data?.data?.resumen ?? null;
         const ultimoArqueo = ultimoArqueoRegistrado.value;

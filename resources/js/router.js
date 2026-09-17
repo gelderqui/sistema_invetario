@@ -125,13 +125,6 @@ const routes = [
     },
     {
         path: '/caja',
-        redirect: '/caja/apertura',
-        meta: {
-            requiresAuth: true,
-        },
-    },
-    {
-        path: '/caja/apertura',
         name: 'caja-apertura',
         component: CajaView,
         meta: {
@@ -211,13 +204,6 @@ const routes = [
         },
     },
     {
-        path: '/inventario',
-        redirect: '/inventario/stock',
-        meta: {
-            requiresAuth: true,
-        },
-    },
-    {
         path: '/inventario/inicial',
         name: 'inventario-inicial',
         component: InventarioInicialView,
@@ -226,7 +212,7 @@ const routes = [
         },
     },
     {
-        path: '/inventario/stock',
+        path: '/inventario',
         name: 'inventario',
         component: InventarioView,
         meta: {

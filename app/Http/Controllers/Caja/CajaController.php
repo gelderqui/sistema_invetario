@@ -32,7 +32,7 @@ class CajaController extends Controller
         ]);
     }
 
-    public function estado(Request $request): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $user = $request->user();
 

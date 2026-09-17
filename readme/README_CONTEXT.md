@@ -1,6 +1,6 @@
 # README Context - Sistema Inventario
 
-Este documento es el contexto principal para IA: resume arquitectura, reglas operativas y decisiones funcionales para entender el sistema antes de modificar codigo.
+Este documento es el contexto principal para IA: resume reglas operativas y decisiones funcionales para entender el sistema antes de modificar codigo. La arquitectura se documenta por separado en `README_ARQUITECTURA.md`.
 
 ## 1) Objetivo del proyecto
 
@@ -22,71 +22,7 @@ Estado funcional actual:
   - Configuracion
   - Manual (solo admin)
 
-## 2) Stack y herramientas
-
-Backend:
-
-- Laravel 12
-- PHP >= 8.2
-- Sanctum
-- MariaDB (Sail)
-- barryvdh/laravel-dompdf
-
-Frontend:
-
-- Vue 3
-- Vue Router 4
-- Pinia
-- Axios
-- Bootstrap 5
-- Font Awesome
-- Vite
-
-Infra local:
-
-- WSL Ubuntu 24.04
-- Docker Desktop
-- Laravel Sail
-
-## 3) Arquitectura actual
-
-### Backend
-
-- Rutas API + SPA entrypoint en `routes/web.php`
-- Controladores clave:
-  - `app/Http/Controllers/AuthController.php`
-  - `app/Http/Controllers/ConfiguracionController.php`
-  - `app/Http/Controllers/Admin/UserManagementController.php`
-  - `app/Http/Controllers/Admin/RoleManagementController.php`
-  - `app/Http/Controllers/Caja/CajaController.php`
-  - `app/Http/Controllers/Ventas/VentaController.php`
-  - `app/Http/Controllers/Ventas/DevolucionController.php`
-  - `app/Http/Controllers/Capital/CapitalController.php`
-  - `app/Http/Controllers/Compras/CompraController.php`
-  - `app/Http/Controllers/Inventario/*`
-- Middleware de permisos:
-  - `app/Http/Middleware/CheckPermission.php`
-
-### Frontend
-
-- Shell principal: `resources/js/AppLayout.vue`
-- Router: `resources/js/router.js`
-- Store auth: `resources/js/stores/auth.js`
-- Vistas principales:
-  - `resources/js/components/CajaView.vue`
-  - `resources/js/components/VentasView.vue`
-  - `resources/js/components/HistorialVentasView.vue`
-  - `resources/js/components/DevolucionesView.vue`
-  - `resources/js/components/ComprasView.vue`
-  - `resources/js/components/InventarioAlertasView.vue`
-  - `resources/js/components/InventarioInicialView.vue`
-  - `resources/js/components/ReportesView.vue`
-  - `resources/js/components/CapitalView.vue`
-  - `resources/js/components/UsersView.vue`
-  - `resources/js/components/ConfiguracionesView.vue`
-  - `resources/js/components/TicketReceiptModal.vue`
-
-## 4) Reglas funcionales vigentes
+## 2) Reglas funcionales vigentes
 
 ### Caja
 
@@ -195,7 +131,7 @@ Compensaciones:
 - Restriccion aplicada en negocio y en FK (`users.role_id` con `restrictOnDelete`).
 - Orden esperado en listado: Administrador, Operador, Cajero.
 
-## 5) Configuraciones (tipos y reglas)
+## 3) Configuraciones (tipos y reglas)
 
 Codigos base:
 
@@ -224,7 +160,7 @@ Defaults actuales (seeder):
 - `porcentaje_utilidad_compra = 25`
 - `caja_aperturas_maximas_por_dia = 1`
 
-## 6) Roles y alcance
+## 4) Roles y alcance
 
 - `admin`: todos los permisos
 - `operador`: todo excepto modulo configuracion
@@ -237,7 +173,7 @@ Usuarios seed de prueba:
 - `cajero@admin.local`
 - Password base en seed: `password`
 
-## 7) Comandos recomendados
+## 5) Comandos recomendados
 
 Instalar:
 
@@ -275,7 +211,7 @@ Tests:
 - Actualmente no se requiere crear ni mantener tests automatizados en este proyecto.
 - Si existen archivos de prueba locales o temporales, se pueden omitir o eliminar para priorizar velocidad de entrega.
 
-## 8) Notas operativas
+## 6) Notas operativas
 
 - No hay triggers activos/referenciados para reglas de negocio.
 - La autorizacion final siempre se valida en backend.

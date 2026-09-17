@@ -76,7 +76,7 @@ Politica de modelos:
 
 Cada cambio funcional debe actualizar:
 
-- `README_MANUAL_USUARIO.md` (impacto al usuario final)
+- `manual/README_MANUAL_USUARIO.md` (impacto al usuario final)
 - `README_CONTEXT.md` (contexto operativo para IA)
 - `README_REGLAS_INQUEBRANTABLES.md` (si cambia una regla de negocio critica)
 - `README_FLUJOS_CRITICOS.md` (si cambia un flujo operativo punta a punta)

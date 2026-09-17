@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\PermissionCatalogController;
 use App\Http\Controllers\Admin\RoleManagementController;
 use App\Http\Controllers\Admin\UserManagementController;
+use App\Http\Controllers\AgenteBi\AgenteBiController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Caja\CajaController;
 use App\Http\Controllers\Capital\CapitalController;
@@ -131,6 +132,19 @@ Route::prefix('api')->group(function (): void {
             Route::get('/get', [CapitalController::class, 'index'])->middleware('permission:capital');
             Route::get('/get/catalogs', [CapitalController::class, 'catalogs'])->middleware('permission:capital');
             Route::post('/store', [CapitalController::class, 'store'])->middleware('permission:capital');
+        });
+
+        Route::prefix('agente-bi')->middleware('permission:agente_bi')->group(function (): void {
+            Route::get('/get', [AgenteBiController::class, 'index']);
+            Route::get('/historial/campo/{campo}', [AgenteBiController::class, 'historialCampo']);
+            Route::post('/deudas', [AgenteBiController::class, 'storeDeuda']);
+            Route::put('/deudas/{deuda}', [AgenteBiController::class, 'updateDeuda']);
+            Route::get('/deudas/{deuda}/movimientos', [AgenteBiController::class, 'movimientosDeuda']);
+            Route::post('/deudas/{deuda}/movimientos', [AgenteBiController::class, 'registrarMovimientoDeuda']);
+            Route::post('/arqueos', [AgenteBiController::class, 'storeArqueo']);
+            Route::get('/cuadres', [AgenteBiController::class, 'cuadres']);
+            Route::get('/cuadres/{cuadre}', [AgenteBiController::class, 'showCuadre']);
+            Route::post('/cuadres', [AgenteBiController::class, 'storeCuadre']);
         });
 
         Route::prefix('ventas')->group(function (): void {

@@ -57,6 +57,14 @@ Este documento describe las tablas actuales y sus relaciones principales.
 - `capital_cuentas`
 - `capital_movimientos`
 
+### 1.7 Agente BI
+
+- `agente_bi_deudas`
+- `agente_bi_deuda_movimientos`
+- `agente_bi_arqueos_caja_chica`
+- `agente_bi_arqueo_detalles`
+- `agente_bi_cuadres`
+
 ## 2. Relaciones principales
 
 ## 2.1 Seguridad
@@ -115,6 +123,16 @@ Este documento describe las tablas actuales y sus relaciones principales.
 - `capital_movimientos.cuenta_origen_id -> capital_cuentas.id` (M:1)
 - `capital_movimientos.cuenta_destino_id -> capital_cuentas.id` (M:1)
 - `capital_movimientos.usuario_id -> users.id` (M:1)
+
+## 2.8 Agente BI
+
+- `agente_bi_deudas.usuario_id -> users.id` (M:1)
+- `agente_bi_deuda_movimientos.agente_bi_deuda_id -> agente_bi_deudas.id` (1:N)
+- `agente_bi_deuda_movimientos.usuario_id -> users.id` (M:1)
+- `agente_bi_arqueos_caja_chica.usuario_id -> users.id` (M:1)
+- `agente_bi_arqueo_detalles.agente_bi_arqueo_caja_chica_id -> agente_bi_arqueos_caja_chica.id` (1:N)
+- `agente_bi_cuadres.agente_bi_arqueo_caja_chica_id -> agente_bi_arqueos_caja_chica.id` (M:1)
+- `agente_bi_cuadres.usuario_id -> users.id` (M:1)
 
 ## 3. Notas de modelado
 

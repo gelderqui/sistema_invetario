@@ -13,6 +13,7 @@ Estado funcional actual:
 - Modulos activos y orden de menu:
   - Dashboard
   - Capital
+  - Agente BI
   - Reportes
   - Caja
   - Ventas
@@ -41,6 +42,14 @@ Estado funcional actual:
 - En formulario de capital no se ingresa fecha manual; se usa fecha actual del sistema.
 - El primer movimiento de `ingreso_capital` se considera capital inicial del negocio.
 - Los ingresos de capital posteriores se consideran inyecciones de capital.
+
+### Agente BI
+
+- Modulo independiente de Capital y Caja POS para cuadrar fondos de BI.
+- Cada cuadre guarda una fotografia historica: `capital + bi_debe = banco + caja + caja_chica + deuda_a_bi + diferencia`.
+- Banco, caja y capital se capturan manualmente en el cuadre; caja chica se toma del arqueo seleccionado.
+- `bi_debe` y `deuda_a_bi` comparten una tabla de deudas diferenciada por tipo y sus saldos se calculan en backend al guardar el cuadre.
+- El arqueo de caja chica es independiente de `arqueos_caja` de la tienda y conserva el detalle por denominacion.
 
 ### Ventas, devoluciones y anulaciones
 

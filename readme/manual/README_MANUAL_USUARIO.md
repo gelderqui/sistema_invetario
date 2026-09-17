@@ -94,7 +94,20 @@ El modulo Capital administra fondos globales del negocio (`caja_general` y `banc
 
 ---
 
-## 5. Como leer los reportes
+## 5. Agente BI
+
+Este modulo es independiente de la Caja POS y permite cuadrar fondos de BI.
+
+1. Registra las deudas de tipo `BI debe` o `Deuda a BI`.
+2. Registra abonos o ajustes para conservar el saldo de cada deuda.
+3. Haz el arqueo de caja chica con las denominaciones reales.
+4. Guarda un cuadre ingresando Capital, Banco y Caja. El sistema toma caja chica del arqueo y calcula las deudas y la diferencia automaticamente.
+
+La diferencia queda registrada en el historial de cuadres y no se corrige automaticamente.
+
+---
+
+## 6. Como leer los reportes
 
 Ruta: `Reportes`
 
@@ -149,7 +162,7 @@ Muestra valor de productos en existencia:
 
 ---
 
-## 6. Configuraciones (al final de la operacion)
+## 7. Configuraciones (al final de la operacion)
 
 Ruta: `Configuraciones`
 
@@ -173,7 +186,7 @@ Reglas de valor:
 
 ---
 
-## 7. Checklist de uso saludable
+## 8. Checklist de uso saludable
 
 - Cargar inventario de arranque por `Inventario inicial`, no por compras.
 - Revisar reportes al cierre del dia o semana.
@@ -183,7 +196,7 @@ Reglas de valor:
 
 ---
 
-## 8. Notas finales
+## 9. Notas finales
 
 - Este manual es de solo lectura en pantalla.
 - Si cambia una regla de negocio, actualizar este archivo en la misma entrega.

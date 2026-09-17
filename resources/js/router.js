@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import axios from '@/bootstrap';
 import { beginLoading, endLoading } from '@/components/components_ui/loadingState';
 import { useAuthStore } from '@/stores/auth';
+import AgenteBiView from '@/components/AgenteBiView.vue';
 import CajaView from '@/components/CajaView.vue';
 import CapitalView from '@/components/CapitalView.vue';
 import CategoriasView from '@/components/CategoriasView.vue';
@@ -164,6 +165,14 @@ const routes = [
         path: '/capital',
         name: 'capital',
         component: CapitalView,
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
+        path: '/agente-bi',
+        name: 'agente-bi',
+        component: AgenteBiView,
         meta: {
             requiresAuth: true,
         },

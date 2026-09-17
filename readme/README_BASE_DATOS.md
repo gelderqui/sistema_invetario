@@ -65,6 +65,10 @@ Este documento describe las tablas actuales y sus relaciones principales.
 - `agente_bi_arqueo_detalles`
 - `agente_bi_cuadres`
 
+### 1.8 Activos
+
+- `activos`
+
 ## 2. Relaciones principales
 
 ## 2.1 Seguridad
@@ -133,6 +137,10 @@ Este documento describe las tablas actuales y sus relaciones principales.
 - `agente_bi_arqueo_detalles.agente_bi_arqueo_caja_chica_id -> agente_bi_arqueos_caja_chica.id` (1:N)
 - `agente_bi_cuadres.agente_bi_arqueo_caja_chica_id -> agente_bi_arqueos_caja_chica.id` (M:1)
 - `agente_bi_cuadres.usuario_id -> users.id` (M:1)
+
+## 2.9 Activos
+
+- `activos.usuario_id -> users.id` (M:1)
 
 ## 3. Notas de modelado
 

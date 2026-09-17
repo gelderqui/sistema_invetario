@@ -14,6 +14,7 @@ Estado funcional actual:
   - Dashboard
   - Capital
   - Agente BI
+  - Activos
   - Reportes
   - Caja
   - Ventas
@@ -50,6 +51,11 @@ Estado funcional actual:
 - Banco, caja y capital se capturan manualmente en el cuadre; caja chica se toma del arqueo seleccionado.
 - `bi_debe` y `deuda_a_bi` comparten una tabla de deudas diferenciada por tipo y sus saldos se calculan en backend al guardar el cuadre.
 - El arqueo de caja chica es independiente de `arqueos_caja` de la tienda y conserva el detalle por denominacion.
+
+### Activos
+
+- Modulo independiente del inventario para bienes de uso diario como refrigeradoras, estantes y equipo.
+- Los activos se desactivan logicamente; no se eliminan de la base de datos.
 
 ### Ventas, devoluciones y anulaciones
 

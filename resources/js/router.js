@@ -4,6 +4,7 @@ import axios from '@/bootstrap';
 import { beginLoading, endLoading } from '@/components/components_ui/loadingState';
 import { useAuthStore } from '@/stores/auth';
 import AgenteBiView from '@/components/AgenteBiView.vue';
+import ActivosView from '@/components/ActivosView.vue';
 import CajaView from '@/components/CajaView.vue';
 import CapitalView from '@/components/CapitalView.vue';
 import CategoriasView from '@/components/CategoriasView.vue';
@@ -173,6 +174,14 @@ const routes = [
         path: '/agente-bi',
         name: 'agente-bi',
         component: AgenteBiView,
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
+        path: '/activos',
+        name: 'activos',
+        component: ActivosView,
         meta: {
             requiresAuth: true,
         },

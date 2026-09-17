@@ -107,7 +107,15 @@ La diferencia queda registrada en el historial de cuadres y no se corrige automa
 
 ---
 
-## 6. Como leer los reportes
+## 6. Activos
+
+Ruta: `Activos`
+
+Registra bienes de uso diario que no forman parte del inventario de venta, como estantes, refrigeradoras y equipo. Puedes crearlos, editarlos y desactivarlos sin borrar su registro.
+
+---
+
+## 7. Como leer los reportes
 
 Ruta: `Reportes`
 

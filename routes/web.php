@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\PermissionCatalogController;
 use App\Http\Controllers\Admin\RoleManagementController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\AgenteBi\AgenteBiController;
+use App\Http\Controllers\Activos\ActivoController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Caja\CajaController;
 use App\Http\Controllers\Capital\CapitalController;
@@ -145,6 +146,13 @@ Route::prefix('api')->group(function (): void {
             Route::get('/cuadres', [AgenteBiController::class, 'cuadres']);
             Route::get('/cuadres/{cuadre}', [AgenteBiController::class, 'showCuadre']);
             Route::post('/cuadres', [AgenteBiController::class, 'storeCuadre']);
+        });
+
+        Route::prefix('activos')->middleware('permission:activos')->group(function (): void {
+            Route::get('/get', [ActivoController::class, 'index']);
+            Route::post('/store', [ActivoController::class, 'store']);
+            Route::put('/update/{activo}', [ActivoController::class, 'update']);
+            Route::patch('/toggle/{activo}', [ActivoController::class, 'toggle']);
         });
 
         Route::prefix('ventas')->group(function (): void {

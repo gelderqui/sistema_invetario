@@ -16,6 +16,7 @@ class AuthorizationSeeder extends Seeder
             ['name' => 'Dashboard',    'code' => 'dashboard',  'module' => 'dashboard',  'module_label' => null,             'module_icono' => null,                            'ruta' => '/',               'icono' => 'fa-solid fa-chart-line',     'orden' => 10],
             ['name' => 'Capital',            'code' => 'capital',         'module' => 'capital',    'module_label' => null,        'module_icono' => null,                             'ruta' => '/capital',         'icono' => 'fa-solid fa-building-columns', 'orden' => 20],
             ['name' => 'Agente BI',          'code' => 'agente_bi',       'module' => 'agente_bi',  'module_label' => null,        'module_icono' => null,                             'ruta' => '/agente-bi',       'icono' => 'fa-solid fa-scale-balanced', 'orden' => 22],
+            ['name' => 'Activos',            'code' => 'activos',         'module' => 'activos',    'module_label' => null,        'module_icono' => null,                             'ruta' => '/activos',         'icono' => 'fa-solid fa-building',        'orden' => 23],
             ['name' => 'Apertura de caja',   'code' => 'caja_apertura',   'module' => 'caja',       'module_label' => 'Caja',      'module_icono' => 'fa-solid fa-cash-register', 'ruta' => '/caja/apertura',   'icono' => 'fa-solid fa-lock-open',      'orden' => 30],
             ['name' => 'Movimientos de caja','code' => 'caja_movimientos','module' => 'caja',       'module_label' => 'Caja',      'module_icono' => 'fa-solid fa-cash-register', 'ruta' => '/caja/movimientos','icono' => 'fa-solid fa-money-bill-transfer', 'orden' => 31],
             ['name' => 'Arqueo de caja',     'code' => 'caja_arqueo',     'module' => 'caja',       'module_label' => 'Caja',      'module_icono' => 'fa-solid fa-cash-register', 'ruta' => '/caja/arqueo',     'icono' => 'fa-solid fa-scale-balanced', 'orden' => 32],
@@ -74,7 +75,7 @@ class AuthorizationSeeder extends Seeder
                 'name' => 'Cajero',
                 'description' => 'Acceso a todo excepto configuracion y capital.',
                 'permissions' => $allPermissionCodes
-                    ->reject(fn (string $code): bool => in_array($code, ['users', 'roles', 'configuraciones', 'capital', 'agente_bi'], true))
+                    ->reject(fn (string $code): bool => in_array($code, ['users', 'roles', 'configuraciones', 'capital', 'agente_bi', 'activos'], true))
                     ->values()
                     ->all(),
             ],
@@ -130,7 +131,7 @@ class AuthorizationSeeder extends Seeder
                 'telefono' => null,
                 'activo' => true,
                 'role_id' => $adminRole->id,
-                'password' => Hash::make('password'),
+                'password' => Hash::make('admin'),
             ]
         );
 
@@ -142,7 +143,7 @@ class AuthorizationSeeder extends Seeder
                 'telefono' => null,
                 'activo' => true,
                 'role_id' => $operadorRole->id,
-                'password' => Hash::make('password'),
+                'password' => Hash::make('operador'),
             ]
         );
 
@@ -154,7 +155,7 @@ class AuthorizationSeeder extends Seeder
                 'telefono' => null,
                 'activo' => true,
                 'role_id' => $cajeroRole->id,
-                'password' => Hash::make('password'),
+                'password' => Hash::make('cajero'),
             ]
         );
     }

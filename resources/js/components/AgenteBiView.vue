@@ -3,45 +3,43 @@
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
             <div>
                 <h3 class="mb-1">Agente BI</h3>
-                <small class="text-muted">Cuadre de capital, fondos físicos y deudas de BI.</small>
             </div>
-            <button class="btn btn-outline-brand btn-sm" :disabled="loading" @click="loadData">Recargar</button>
+            <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-outline-brand btn-sm" @click="openDeudaModal">Gestionar cuentas</button>
+                <button class="btn btn-outline-brand btn-sm" :disabled="loading" @click="loadData">Recargar</button>
+            </div>
         </div>
 
         <FormErrors :errors="errors" />
 
-        <div class="d-flex flex-wrap align-items-center gap-2 mb-2 small text-muted">
-            <span>Capital + BI debe = Banco + Caja + Caja chica + Deuda a BI</span>
-            <span class="fw-semibold">· Diferencia = ubicado − financiado</span>
-        </div>
         <div v-for="(row, rowIndex) in summaryCardRows" :key="rowIndex" class="row g-3" :class="rowIndex === summaryCardRows.length - 1 ? 'mb-4' : 'mb-3'">
             <div v-for="card in row" :key="card.key" :class="card.columnClass">
-                <button type="button" class="bi-card bi-card-clickable bi-summary-card" :class="summaryCardClass(card)" @click="openSummaryCard(card)">
+                <button v-if="card.historyField || card.debtType" type="button" class="bi-card bi-card-clickable bi-summary-card" :class="summaryCardClass(card)" @click="openSummaryCard(card)">
                     <small>{{ card.label }}</small>
                     <strong>Q {{ q(resumen[card.valueKey]) }}</strong>
                 </button>
+                <div v-else class="bi-card bi-summary-card" :class="summaryCardClass(card)">
+                    <small>{{ card.label }}</small>
+                    <strong>Q {{ q(resumen[card.valueKey]) }}</strong>
+                </div>
             </div>
         </div>
 
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-header bg-transparent d-flex flex-wrap justify-content-between align-items-center gap-1">
-                <strong>Guardar cuadre</strong>
-                <small class="text-muted">Los totales de deuda se calculan automáticamente.</small>
+                <strong>Guardar nuevo cuadre</strong>
             </div>
             <form class="card-body row g-3 align-items-end" @submit.prevent="openConfirmCuadre">
                 <div class="col-12 col-md-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <label class="form-label mb-1">Capital</label>
-                        <button type="button" class="btn btn-link btn-sm p-0" @click="capitalEditable = !capitalEditable">{{ capitalEditable ? 'Bloquear' : 'Modificar' }}</button>
+                        <button v-if="esAdmin" type="button" class="btn btn-link btn-sm p-0" @click="capitalEditable = !capitalEditable">{{ capitalEditable ? 'Bloquear' : 'Modificar' }}</button>
                     </div>
-                    <input v-model.number="cuadreForm.capital" class="form-control" :class="{ 'bg-light': !capitalEditable }" type="number" min="0" step="0.01" required :readonly="!capitalEditable" @blur="formatCuadreField('capital')">
+                    <input v-model.number="cuadreForm.capital" class="form-control" :class="{ 'bg-light': !esAdmin || !capitalEditable }" type="number" min="0" step="0.01" required :readonly="!esAdmin || !capitalEditable" @blur="formatCuadreField('capital')">
                 </div>
                 <div class="col-12 col-md-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <label class="form-label mb-1">Caja</label>
-                        <button type="button" class="btn btn-link btn-sm p-0" @click="cajaEditable = !cajaEditable">{{ cajaEditable ? 'Bloquear' : 'Modificar' }}</button>
-                    </div>
-                    <input v-model.number="cuadreForm.caja" class="form-control" :class="{ 'bg-light': !cajaEditable }" type="number" min="0" step="0.01" required :readonly="!cajaEditable" @blur="formatCuadreField('caja')">
+                    <label class="form-label">Caja</label>
+                    <input v-model.number="cuadreForm.caja" class="form-control" type="number" min="0" step="0.01" required @blur="formatCuadreField('caja')">
                 </div>
                 <div class="col-12 col-md-3">
                     <label class="form-label">Banco</label>
@@ -49,18 +47,62 @@
                 </div>
                 <div class="col-12 col-md-3">
                     <label class="form-label">Último arqueo de caja chica</label>
-                    <div class="form-control bg-light">Q {{ q(resumen.ultimo_arqueo_monto) }}</div>
+                    <div class="input-group">
+                        <div class="form-control bg-light">Q {{ q(resumen.ultimo_arqueo_monto) }}</div>
+                        <button type="button" class="btn btn-outline-brand" @click="openArqueoModal">Nuevo arqueo</button>
+                    </div>
                 </div>
                 <div class="col-12 col-md-3 ms-md-auto d-grid">
-                    <button class="btn btn-brand" :disabled="savingCuadre">{{ savingCuadre ? 'Guardando...' : 'Guardar cuadre' }}</button>
+                    <button class="btn btn-brand" :disabled="savingCuadre">{{ savingCuadre ? 'Guardando...' : 'Guardar nuevo cuadre' }}</button>
                 </div>
             </form>
         </div>
 
-        <div class="bi-action-buttons d-flex flex-wrap justify-content-end gap-2 mb-4">
-            <button class="btn btn-outline-brand" @click="openDeudaModal">Gestionar deuda</button>
-            <button class="btn btn-outline-brand" @click="openArqueoModal">Nuevo arqueo</button>
-            <button class="btn btn-outline-brand" @click="openCuadresModal">Ver cuadres</button>
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-transparent d-flex flex-wrap justify-content-between align-items-center gap-1">
+                <strong>Cuadres guardados</strong>
+                <small class="text-muted">{{ cuadresMeta.total }} cuadre{{ cuadresMeta.total === 1 ? '' : 's' }}</small>
+            </div>
+            <div v-if="cuadresLoading" class="text-center text-muted py-4">Cargando cuadres...</div>
+            <div v-else class="table-responsive">
+                <table class="table table-sm align-middle mb-0 bi-cuadres-table">
+                    <thead class="thead-brand"><tr><th>Fecha</th><th class="text-end">Total financiado</th><th class="text-end">Total ubicado</th><th class="text-end">Diferencia</th><th>Usuario</th><th></th></tr></thead>
+                    <tbody>
+                        <tr v-if="!cuadresHistory.length"><td colspan="6" class="text-center text-muted py-3">No hay cuadres registrados.</td></tr>
+                        <template v-for="cuadre in cuadresHistory" :key="cuadre.id">
+                            <tr><td>{{ dateTime(cuadre.fecha) }}</td><td class="text-end">Q {{ q(cuadre.total_financiado) }}</td><td class="text-end">Q {{ q(cuadre.total_ubicado) }}</td><td class="text-end" :class="Number(cuadre.diferencia) >= 0 ? 'text-success' : 'text-danger'">Q {{ q(cuadre.diferencia) }}</td><td>{{ cuadre.usuario?.name || '—' }}</td><td class="text-end"><button type="button" class="btn btn-sm btn-outline-brand text-nowrap" :disabled="cuadreDetalleLoadingId === cuadre.id" @click="openCuadreDetail(cuadre)">{{ cuadreDetalleLoadingId === cuadre.id ? 'Cargando...' : 'Ver detalle' }}</button></td></tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+            <TablePagination
+                :page="cuadresMeta.currentPage"
+                :per-page="cuadresPerPage"
+                :total-items="cuadresMeta.total"
+                :page-size-options="[5, 10, 25, 50]"
+                @update:page="loadCuadres"
+                @update:per-page="updateCuadresPerPage"
+            />
+        </div>
+
+        <div ref="cuadreDetailModalRef" class="modal fade" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header modal-header-brand"><h5 class="modal-title">Detalle de cuadre</h5><button type="button" class="btn-close" data-bs-dismiss="modal" /></div>
+                    <div class="modal-body">
+                        <div v-if="!cuadreDetalle" class="text-center text-muted py-4">Cargando detalle...</div>
+                        <template v-else>
+                            <div class="row g-2 mb-4"><div v-for="item in detalleCuadreValores" :key="item.label" class="col-6 col-md-4 col-lg-3"><div class="border rounded p-2 h-100"><small class="d-block text-muted">{{ item.label }}</small><strong>Q {{ q(item.valor) }}</strong></div></div></div>
+                            <template v-if="cuadreDetalle.arqueo_caja_chica">
+                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2"><h6 class="mb-0">Arqueo de caja chica utilizado</h6><small class="text-muted">{{ dateTime(cuadreDetalle.arqueo_caja_chica.fecha) }} · Q {{ q(cuadreDetalle.arqueo_caja_chica.monto_contado) }}</small></div>
+                                <div class="table-responsive border rounded"><table class="table table-sm align-middle mb-0"><thead><tr><th class="ps-3">Tipo</th><th>Denominación</th><th>Unidades por paquete</th><th>Cantidad</th><th class="text-end pe-3">Subtotal</th></tr></thead><tbody><tr v-for="detalle in cuadreDetalle.arqueo_caja_chica.detalles" :key="detalle.id"><td class="ps-3">{{ detalle.tipo }}</td><td>Q {{ q(detalle.denominacion) }}</td><td>{{ detalle.unidades_por_paquete }}</td><td>{{ detalle.cantidad }}</td><td class="text-end pe-3">Q {{ q(detalle.subtotal) }}</td></tr></tbody></table></div>
+                            </template>
+                            <div v-else class="border rounded p-3 text-muted">Este cuadre no tiene un arqueo de caja chica asociado.</div>
+                        </template>
+                    </div>
+                    <div class="modal-footer"><button type="button" class="btn btn-outline-brand" data-bs-dismiss="modal">Cerrar</button></div>
+                </div>
+            </div>
         </div>
 
         <div ref="historyModalRef" class="modal fade" tabindex="-1" aria-hidden="true">
@@ -103,46 +145,7 @@
                             </table>
                         </div>
                     </div>
-                    <div class="modal-footer"><button v-if="selectedDebtHistory" type="button" class="btn btn-outline-brand" @click="backToDebtList">← Volver a deudas</button><button type="button" class="btn btn-outline-brand" data-bs-dismiss="modal">Cerrar</button></div>
-                </div>
-            </div>
-        </div>
-
-        <div ref="cuadresModalRef" class="modal fade" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-xl modal-dialog-scrollable">
-                <div class="modal-content">
-                    <div class="modal-header modal-header-brand"><h5 class="modal-title">{{ selectedCuadre ? 'Detalle de cuadre' : 'Historial de cuadres' }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal" /></div>
-                    <div class="modal-body">
-                        <div v-if="!selectedCuadre" class="row g-2 align-items-end mb-3">
-                            <div class="col-12 col-sm-5"><label class="form-label mb-1">Fecha inicial</label><input v-model="cuadresFilters.fechaInicio" class="form-control" type="date" required></div>
-                            <div class="col-12 col-sm-5"><label class="form-label mb-1">Fecha final</label><input v-model="cuadresFilters.fechaFin" class="form-control" type="date" required></div>
-                            <div class="col-12 col-sm-2 d-grid"><button type="button" class="btn btn-outline-brand" :disabled="cuadresLoading" @click="loadCuadres(1)">Filtrar</button></div>
-                        </div>
-                        <div v-if="cuadresLoading" class="text-center text-muted py-4">Cargando cuadres...</div>
-                        <template v-else-if="selectedCuadre">
-                            <div class="row g-2 mb-4">
-                                <div v-for="item in detalleCuadreValores" :key="item.label" class="col-6 col-md-4 col-lg-3"><div class="border rounded p-2 h-100"><small class="d-block text-muted">{{ item.label }}</small><strong>Q {{ q(item.valor) }}</strong></div></div>
-                            </div>
-                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2"><h6 class="mb-0">Arqueo de caja chica utilizado</h6><small v-if="selectedCuadre.arqueo_caja_chica" class="text-muted">{{ dateTime(selectedCuadre.arqueo_caja_chica.fecha) }} · Q {{ q(selectedCuadre.arqueo_caja_chica.monto_contado) }}</small></div>
-                            <div v-if="selectedCuadre.arqueo_caja_chica" class="table-responsive border rounded">
-                                <table class="table table-sm align-middle mb-0"><thead><tr><th class="ps-3">Tipo</th><th>Denominación</th><th>Unidades por paquete</th><th>Cantidad</th><th class="text-end pe-3">Subtotal</th></tr></thead><tbody><tr v-for="detalle in selectedCuadre.arqueo_caja_chica.detalles" :key="detalle.id"><td class="ps-3">{{ detalle.tipo }}</td><td>Q {{ q(detalle.denominacion) }}</td><td>{{ detalle.unidades_por_paquete }}</td><td>{{ detalle.cantidad }}</td><td class="text-end pe-3">Q {{ q(detalle.subtotal) }}</td></tr></tbody></table>
-                            </div>
-                            <div v-else class="border rounded p-3 text-muted">Este cuadre no tiene un arqueo de caja chica asociado.</div>
-                        </template>
-                        <div v-else class="table-responsive">
-                            <table class="table table-sm align-middle mb-0 bi-cuadres-table">
-                                <thead><tr><th>Fecha</th><th class="text-end">Total financiado</th><th class="text-end">Total ubicado</th><th class="text-end">Diferencia</th><th>Usuario</th><th></th></tr></thead>
-                                <tbody>
-                                    <tr v-if="!cuadresHistory.length"><td colspan="6" class="text-center text-muted py-3">No hay cuadres registrados.</td></tr>
-                                    <tr v-for="cuadre in cuadresHistory" :key="cuadre.id"><td>{{ dateTime(cuadre.fecha) }}</td><td class="text-end">Q {{ q(cuadre.total_financiado) }}</td><td class="text-end">Q {{ q(cuadre.total_ubicado) }}</td><td class="text-end" :class="Number(cuadre.diferencia) >= 0 ? 'text-success' : 'text-danger'">Q {{ q(cuadre.diferencia) }}</td><td>{{ cuadre.usuario?.name || '—' }}</td><td><button type="button" class="btn btn-sm btn-outline-brand text-nowrap" @click="openCuadreDetail(cuadre)">Ver detalle</button></td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="modal-footer d-flex justify-content-between">
-                        <template v-if="selectedCuadre"><button type="button" class="btn btn-outline-brand" @click="backToCuadres">← Volver a cuadres</button><small class="text-muted">Guardado por {{ selectedCuadre.usuario?.name || '—' }}</small></template>
-                        <template v-else><small class="text-muted">{{ cuadresMeta.total }} cuadre{{ cuadresMeta.total === 1 ? '' : 's' }}</small><div class="d-flex align-items-center gap-2"><button type="button" class="btn btn-sm btn-outline-brand" :disabled="cuadresLoading || cuadresMeta.currentPage <= 1" @click="loadCuadres(cuadresMeta.currentPage - 1)">Anterior</button><span class="small">Página {{ cuadresMeta.currentPage }} de {{ cuadresMeta.lastPage }}</span><button type="button" class="btn btn-sm btn-outline-brand" :disabled="cuadresLoading || cuadresMeta.currentPage >= cuadresMeta.lastPage" @click="loadCuadres(cuadresMeta.currentPage + 1)">Siguiente</button></div></template>
-                    </div>
+                    <div class="modal-footer"><button v-if="historyMode === 'deudas' && selectedDebtHistory" type="button" class="btn btn-outline-brand" @click="backToDebtList">← Volver a cuentas</button><button type="button" class="btn btn-outline-brand" data-bs-dismiss="modal">Cerrar</button></div>
                 </div>
             </div>
         </div>
@@ -160,7 +163,7 @@
                             <div class="d-flex justify-content-between gap-3"><strong>Diferencia actual</strong><strong :class="previewCuadre.diferencia >= 0 ? 'text-success' : 'text-danger'">Q {{ q(previewCuadre.diferencia) }}</strong></div>
                         </div>
                     </div>
-                    <div class="modal-footer"><button type="button" class="btn btn-outline-brand" data-bs-dismiss="modal">Cancelar</button><button type="button" class="btn btn-brand" :disabled="savingCuadre" @click="saveCuadre">{{ savingCuadre ? 'Guardando...' : 'Sí, guardar cuadre' }}</button></div>
+                    <div class="modal-footer"><button type="button" class="btn btn-outline-brand" data-bs-dismiss="modal">Cancelar</button><button type="button" class="btn btn-brand" :disabled="savingCuadre" @click="saveCuadre">{{ savingCuadre ? 'Guardando...' : 'Sí, guardar nuevo cuadre' }}</button></div>
                 </div>
             </div>
         </div>
@@ -168,25 +171,25 @@
         <div ref="deudaModalRef" class="modal fade" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
-                    <div class="modal-header modal-header-brand"><h5 class="modal-title">Gestionar deuda</h5><button type="button" class="btn-close" data-bs-dismiss="modal" /></div>
+                    <div class="modal-header modal-header-brand"><h5 class="modal-title">Gestionar cuentas</h5><button type="button" class="btn-close" data-bs-dismiss="modal" /></div>
                     <form @submit.prevent="saveDeudaAction">
                         <div class="modal-body row g-3">
                             <div class="col-12"><label class="form-label">Acción</label><select v-model="deudaAction" class="form-select" @change="resetDebtActionForm"><option value="nuevo">Nuevo registro</option><option value="movimiento">Abono o ajuste</option></select></div>
                             <template v-if="deudaAction === 'nuevo'">
-                                <div class="col-12 col-md-5"><label class="form-label">Tipo</label><select v-model="deudaForm.tipo" class="form-select"><option value="bi_debe">BI debe</option><option value="deuda_a_bi">Deuda a BI</option></select></div>
+                                <div class="col-12 col-md-5"><label class="form-label">Tipo</label><select v-model="deudaForm.tipo" class="form-select"><option value="cuenta_por_pagar">Cuentas por pagar</option><option value="cuenta_por_cobrar">Cuentas por cobrar</option></select></div>
                                 <div class="col-12 col-md-7"><label class="form-label">Persona o referencia</label><input v-model="deudaForm.nombre_referencia" class="form-control" maxlength="150" required placeholder="Ej. Rodrigo"></div>
                                 <div class="col-12"><label class="form-label">Monto inicial</label><input v-model.number="deudaForm.monto" class="form-control" type="number" min="0.01" step="0.01" required></div>
                                 <div class="col-12"><label class="form-label">Descripción</label><input v-model="deudaForm.descripcion" class="form-control" maxlength="255" placeholder="Motivo o detalle"></div>
                             </template>
                             <template v-else>
-                                <div class="col-12 col-md-5"><label class="form-label">Tipo</label><select v-model="movimientoTipo" class="form-select" @change="movimientoForm.deuda_id = null"><option value="bi_debe">BI debe</option><option value="deuda_a_bi">Deuda a BI</option></select></div>
-                                <div class="col-12 col-md-7"><label class="form-label">Deuda activa</label><select v-model="movimientoForm.deuda_id" class="form-select" required><option :value="null">Seleccione</option><option v-for="deuda in deudasActivasPorTipo" :key="deuda.id" :value="deuda.id">{{ deuda.nombre_referencia }} · Q {{ q(deuda.saldo_pendiente) }}</option></select></div>
-                                <div class="col-12 col-md-5"><label class="form-label">Movimiento</label><select v-model="movimientoForm.tipo" class="form-select"><option value="abono">Abono</option><option value="ajuste_aumenta">Ajuste aumenta</option></select></div>
+                                <div class="col-12 col-md-5"><label class="form-label">Tipo</label><select v-model="movimientoTipo" class="form-select" @change="movimientoForm.deuda_id = null"><option value="cuenta_por_pagar">Cuentas por pagar</option><option value="cuenta_por_cobrar">Cuentas por cobrar</option></select></div>
+                                <div class="col-12 col-md-7"><label class="form-label">Cuenta activa</label><select v-model="movimientoForm.deuda_id" class="form-select" required><option :value="null">Seleccione</option><option v-for="deuda in deudasActivasPorTipo" :key="deuda.id" :value="deuda.id">{{ deuda.nombre_referencia }} · Q {{ q(deuda.saldo_pendiente) }}</option></select></div>
+                                <div class="col-12 col-md-5"><label class="form-label">Movimiento</label><select v-model="movimientoForm.tipo" class="form-select"><option value="abono">Abono disminuye</option><option value="ajuste_aumenta">Ajuste aumenta</option></select></div>
                                 <div class="col-12 col-md-3"><label class="form-label">Monto</label><input v-model.number="movimientoForm.monto" class="form-control" type="number" min="0.01" step="0.01" required></div>
                                 <div class="col-12 col-md-4"><label class="form-label">Descripción</label><input v-model="movimientoForm.descripcion" class="form-control" maxlength="255" required></div>
                             </template>
                         </div>
-                        <div class="modal-footer"><button type="button" class="btn btn-outline-brand" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-brand" :disabled="savingDeuda || savingMovimiento">{{ savingDeuda || savingMovimiento ? 'Guardando...' : deudaAction === 'nuevo' ? 'Registrar deuda' : 'Guardar movimiento' }}</button></div>
+                        <div class="modal-footer"><button type="button" class="btn btn-outline-brand" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-brand" :disabled="savingDeuda || savingMovimiento">{{ savingDeuda || savingMovimiento ? 'Guardando...' : deudaAction === 'nuevo' ? 'Registrar cuenta' : 'Guardar movimiento' }}</button></div>
                     </form>
                 </div>
             </div>
@@ -238,8 +241,11 @@ import { Modal } from 'bootstrap';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import axios from '@/bootstrap';
 import FormErrors from '@/components/FormErrors.vue';
+import TablePagination from '@/components/components_ui/TablePagination.vue';
+import { useAuthStore } from '@/stores/auth';
 import { formatMoney } from '@/utils/formatters';
 
+const authStore = useAuthStore();
 const loading = ref(false);
 const savingCuadre = ref(false);
 const savingDeuda = ref(false);
@@ -248,13 +254,11 @@ const savingArqueo = ref(false);
 const errors = ref([]);
 const deudas = ref([]);
 const arqueos = ref([]);
-const cuadres = ref([]);
-const resumen = ref({ capital: 0, banco: 0, caja: 0, bi_debe_total: 0, deuda_a_bi_total: 0, caja_chica_total: 0, total_financiado: 0, total_ubicado: 0, diferencia: 0, ultimo_arqueo_id: null, ultimo_arqueo_monto: 0 });
+const resumen = ref({ capital: 0, banco: 0, caja: 0, cuentas_por_pagar_total: 0, cuentas_por_cobrar_total: 0, caja_chica_total: 0, total_financiado: 0, total_ubicado: 0, diferencia: 0, ultimo_arqueo_id: null, ultimo_arqueo_monto: 0 });
 const cuadreFormInicializado = ref(false);
 const capitalEditable = ref(false);
-const cajaEditable = ref(false);
 const historyModalRef = ref(null);
-const cuadresModalRef = ref(null);
+const cuadreDetailModalRef = ref(null);
 const confirmCuadreModalRef = ref(null);
 const deudaModalRef = ref(null);
 const arqueoModalRef = ref(null);
@@ -263,25 +267,26 @@ const historyMode = ref('campo');
 const historyLoading = ref(false);
 const fieldHistory = ref([]);
 const debtHistoryType = ref(null);
-const deudaHistoryFilter = ref('todas');
+const deudaHistoryFilter = ref('activa');
 const selectedDebtHistory = ref(null);
 const debtMovements = ref([]);
 const debtHistoryBaseTitle = ref('');
 const cargarUltimoArqueo = ref(false);
 const deudaAction = ref('nuevo');
-const movimientoTipo = ref('bi_debe');
+const movimientoTipo = ref('cuenta_por_pagar');
 const cuadresHistory = ref([]);
 const cuadresLoading = ref(false);
-const cuadresMeta = ref({ currentPage: 1, lastPage: 1, perPage: 15, total: 0 });
-const selectedCuadre = ref(null);
-const cuadresFilters = ref({ fechaInicio: localDateToday(), fechaFin: localDateToday() });
+const cuadresMeta = ref({ currentPage: 1, lastPage: 1, perPage: 5, total: 0 });
+const cuadresPerPage = ref(5);
+const cuadreDetalle = ref(null);
+const cuadreDetalleLoadingId = ref(null);
 let historyModal = null;
-let cuadresModal = null;
+let cuadreDetailModal = null;
 let confirmCuadreModal = null;
 let deudaModal = null;
 let arqueoModal = null;
 
-const emptyDeuda = () => ({ tipo: 'bi_debe', nombre_referencia: '', descripcion: '', monto: null });
+const emptyDeuda = () => ({ tipo: 'cuenta_por_pagar', nombre_referencia: '', descripcion: '', monto: null });
 const emptyMovimiento = () => ({ deuda_id: null, tipo: 'abono', monto: null, descripcion: '' });
 const defaultDetalles = () => [
     { tipo: 'billete', denominacion: 100, unidades_por_paquete: 1, cantidad: 0 },
@@ -306,12 +311,13 @@ const filteredDebtHistory = computed(() => deudas.value.filter((item) => {
     return true;
 }));
 const totalArqueo = computed(() => arqueoForm.value.detalles.reduce((total, detalle) => total + subtotalDetalle(detalle), 0));
+const esAdmin = computed(() => authStore.user?.role?.code === 'admin');
 const previewCuadre = computed(() => {
     const capital = Number(cuadreForm.value.capital || 0);
     const banco = Number(cuadreForm.value.banco || 0);
     const caja = Number(cuadreForm.value.caja || 0);
-    const totalFinanciado = capital + Number(resumen.value.bi_debe_total || 0);
-    const totalUbicado = banco + caja + Number(resumen.value.ultimo_arqueo_monto || 0) + Number(resumen.value.deuda_a_bi_total || 0);
+    const totalFinanciado = capital + Number(resumen.value.cuentas_por_pagar_total || 0);
+    const totalUbicado = banco + caja + Number(resumen.value.ultimo_arqueo_monto || 0) + Number(resumen.value.cuentas_por_cobrar_total || 0);
 
     return {
         totalFinanciado,
@@ -320,63 +326,60 @@ const previewCuadre = computed(() => {
     };
 });
 const detalleCuadreValores = computed(() => {
-    if (!selectedCuadre.value) return [];
+    if (!cuadreDetalle.value) return [];
 
     return [
-        { label: 'Capital', valor: selectedCuadre.value.capital },
-        { label: 'BI debe', valor: selectedCuadre.value.bi_debe_total },
-        { label: 'Total financiado', valor: selectedCuadre.value.total_financiado },
-        { label: 'Banco', valor: selectedCuadre.value.banco },
-        { label: 'Caja', valor: selectedCuadre.value.caja },
-        { label: 'Caja chica', valor: selectedCuadre.value.caja_chica },
-        { label: 'Deuda a BI', valor: selectedCuadre.value.deuda_a_bi_total },
-        { label: 'Total ubicado', valor: selectedCuadre.value.total_ubicado },
-        { label: 'Diferencia', valor: selectedCuadre.value.diferencia },
+        { label: 'Capital', valor: cuadreDetalle.value.capital },
+        { label: 'Cuentas por pagar', valor: cuadreDetalle.value.cuentas_por_pagar_total },
+        { label: 'Total financiado', valor: cuadreDetalle.value.total_financiado },
+        { label: 'Banco', valor: cuadreDetalle.value.banco },
+        { label: 'Caja', valor: cuadreDetalle.value.caja },
+        { label: 'Caja chica', valor: cuadreDetalle.value.caja_chica },
+        { label: 'Cuentas por cobrar', valor: cuadreDetalle.value.cuentas_por_cobrar_total },
+        { label: 'Total ubicado', valor: cuadreDetalle.value.total_ubicado },
+        { label: 'Diferencia', valor: cuadreDetalle.value.diferencia },
     ];
 });
 const summaryCardRows = computed(() => [
     [
-        { key: 'capital', label: 'Capital', valueKey: 'capital', tone: 'financed', columnClass: 'col-12 col-md-6 col-xl-3', historyField: 'capital', historyTitle: 'Historial de capital' },
-        { key: 'bi_debe', label: 'BI debe', valueKey: 'bi_debe_total', tone: 'financed', columnClass: 'col-12 col-md-6 col-xl-3', debtType: 'bi_debe', historyTitle: 'BI debe' },
-        { key: 'total_financiado', label: 'Total financiado', valueKey: 'total_financiado', tone: 'financed', columnClass: 'col-12 col-md-6 col-xl-3', historyField: 'total_financiado', historyTitle: 'Historial de total financiado' },
-        { key: 'diferencia', label: 'Diferencia', valueKey: 'diferencia', tone: 'difference', columnClass: 'col-12 col-md-6 col-xl-3', historyField: 'diferencia', historyTitle: 'Historial de diferencia' },
+        { key: 'capital', label: 'Capital', valueKey: 'capital', tone: 'financed', columnClass: 'col-12 col-md-6', historyField: 'capital', historyTitle: 'Historial de capital' },
+        { key: 'cuenta_por_pagar', label: 'Cuentas por pagar', valueKey: 'cuentas_por_pagar_total', tone: 'financed', columnClass: 'col-12 col-md-6', debtType: 'cuenta_por_pagar', historyTitle: 'Cuentas por pagar' },
     ],
     [
-        { key: 'caja', label: 'Caja', valueKey: 'caja', tone: 'located', columnClass: 'col-6 col-md-4 col-xl-2', historyField: 'caja', historyTitle: 'Historial de caja' },
-        { key: 'banco', label: 'Banco', valueKey: 'banco', tone: 'located', columnClass: 'col-6 col-md-4 col-xl-2', historyField: 'banco', historyTitle: 'Historial de banco' },
-        { key: 'caja_chica', label: 'Caja chica', valueKey: 'caja_chica_total', tone: 'located', columnClass: 'col-6 col-md-4 col-xl-2', historyField: 'caja_chica', historyTitle: 'Arqueos de caja chica incluidos en cuadres' },
-        { key: 'deuda_a_bi', label: 'Deuda a BI', valueKey: 'deuda_a_bi_total', tone: 'located', columnClass: 'col-6 col-md-4 col-xl-2', debtType: 'deuda_a_bi', historyTitle: 'Deuda a BI' },
-        { key: 'total_ubicado', label: 'Total ubicado', valueKey: 'total_ubicado', tone: 'located', columnClass: 'col-6 col-md-4 col-xl-2', historyField: 'total_ubicado', historyTitle: 'Historial de total ubicado' },
+        { key: 'banco', label: 'Banco', valueKey: 'banco', tone: 'located', columnClass: 'col-6 col-md-3', historyField: 'banco', historyTitle: 'Historial de banco' },
+        { key: 'caja', label: 'Caja', valueKey: 'caja', tone: 'located', columnClass: 'col-6 col-md-3', historyField: 'caja', historyTitle: 'Historial de caja' },
+        { key: 'caja_chica', label: 'Caja chica', valueKey: 'caja_chica_total', tone: 'located', columnClass: 'col-6 col-md-3', historyField: 'caja_chica', historyTitle: 'Arqueos de caja chica incluidos en cuadres' },
+        { key: 'cuenta_por_cobrar', label: 'Cuentas por cobrar', valueKey: 'cuentas_por_cobrar_total', tone: 'located', columnClass: 'col-6 col-md-3', debtType: 'cuenta_por_cobrar', historyTitle: 'Cuentas por cobrar' },
+    ],
+    [
+        { key: 'total_financiado', label: 'Total financiado', valueKey: 'total_financiado', tone: 'balanced', columnClass: 'col-12 col-md-4' },
+        { key: 'total_ubicado', label: 'Total ubicado', valueKey: 'total_ubicado', tone: 'balanced', columnClass: 'col-12 col-md-4' },
+        { key: 'diferencia', label: 'Diferencia', valueKey: 'diferencia', tone: 'difference', columnClass: 'col-12 col-md-4' },
     ],
 ]);
 
 onMounted(() => {
     historyModal = new Modal(historyModalRef.value);
-    cuadresModal = new Modal(cuadresModalRef.value);
+    cuadreDetailModal = new Modal(cuadreDetailModalRef.value);
     confirmCuadreModal = new Modal(confirmCuadreModalRef.value);
     deudaModal = new Modal(deudaModalRef.value);
     arqueoModal = new Modal(arqueoModalRef.value);
     loadData();
+    loadCuadres();
 });
 
 onBeforeUnmount(() => {
     historyModal?.dispose();
-    cuadresModal?.dispose();
+    cuadreDetailModal?.dispose();
     confirmCuadreModal?.dispose();
     deudaModal?.dispose();
     arqueoModal?.dispose();
 });
 
 function q(value) { return formatMoney(value); }
-function localDateToday() {
-    const today = new Date();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-
-    return `${today.getFullYear()}-${month}-${day}`;
-}
 function summaryCardClass(card) {
     if (card.tone === 'difference') return Number(resumen.value.diferencia) >= 0 ? 'bi-card-balanced' : 'bi-card-unbalanced';
+    if (card.tone === 'balanced') return 'bi-card-balanced';
     return card.tone === 'financed' ? 'bi-card-financed' : 'bi-card-located';
 }
 function openSummaryCard(card) {
@@ -385,7 +388,7 @@ function openSummaryCard(card) {
         return;
     }
 
-    openFieldHistory(card.historyField, card.historyTitle);
+    if (card.historyField) openFieldHistory(card.historyField, card.historyTitle);
 }
 function decimalInput(value) { return Number(value || 0).toFixed(2); }
 function formatCuadreField(campo) { cuadreForm.value[campo] = decimalInput(cuadreForm.value[campo]); }
@@ -405,7 +408,7 @@ function openDebtHistory(tipo, title) {
     debtHistoryBaseTitle.value = title;
     historyMode.value = 'deudas';
     debtHistoryType.value = tipo;
-    deudaHistoryFilter.value = 'todas';
+    deudaHistoryFilter.value = 'activa';
     selectedDebtHistory.value = null;
     debtMovements.value = [];
     historyLoading.value = false;
@@ -424,7 +427,7 @@ async function openDebtMovements(deuda) {
     } catch (error) {
         selectedDebtHistory.value = null;
         historyTitle.value = debtHistoryBaseTitle.value;
-        setErrors(error, 'No se pudieron cargar los movimientos de la deuda.');
+        setErrors(error, 'No se pudieron cargar los movimientos de la cuenta.');
     } finally {
         historyLoading.value = false;
     }
@@ -434,22 +437,17 @@ function backToDebtList() {
     debtMovements.value = [];
     historyTitle.value = debtHistoryBaseTitle.value;
 }
-function openCuadresModal() {
-    selectedCuadre.value = null;
-    cuadresFilters.value = { fechaInicio: localDateToday(), fechaFin: localDateToday() };
-    cuadresModal?.show();
-    loadCuadres(1);
-}
 async function loadCuadres(page = 1) {
     cuadresLoading.value = true;
+    cuadreDetalle.value = null;
     try {
-        const { data } = await axios.get('/agente-bi/cuadres', { params: { page, per_page: 15, fecha_inicio: cuadresFilters.value.fechaInicio, fecha_fin: cuadresFilters.value.fechaFin } });
+        const { data } = await axios.get('/agente-bi/cuadres', { params: { page, per_page: cuadresPerPage.value } });
         cuadresHistory.value = data?.data ?? [];
         const meta = data?.meta ?? {};
         cuadresMeta.value = {
             currentPage: Number(meta.current_page ?? 1),
             lastPage: Number(meta.last_page ?? 1),
-            perPage: Number(meta.per_page ?? 15),
+            perPage: Number(meta.per_page ?? 5),
             total: Number(meta.total ?? 0),
         };
     } catch (error) {
@@ -458,24 +456,28 @@ async function loadCuadres(page = 1) {
         cuadresLoading.value = false;
     }
 }
+function updateCuadresPerPage(perPage) {
+    cuadresPerPage.value = Number(perPage);
+}
 async function openCuadreDetail(cuadre) {
-    cuadresLoading.value = true;
+    cuadreDetalle.value = null;
+    cuadreDetalleLoadingId.value = cuadre.id;
     try {
         const { data } = await axios.get(`/agente-bi/cuadres/${cuadre.id}`);
-        selectedCuadre.value = data?.data ?? null;
+        cuadreDetalle.value = data?.data ?? null;
+        cuadreDetailModal?.show();
     } catch (error) {
         setErrors(error, 'No se pudo cargar el detalle del cuadre.');
     } finally {
-        cuadresLoading.value = false;
+        cuadreDetalleLoadingId.value = null;
     }
-}
-function backToCuadres() {
-    selectedCuadre.value = null;
 }
 async function openFieldHistory(campo, title) {
     historyTitle.value = title;
     historyMode.value = 'campo';
     fieldHistory.value = [];
+    selectedDebtHistory.value = null;
+    debtMovements.value = [];
     historyLoading.value = true;
     historyModal?.show();
     try {
@@ -489,7 +491,7 @@ async function openFieldHistory(campo, title) {
 }
 function openDeudaModal() {
     deudaAction.value = 'nuevo';
-    movimientoTipo.value = 'bi_debe';
+    movimientoTipo.value = 'cuenta_por_pagar';
     deudaForm.value = emptyDeuda();
     movimientoForm.value = emptyMovimiento();
     deudaModal?.show();
@@ -497,7 +499,7 @@ function openDeudaModal() {
 function resetDebtActionForm() {
     if (deudaAction.value === 'nuevo') deudaForm.value = emptyDeuda();
     else {
-        movimientoTipo.value = 'bi_debe';
+        movimientoTipo.value = 'cuenta_por_pagar';
         movimientoForm.value = emptyMovimiento();
     }
 }
@@ -537,7 +539,6 @@ async function loadData() {
         const payload = data?.data ?? {};
         deudas.value = payload.deudas ?? [];
         arqueos.value = payload.arqueos ?? [];
-        cuadres.value = payload.cuadres ?? [];
         resumen.value = { ...resumen.value, ...(payload.resumen ?? {}) };
         if (!cuadreFormInicializado.value) {
             cuadreForm.value.capital = decimalInput(resumen.value.capital);
@@ -559,9 +560,9 @@ async function saveCuadre() {
         formatCuadreField('banco');
         formatCuadreField('caja');
         capitalEditable.value = false;
-        cajaEditable.value = false;
         confirmCuadreModal?.hide();
         await loadData();
+        await loadCuadres(1);
     } catch (error) { setErrors(error, 'No se pudo guardar el cuadre.'); } finally { savingCuadre.value = false; }
 }
 
@@ -572,7 +573,7 @@ async function saveDeuda() {
         deudaModal?.hide();
         deudaForm.value = emptyDeuda();
         await loadData();
-    } catch (error) { setErrors(error, 'No se pudo guardar la deuda.'); } finally { savingDeuda.value = false; }
+    } catch (error) { setErrors(error, 'No se pudo guardar la cuenta.'); } finally { savingDeuda.value = false; }
 }
 
 async function saveMovimientoDeuda() {
@@ -595,27 +596,3 @@ async function saveArqueo() {
     } catch (error) { setErrors(error, 'No se pudo guardar el arqueo.'); } finally { savingArqueo.value = false; }
 }
 </script>
-
-<style scoped>
-.bi-card { background: #fff; border: 1px solid #e8edf3; border-radius: .85rem; padding: 1rem; height: 100%; }
-.bi-card small { display: block; color: #5f6b7a; margin-bottom: .35rem; }
-.bi-card strong { font-size: 1.35rem; }
-.bi-card-financed { background: #edf8fc; border-color: #c5e6ef; }
-.bi-card-located { background: #fff8ed; border-color: #f2ddba; }
-.bi-card-balanced { background: #f0f8f2; border-color: #c8e3cf; }
-.bi-card-unbalanced { background: #fff2f2; border-color: #f0c5c5; }
-.bi-card-clickable { cursor: pointer; transition: transform .15s ease, box-shadow .15s ease; }
-.bi-card-clickable:hover { box-shadow: 0 .35rem .8rem rgba(35, 55, 80, .12); transform: translateY(-1px); }
-.bi-summary-card { display: block; width: 100%; color: inherit; text-align: left; }
-.bi-summary-card:focus-visible { outline: 3px solid rgba(13, 110, 253, .35); outline-offset: 2px; }
-.bi-cuadres-table { min-width: 720px; }
-
-@media (max-width: 575.98px) {
-    .agente-bi-view { padding-right: .75rem !important; padding-left: .75rem !important; }
-    .bi-card { padding: .8rem; }
-    .bi-card strong { font-size: 1.12rem; }
-    .bi-action-buttons > .btn { width: 100%; }
-    .agente-bi-view :deep(.modal-dialog) { margin: .5rem; }
-    .agente-bi-view :deep(.table-responsive > .table) { min-width: 620px; }
-}
-</style>

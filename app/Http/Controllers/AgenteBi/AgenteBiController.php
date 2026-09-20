@@ -46,12 +46,12 @@ class AgenteBiController extends Controller
         $capital = toMoney($ultimoCuadre?->capital ?? 0, 4);
         $banco = toMoney($ultimoCuadre?->banco ?? 0, 4);
         $caja = toMoney($ultimoCuadre?->caja ?? 0, 4);
-        $biDebeTotal = $this->totalDeuda('bi_debe');
-        $deudaABiTotal = $this->totalDeuda('deuda_a_bi');
+        $cuentasPorPagarTotal = $this->totalCuenta('cuenta_por_pagar');
+        $cuentasPorCobrarTotal = $this->totalCuenta('cuenta_por_cobrar');
         // La tarjeta representa el último cuadre confirmado, no un arqueo pendiente.
         $cajaChica = toMoney($ultimoCuadre?->caja_chica ?? 0, 4);
-        $totalFinanciado = toMoney($capital + $biDebeTotal, 4);
-        $totalUbicado = toMoney($banco + $caja + $cajaChica + $deudaABiTotal, 4);
+        $totalFinanciado = toMoney($capital + $cuentasPorPagarTotal, 4);
+        $totalUbicado = toMoney($banco + $caja + $cajaChica + $cuentasPorCobrarTotal, 4);
 
         return response()->json([
             'data' => [
@@ -62,8 +62,8 @@ class AgenteBiController extends Controller
                     'capital' => $capital,
                     'banco' => $banco,
                     'caja' => $caja,
-                    'bi_debe_total' => $biDebeTotal,
-                    'deuda_a_bi_total' => $deudaABiTotal,
+                    'cuentas_por_pagar_total' => $cuentasPorPagarTotal,
+                    'cuentas_por_cobrar_total' => $cuentasPorCobrarTotal,
                     'caja_chica_total' => $cajaChica,
                     'total_financiado' => $totalFinanciado,
                     'total_ubicado' => $totalUbicado,
@@ -82,9 +82,6 @@ class AgenteBiController extends Controller
             'banco',
             'caja',
             'caja_chica',
-            'total_financiado',
-            'total_ubicado',
-            'diferencia',
         ];
 
         abort_unless(in_array($campo, $camposPermitidos, true), 404);
@@ -124,13 +121,11 @@ class AgenteBiController extends Controller
             'fecha_inicio' => ['nullable', 'date'],
             'fecha_fin' => ['nullable', 'date', 'after_or_equal:fecha_inicio'],
         ]);
-        $perPage = min(max((int) $request->integer('per_page', 15), 10), 50);
-        $fechaInicio = $validated['fecha_inicio'] ?? now()->toDateString();
-        $fechaFin = $validated['fecha_fin'] ?? now()->toDateString();
+        $perPage = min(max((int) $request->integer('per_page', 5), 5), 50);
         $paginador = AgenteBiCuadre::query()
             ->with(['usuario:id,name', 'arqueoCajaChica:id,monto_contado,fecha'])
-            ->whereDate('fecha', '>=', $fechaInicio)
-            ->whereDate('fecha', '<=', $fechaFin)
+            ->when($validated['fecha_inicio'] ?? null, fn ($query, $fechaInicio) => $query->whereDate('fecha', '>=', $fechaInicio))
+            ->when($validated['fecha_fin'] ?? null, fn ($query, $fechaFin) => $query->whereDate('fecha', '<=', $fechaFin))
             ->orderByDesc('fecha')
             ->orderByDesc('id')
             ->paginate($perPage);
@@ -159,7 +154,7 @@ class AgenteBiController extends Controller
     public function storeDeuda(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'tipo' => ['required', Rule::in(['bi_debe', 'deuda_a_bi'])],
+            'tipo' => ['required', Rule::in(['cuenta_por_pagar', 'cuenta_por_cobrar'])],
             'nombre_referencia' => ['required', 'string', 'max:150'],
             'descripcion' => ['nullable', 'string', 'max:255'],
             'monto' => ['required', 'numeric', 'gt:0'],
@@ -186,7 +181,7 @@ class AgenteBiController extends Controller
                 'monto' => $monto,
                 'saldo_anterior' => 0,
                 'saldo_posterior' => $monto,
-                'descripcion' => 'Registro inicial de deuda.',
+                'descripcion' => 'Registro inicial de cuenta.',
                 'fecha' => $fechaOrigen,
                 'usuario_id' => $request->user()->id,
             ]);
@@ -195,7 +190,7 @@ class AgenteBiController extends Controller
         });
 
         return response()->json([
-            'message' => 'Deuda registrada correctamente.',
+            'message' => 'Cuenta registrada correctamente.',
             'data' => $deuda->load('usuario:id,name'),
         ], 201);
     }
@@ -211,7 +206,7 @@ class AgenteBiController extends Controller
         $deuda->update($validated);
 
         return response()->json([
-            'message' => 'Datos de deuda actualizados.',
+            'message' => 'Datos de cuenta actualizados.',
             'data' => $deuda->fresh()->load('usuario:id,name'),
         ]);
     }
@@ -246,7 +241,7 @@ class AgenteBiController extends Controller
 
             if ($deuda->estado !== 'activa') {
                 throw ValidationException::withMessages([
-                    'deuda' => ['Solo se pueden registrar movimientos sobre deudas activas.'],
+                    'deuda' => ['Solo se pueden registrar movimientos sobre cuentas activas.'],
                 ]);
             }
 
@@ -293,7 +288,7 @@ class AgenteBiController extends Controller
         });
 
         return response()->json([
-            'message' => 'Movimiento de deuda registrado.',
+            'message' => 'Movimiento de cuenta registrado.',
             'data' => $deuda->fresh()->load('usuario:id,name'),
         ]);
     }
@@ -365,23 +360,34 @@ class AgenteBiController extends Controller
 
         $cuadre = DB::transaction(function () use ($validated, $request): AgenteBiCuadre {
             $arqueo = AgenteBiArqueoCajaChica::query()->latest('fecha')->latest('id')->first();
+            $ultimoCuadre = AgenteBiCuadre::query()->latest('fecha')->latest('id')->first();
+            $esAdmin = $request->user()?->role?->code === 'admin';
 
-            $capital = toMoney($validated['capital'], 4);
+            $capitalActual = toMoney($ultimoCuadre?->capital ?? 0, 4);
+            $capitalSolicitado = toMoney($validated['capital'], 4);
+
+            if (! $esAdmin && abs($capitalSolicitado - $capitalActual) > 0.0001) {
+                throw ValidationException::withMessages([
+                    'capital' => ['Solo un administrador puede modificar el capital.'],
+                ]);
+            }
+
+            $capital = $esAdmin ? $capitalSolicitado : $capitalActual;
             $banco = toMoney($validated['banco'], 4);
             $caja = toMoney($validated['caja'], 4);
-            $biDebeTotal = $this->totalDeuda('bi_debe');
-            $deudaABiTotal = $this->totalDeuda('deuda_a_bi');
+            $cuentasPorPagarTotal = $this->totalCuenta('cuenta_por_pagar');
+            $cuentasPorCobrarTotal = $this->totalCuenta('cuenta_por_cobrar');
             $cajaChica = $arqueo ? toMoney($arqueo->monto_contado, 4) : 0;
-            $totalFinanciado = toMoney($capital + $biDebeTotal, 4);
-            $totalUbicado = toMoney($banco + $caja + $cajaChica + $deudaABiTotal, 4);
+            $totalFinanciado = toMoney($capital + $cuentasPorPagarTotal, 4);
+            $totalUbicado = toMoney($banco + $caja + $cajaChica + $cuentasPorCobrarTotal, 4);
 
             return AgenteBiCuadre::query()->create([
                 'capital' => $capital,
-                'bi_debe_total' => $biDebeTotal,
+                'cuentas_por_pagar_total' => $cuentasPorPagarTotal,
                 'banco' => $banco,
                 'caja' => $caja,
                 'caja_chica' => $cajaChica,
-                'deuda_a_bi_total' => $deudaABiTotal,
+                'cuentas_por_cobrar_total' => $cuentasPorCobrarTotal,
                 'total_financiado' => $totalFinanciado,
                 'total_ubicado' => $totalUbicado,
                 'diferencia' => toMoney($totalUbicado - $totalFinanciado, 4),
@@ -397,7 +403,7 @@ class AgenteBiController extends Controller
         ], 201);
     }
 
-    private function totalDeuda(string $tipo): float
+    private function totalCuenta(string $tipo): float
     {
         return toMoney(
             AgenteBiDeuda::query()

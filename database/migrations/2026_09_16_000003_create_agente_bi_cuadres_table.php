@@ -11,11 +11,11 @@ return new class extends Migration
         Schema::create('agente_bi_cuadres', function (Blueprint $table): void {
             $table->id();
             $table->decimal('capital', 14, 4)->default(0);
-            $table->decimal('bi_debe_total', 14, 4)->default(0);
+            $table->decimal('cuentas_por_pagar_total', 14, 4)->default(0);
             $table->decimal('banco', 14, 4)->default(0);
             $table->decimal('caja', 14, 4)->default(0);
             $table->decimal('caja_chica', 14, 4)->default(0);
-            $table->decimal('deuda_a_bi_total', 14, 4)->default(0);
+            $table->decimal('cuentas_por_cobrar_total', 14, 4)->default(0);
             $table->decimal('total_financiado', 14, 4)->default(0);
             $table->decimal('total_ubicado', 14, 4)->default(0);
             $table->decimal('diferencia', 14, 4)->default(0);

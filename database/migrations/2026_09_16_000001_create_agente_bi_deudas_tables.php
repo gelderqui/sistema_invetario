@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('agente_bi_deudas', function (Blueprint $table): void {
             $table->id();
-            $table->enum('tipo', ['bi_debe', 'deuda_a_bi']);
+            $table->enum('tipo', ['cuenta_por_pagar', 'cuenta_por_cobrar']);
             $table->string('nombre_referencia', 150);
             $table->string('descripcion', 255)->nullable();
             $table->decimal('monto_original', 14, 4)->default(0);

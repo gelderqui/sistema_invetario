@@ -98,10 +98,10 @@ El modulo Capital administra fondos globales del negocio (`caja_general` y `banc
 
 Este modulo es independiente de la Caja POS y permite cuadrar fondos de BI.
 
-1. Registra las deudas de tipo `BI debe` o `Deuda a BI`.
-2. Registra abonos o ajustes para conservar el saldo de cada deuda.
+1. Registra las cuentas de tipo `Cuentas por pagar` o `Cuentas por cobrar`.
+2. Registra abonos o ajustes para conservar el saldo de cada cuenta.
 3. Haz el arqueo de caja chica con las denominaciones reales.
-4. Guarda un cuadre ingresando Capital, Banco y Caja. El sistema toma caja chica del arqueo y calcula las deudas y la diferencia automaticamente.
+4. Guarda un cuadre ingresando Capital, Banco y Caja. El sistema toma caja chica del arqueo y calcula las cuentas y la diferencia automaticamente.
 
 La diferencia queda registrada en el historial de cuadres y no se corrige automaticamente.
 

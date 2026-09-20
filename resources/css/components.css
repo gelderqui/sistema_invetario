@@ -198,3 +198,95 @@
     color: #ffffff;
     margin: 0;
 }
+
+/* =============================================================
+   Tarjetas de resumen Agente BI
+   La grilla responde sin desplazamiento horizontal: cuatro,
+   dos y una columna según el ancho disponible.
+   ============================================================= */
+.bi-card {
+    height: 100%;
+    padding: 1rem;
+    border: 1px solid #e8edf3;
+    border-radius: .85rem;
+    background: #ffffff;
+}
+
+.bi-card small {
+    display: block;
+    margin-bottom: .35rem;
+    color: #5f6b7a;
+}
+
+.bi-card strong {
+    font-size: 1.35rem;
+}
+
+.bi-card-financed {
+    background: #edf8fc;
+    border-color: #c5e6ef;
+}
+
+.bi-card-located {
+    background: #fff8ed;
+    border-color: #f2ddba;
+}
+
+.bi-card-balanced {
+    background: #f0f8f2;
+    border-color: #c8e3cf;
+}
+
+.bi-card-unbalanced {
+    background: #fff2f2;
+    border-color: #f0c5c5;
+}
+
+.bi-card-clickable {
+    cursor: pointer;
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.bi-card-clickable:hover {
+    box-shadow: 0 .35rem .8rem rgba(35, 55, 80, .12);
+    transform: translateY(-1px);
+}
+
+.bi-summary-card {
+    display: block;
+    width: 100%;
+    color: inherit;
+    text-align: left;
+}
+
+.bi-summary-card:focus-visible {
+    outline: 3px solid rgba(13, 110, 253, .35);
+    outline-offset: 2px;
+}
+
+.bi-cuadres-table {
+    min-width: 720px;
+}
+
+@media (max-width: 575.98px) {
+    .agente-bi-view {
+        padding-right: .75rem !important;
+        padding-left: .75rem !important;
+    }
+
+    .bi-card {
+        padding: .8rem;
+    }
+
+    .bi-card strong {
+        font-size: 1.12rem;
+    }
+
+    .agente-bi-view .modal-dialog {
+        margin: .5rem;
+    }
+
+    .agente-bi-view .table-responsive > .table {
+        min-width: 620px;
+    }
+}

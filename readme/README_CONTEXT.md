@@ -47,9 +47,9 @@ Estado funcional actual:
 ### Agente BI
 
 - Modulo independiente de Capital y Caja POS para cuadrar fondos de BI.
-- Cada cuadre guarda una fotografia historica: `capital + bi_debe = banco + caja + caja_chica + deuda_a_bi + diferencia`.
+- Cada cuadre guarda una fotografia historica: `capital + cuenta_por_pagar = banco + caja + caja_chica + cuenta_por_cobrar + diferencia`.
 - Banco, caja y capital se capturan manualmente en el cuadre; caja chica se toma del arqueo seleccionado.
-- `bi_debe` y `deuda_a_bi` comparten una tabla de deudas diferenciada por tipo y sus saldos se calculan en backend al guardar el cuadre.
+- `cuenta_por_pagar` y `cuenta_por_cobrar` comparten una tabla de cuentas diferenciada por tipo y sus saldos se calculan en backend al guardar el cuadre.
 - El arqueo de caja chica es independiente de `arqueos_caja` de la tienda y conserva el detalle por denominacion.
 
 ### Activos

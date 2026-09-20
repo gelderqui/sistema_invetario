@@ -11,11 +11,11 @@ class AgenteBiCuadre extends Model
 
     protected $fillable = [
         'capital',
-        'bi_debe_total',
+        'cuentas_por_pagar_total',
         'banco',
         'caja',
         'caja_chica',
-        'deuda_a_bi_total',
+        'cuentas_por_cobrar_total',
         'total_financiado',
         'total_ubicado',
         'diferencia',
@@ -28,11 +28,11 @@ class AgenteBiCuadre extends Model
     {
         return [
             'capital' => 'decimal:4',
-            'bi_debe_total' => 'decimal:4',
+            'cuentas_por_pagar_total' => 'decimal:4',
             'banco' => 'decimal:4',
             'caja' => 'decimal:4',
             'caja_chica' => 'decimal:4',
-            'deuda_a_bi_total' => 'decimal:4',
+            'cuentas_por_cobrar_total' => 'decimal:4',
             'total_financiado' => 'decimal:4',
             'total_ubicado' => 'decimal:4',
             'diferencia' => 'decimal:4',

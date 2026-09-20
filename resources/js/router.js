@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import axios from '@/bootstrap';
 import { beginLoading, endLoading } from '@/components/components_ui/loadingState';
 import { useAuthStore } from '@/stores/auth';
+import { getDefaultAuthorizedPath, hasRoutePermission } from '@/utils/authorization';
 import AgenteBiView from '@/components/AgenteBiView.vue';
 import ActivosView from '@/components/ActivosView.vue';
 import CajaView from '@/components/CajaView.vue';
@@ -315,6 +316,7 @@ router.beforeEach(async (to) => {
     }
 
     if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+        endLoading();
         return {
             name: 'login',
             query: { redirect: to.fullPath },
@@ -322,7 +324,29 @@ router.beforeEach(async (to) => {
     }
 
     if (to.meta.guestOnly && authStore.isAuthenticated) {
-        return { name: 'dashboard' };
+        endLoading();
+        return getDefaultAuthorizedPath(authStore.user) ?? { name: 'error' };
+    }
+
+    // La pantalla de error no representa un módulo y debe seguir disponible.
+    if (to.name === 'error' || to.name === 'not-found') {
+        return true;
+    }
+
+    if (to.meta.requiresAuth && authStore.isAuthenticated) {
+        // `matched[0].path` usa la ruta principal incluso cuando se abrió un alias.
+        const routePath = to.matched[0]?.path ?? to.path;
+
+        if (!hasRoutePermission(authStore.user, routePath)) {
+            endLoading();
+
+            // Al intentar abrir el Dashboard sin permiso, lleva al primer módulo asignado.
+            if (to.name === 'dashboard') {
+                return getDefaultAuthorizedPath(authStore.user) ?? { name: 'error' };
+            }
+
+            return { name: 'error' };
+        }
     }
 
     return true;

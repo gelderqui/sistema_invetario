@@ -67,6 +67,8 @@
                         <div class="form-check">
                             <input id="remember" v-model="form.remember" class="form-check-input" type="checkbox">
                             <label class="form-check-label" for="remember">Mantener sesión iniciada</label>
+                            <label class="form-check-label" for="remember">Usuario: cajero</label>
+                            <label class="form-check-label" for="remember">Contraseña: Cajero123</label>
                         </div>
 
                         <button type="submit" class="btn btn-dark btn-lg w-100 mt-1" :disabled="loading">
@@ -87,6 +89,7 @@ import { useRoute, useRouter } from 'vue-router';
 
 import axios from '@/bootstrap';
 import { useAuthStore } from '@/stores/auth';
+import { getDefaultAuthorizedPath } from '@/utils/authorization';
 
 const authStore = useAuthStore();
 const route = useRoute();
@@ -125,7 +128,9 @@ async function submit() {
         const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : null;
         const safeRedirect = redirect && redirect.startsWith('/') ? redirect : null;
 
-        await router.push(safeRedirect ?? { name: 'dashboard' });
+        // La ruta solicitada se valida en el guard del router. Sin una, usamos el
+        // primer módulo que el usuario realmente tiene asignado.
+        await router.push(safeRedirect ?? getDefaultAuthorizedPath(authStore.user) ?? { name: 'error' });
     } catch (error) {
         const serverErrors = error.response?.data?.errors;
 

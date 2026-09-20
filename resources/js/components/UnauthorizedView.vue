@@ -6,9 +6,20 @@
             <p class="text-body-secondary mb-4">
                 Tu sesión está activa, pero la ruta no existe o tu rol no tiene acceso al recurso solicitado.
             </p>
-            <router-link :to="{ name: 'dashboard' }" class="btn btn-dark">
-                Volver al dashboard
+            <router-link v-if="defaultPath" :to="defaultPath" class="btn btn-dark">
+                Ir a mi módulo disponible
             </router-link>
+            <p v-else class="mb-0 text-body-secondary">No tienes módulos asignados. Contacta a un administrador.</p>
         </div>
     </div>
 </template>
+
+<script setup>
+import { computed } from 'vue';
+
+import { useAuthStore } from '@/stores/auth';
+import { getDefaultAuthorizedPath } from '@/utils/authorization';
+
+const authStore = useAuthStore();
+const defaultPath = computed(() => getDefaultAuthorizedPath(authStore.user));
+</script>

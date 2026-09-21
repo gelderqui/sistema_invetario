@@ -30,6 +30,7 @@ import RolesView from '@/components/RolesView.vue';
 import UnauthorizedView from '@/components/UnauthorizedView.vue';
 import UsersView from '@/components/UsersView.vue';
 import VentasView from '@/components/VentasView.vue';
+import VentasCreditoView from '@/components/VentasCreditoView.vue';
 
 const routes = [
     {
@@ -192,6 +193,14 @@ const routes = [
         path: '/ventas/historial',
         name: 'historial-ventas',
         component: HistorialVentasView,
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
+        path: '/ventas/creditos',
+        name: 'ventas-creditos',
+        component: VentasCreditoView,
         meta: {
             requiresAuth: true,
         },

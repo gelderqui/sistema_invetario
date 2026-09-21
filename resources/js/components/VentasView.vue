@@ -2,14 +2,14 @@
     <div>
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="h4 mb-0">Ventas (POS)</h2>
-            <button class="btn btn-brand" :disabled="actionLocked || !hasOpenCaja" @click="openCreate">
+            <button class="btn btn-brand" :disabled="actionLocked" @click="openCreate">
                 <FontAwesomeIcon icon="fa-solid fa-cash-register" class="me-2" />
                 Nueva venta
             </button>
         </div>
 
         <div v-if="!loading && !hasOpenCaja" class="alert alert-warning py-2">
-            Debe tener una caja abierta (del usuario actual) para registrar ventas.
+            Debe tener una caja abierta para ventas en efectivo y para recibir abonos de crédito. Las ventas al crédito pueden registrarse sin caja abierta.
         </div>
 
         <div v-if="loading" class="text-center py-5">
@@ -193,7 +193,10 @@
                             <div class="row g-3 align-items-end">
                                 <div class="col-12 col-md-3">
                                     <label class="form-label fw-semibold">Metodo de pago *</label>
-                                    <input class="form-control" value="efectivo" disabled>
+                                    <select v-model="form.metodo_pago" class="form-select">
+                                        <option value="efectivo">Efectivo</option>
+                                        <option value="credito">Crédito</option>
+                                    </select>
                                 </div>
 
                                 <div class="col-12 col-md-3">
@@ -204,9 +207,14 @@
                                     <input v-model.number="form.descuento" type="number" step="0.0001" min="0" class="form-control" :disabled="!form.habilitar_descuento">
                                 </div>
 
-                                <div class="col-12 col-md-3">
+                                <div v-if="form.metodo_pago === 'efectivo'" class="col-12 col-md-3">
                                     <label class="form-label fw-semibold">Recibido</label>
                                     <input v-model.number="form.monto_recibido" type="number" step="0.0001" min="0" class="form-control">
+                                </div>
+
+                                <div v-else class="col-12 col-md-3">
+                                    <label class="form-label fw-semibold">Fecha de vencimiento</label>
+                                    <input v-model="form.fecha_vencimiento" type="date" class="form-control" :min="form.fecha_venta">
                                 </div>
 
                                 <div class="col-12 col-md-3">
@@ -214,9 +222,10 @@
                                     <div class="h6 mb-1">Q {{ formatMoney(subtotalVenta) }}</div>
                                     <div class="small text-body-secondary">Total</div>
                                     <div class="h5 mb-0">Q {{ formatMoney(totalVenta) }}</div>
-                                    <div v-if="form.monto_recibido" class="small mt-1">
+                                    <div v-if="form.metodo_pago === 'efectivo' && form.monto_recibido" class="small mt-1">
                                         Cambio: <strong>Q {{ formatMoney(cambioVenta) }}</strong>
                                     </div>
+                                    <div v-else-if="form.metodo_pago === 'credito'" class="small mt-1 text-warning-emphasis">Se creará una cuenta por cobrar.</div>
                                 </div>
                             </div>
                         </div>
@@ -272,6 +281,7 @@ const emptyForm = () => ({
     cliente: consumidorFinal.value,
     fecha_venta: new Date().toISOString().slice(0, 10),
     metodo_pago: 'efectivo',
+    fecha_vencimiento: '',
     habilitar_descuento: false,
     descuento: 0,
     monto_recibido: null,
@@ -304,6 +314,16 @@ watch(
     }
 );
 
+watch(
+    () => form.value.metodo_pago,
+    (metodo) => {
+        if (metodo === 'credito') {
+            form.value.monto_recibido = null;
+            if (form.value.cliente?.id === consumidorFinal.value?.id) form.value.cliente = null;
+        }
+    }
+);
+
 onMounted(async () => {
     formModal = new Modal(formModalRef.value);
     await Promise.all([loadVentas(), loadCatalogs()]);
@@ -327,11 +347,6 @@ async function loadCatalogs() {
 }
 
 function openCreate() {
-    if (!hasOpenCaja.value) {
-        formErrors.value = ['Debe tener una caja abierta (del usuario actual) para registrar ventas.'];
-        return;
-    }
-
     form.value = emptyForm();
     finder.value = {
         producto: null,
@@ -451,8 +466,13 @@ function itemSubtotal(item) {
 }
 
 async function save() {
-    if (!hasOpenCaja.value) {
-        formErrors.value = ['Debe tener una caja abierta (del usuario actual) para registrar ventas.'];
+    if (form.value.metodo_pago === 'efectivo' && !hasOpenCaja.value) {
+        formErrors.value = ['Debe tener una caja abierta para registrar una venta en efectivo.'];
+        return;
+    }
+
+    if (form.value.metodo_pago === 'credito' && !form.value.cliente?.id) {
+        formErrors.value = ['Debe seleccionar un cliente para registrar una venta al crédito.'];
         return;
     }
 
@@ -463,9 +483,10 @@ async function save() {
         const payload = {
             cliente_id: form.value.cliente?.id ?? null,
             fecha_venta: form.value.fecha_venta,
-            metodo_pago: 'efectivo',
+            metodo_pago: form.value.metodo_pago,
+            fecha_vencimiento: form.value.metodo_pago === 'credito' ? (form.value.fecha_vencimiento || null) : null,
             descuento: form.value.habilitar_descuento ? Number(form.value.descuento || 0) : 0,
-            monto_recibido: Number(form.value.monto_recibido || 0),
+            monto_recibido: form.value.metodo_pago === 'efectivo' ? Number(form.value.monto_recibido || 0) : null,
             observaciones: form.value.observaciones || null,
             items: form.value.items.map((item) => ({
                 producto_id: item.producto_id,

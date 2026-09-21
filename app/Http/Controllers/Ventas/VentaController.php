@@ -11,6 +11,8 @@ use App\Models\InventarioMovimiento;
 use App\Models\Producto;
 use App\Models\User;
 use App\Models\Venta;
+use App\Models\VentaCredito;
+use App\Models\VentaCreditoMovimiento;
 use App\Models\VentaDetalle;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
@@ -170,7 +172,7 @@ class VentaController extends Controller
                 'clientes' => $clientes,
                 'consumidor_final_id' => $consumidorFinalId,
                 'productos' => $productos,
-                'metodos_pago' => ['efectivo'],
+                'metodos_pago' => ['efectivo', 'credito'],
                 'caja_activa' => $cajaActiva,
             ],
         ]);
@@ -181,7 +183,8 @@ class VentaController extends Controller
         $validated = $request->validate([
             'cliente_id' => ['nullable', Rule::exists('clientes', 'id')],
             'fecha_venta' => ['required', 'date'],
-            'metodo_pago' => ['required', Rule::in(['efectivo'])],
+            'metodo_pago' => ['required', Rule::in(['efectivo', 'credito'])],
+            'fecha_vencimiento' => ['nullable', 'date', 'after_or_equal:fecha_venta'],
             'descuento' => ['nullable', 'numeric', 'gte:0'],
             'monto_recibido' => ['nullable', 'numeric', 'gte:0'],
             'observaciones' => ['nullable', 'string'],
@@ -199,16 +202,32 @@ class VentaController extends Controller
             }
         }
 
-        $cajaActiva = Caja::query()
-            ->where('usuario_id', (int) getUserId())
-            ->where('estado', 'abierta')
-            ->latest('id')
-            ->first(['id']);
+        if ($validated['metodo_pago'] === 'credito') {
+            if (empty($validated['cliente_id'])) {
+                throw ValidationException::withMessages([
+                    'cliente_id' => ['Debe seleccionar un cliente para una venta al crédito.'],
+                ]);
+            }
 
-        if (! $cajaActiva) {
-            throw ValidationException::withMessages([
-                'caja' => ['Debe tener una caja abierta para registrar ventas.'],
-            ]);
+            if (($cliente->nit ?? null) === 'CF') {
+                throw ValidationException::withMessages([
+                    'cliente_id' => ['No puede registrar crédito a Consumidor final.'],
+                ]);
+            }
+        }
+
+        if ($validated['metodo_pago'] === 'efectivo') {
+            $cajaActiva = Caja::query()
+                ->where('usuario_id', (int) getUserId())
+                ->where('estado', 'abierta')
+                ->latest('id')
+                ->first(['id']);
+
+            if (! $cajaActiva) {
+                throw ValidationException::withMessages([
+                    'caja' => ['Debe tener una caja abierta para registrar ventas en efectivo.'],
+                ]);
+            }
         }
 
         $result = DB::transaction(function () use ($validated) {
@@ -345,7 +364,9 @@ class VentaController extends Controller
             $descuento = toMoney($venta->descuento, 4);
             $total = toMoney(max(0, $subtotal - $descuento), 4);
 
-            $montoRecibido = $validated['monto_recibido'] ?? null;
+            $montoRecibido = $venta->metodo_pago === 'efectivo'
+                ? ($validated['monto_recibido'] ?? null)
+                : null;
             $cambio = null;
 
             if ($venta->metodo_pago === 'efectivo') {
@@ -366,6 +387,31 @@ class VentaController extends Controller
                 'cambio' => $cambio,
                 'mod_user' => getUserId(),
             ]);
+
+            if ($venta->metodo_pago === 'credito') {
+                $credito = VentaCredito::query()->create([
+                    'venta_id' => $venta->id,
+                    'cliente_id' => $venta->cliente_id,
+                    'fecha_vencimiento' => $validated['fecha_vencimiento'] ?? null,
+                    'monto_original' => $total,
+                    'saldo_pendiente' => $total,
+                    'estado' => 'activa',
+                    'observaciones' => $venta->observaciones,
+                    'add_user' => getUserId(),
+                    'mod_user' => getUserId(),
+                ]);
+
+                VentaCreditoMovimiento::query()->create([
+                    'venta_credito_id' => $credito->id,
+                    'tipo' => 'cargo_inicial',
+                    'monto' => $total,
+                    'saldo_anterior' => 0,
+                    'saldo_posterior' => $total,
+                    'fecha' => now(),
+                    'descripcion' => 'Venta a crédito '.$venta->numero,
+                    'usuario_id' => getUserId(),
+                ]);
+            }
 
             if ($venta->metodo_pago === 'efectivo' && getUserId()) {
                 $movimientoCaja = registrarMovimientoCajaAutomatico(
@@ -426,6 +472,17 @@ class VentaController extends Controller
                 ])
                 ->lockForUpdate()
                 ->findOrFail($venta->id);
+
+            $credito = VentaCredito::query()
+                ->where('venta_id', $venta->id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($credito && abs((float) $credito->saldo_pendiente - (float) $credito->monto_original) > 0.0001) {
+                throw ValidationException::withMessages([
+                    'venta' => ['No se puede anular una venta a crédito que ya tiene abonos.'],
+                ]);
+            }
 
             $devolucionesActivas = $venta->devoluciones()->where('estado', 'activo')->count();
             if ($devolucionesActivas > 0) {
@@ -534,6 +591,25 @@ class VentaController extends Controller
                 'estado' => 'anulada',
                 'mod_user' => $userId,
             ]);
+
+            if ($credito) {
+                $saldoAnterior = toMoney($credito->saldo_pendiente, 4);
+                $credito->update([
+                    'saldo_pendiente' => 0,
+                    'estado' => 'anulada',
+                    'mod_user' => $userId,
+                ]);
+                VentaCreditoMovimiento::query()->create([
+                    'venta_credito_id' => $credito->id,
+                    'tipo' => 'anulacion',
+                    'monto' => $saldoAnterior,
+                    'saldo_anterior' => $saldoAnterior,
+                    'saldo_posterior' => 0,
+                    'fecha' => now(),
+                    'descripcion' => 'Anulación de venta '.$venta->numero,
+                    'usuario_id' => $userId,
+                ]);
+            }
 
             if ($venta->metodo_pago === 'efectivo') {
                 registrarMovimientoCajaAutomatico(

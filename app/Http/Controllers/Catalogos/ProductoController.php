@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Catalogos;
 use App\Http\Controllers\Controller;
 use App\Models\Categoria;
 use App\Models\Producto;
+use App\Models\ProductoUnidadMedida;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -12,6 +13,22 @@ use Illuminate\Validation\ValidationException;
 
 class ProductoController extends Controller
 {
+    public function catalogs(): JsonResponse
+    {
+        return response()->json([
+            'data' => [
+                'categorias' => Categoria::query()
+                    ->where('activo', true)
+                    ->orderBy('nombre')
+                    ->get(['id', 'nombre']),
+                'medidas' => ProductoUnidadMedida::query()
+                    ->where('activo', true)
+                    ->orderBy('nombre')
+                    ->get(['id', 'nombre', 'abreviatura']),
+            ],
+        ]);
+    }
+
     public function index(): JsonResponse
     {
         $productos = Producto::query()

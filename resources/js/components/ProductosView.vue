@@ -353,7 +353,7 @@ const selectedCategoriaOption = computed({
 });
 onMounted(async () => {
     formModal = new Modal(formModalRef.value);
-    await Promise.all([loadProductos(), loadCategorias(), loadMedidas()]);
+    await Promise.all([loadProductos(), loadCatalogs()]);
 });
 
 watch(
@@ -442,18 +442,10 @@ async function loadProductos() {
     }
 }
 
-async function loadCategorias() {
-    const { data } = await axios.get('/categorias/get?solo_activas=1');
-    categoriasActivas.value = data.data;
-}
-
-async function loadMedidas() {
-    const { data } = await axios.get('/medidas/get', {
-        params: {
-            solo_activas: 1,
-        },
-    });
-    medidasActivas.value = data.data ?? [];
+async function loadCatalogs() {
+    const { data } = await axios.get('/productos/get/catalogs');
+    categoriasActivas.value = data.data?.categorias ?? [];
+    medidasActivas.value = data.data?.medidas ?? [];
 }
 
 function openCreate() {

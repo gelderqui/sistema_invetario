@@ -23,6 +23,7 @@ use App\Http\Controllers\Inventario\AjusteInventarioController;
 use App\Http\Controllers\ManualController;
 use App\Http\Controllers\Reportes\ReporteController;
 use App\Http\Controllers\Ventas\DevolucionController;
+use App\Http\Controllers\Ventas\VentaCreditoController;
 use App\Http\Controllers\Ventas\VentaController;
 use Illuminate\Support\Facades\Route;
 
@@ -81,6 +82,7 @@ Route::prefix('api')->group(function (): void {
 
         Route::prefix('productos')->group(function (): void {
             Route::get('/get', [ProductoController::class, 'index']);
+            Route::get('/get/catalogs', [ProductoController::class, 'catalogs'])->middleware('permission:productos');
             Route::post('/store', [ProductoController::class, 'store']);
             Route::put('/update/{producto}', [ProductoController::class, 'update']);
             Route::patch('/toggle/{producto}', [ProductoController::class, 'toggle']);
@@ -161,6 +163,12 @@ Route::prefix('api')->group(function (): void {
             Route::get('/get/catalogs', [VentaController::class, 'catalogs'])->middleware('permission:ventas');
             Route::post('/store', [VentaController::class, 'store'])->middleware('permission:ventas');
             Route::patch('/anular/{venta}', [VentaController::class, 'anular'])->middleware('permission:ventas|historial_ventas');
+
+            Route::prefix('creditos')->middleware('permission:ventas_credito')->group(function (): void {
+                Route::get('/get', [VentaCreditoController::class, 'index']);
+                Route::get('/{credito}/movimientos', [VentaCreditoController::class, 'movimientos']);
+                Route::post('/{credito}/abonos', [VentaCreditoController::class, 'abonar']);
+            });
 
             Route::prefix('devoluciones')->group(function (): void {
                 Route::get('/get', [DevolucionController::class, 'index'])->middleware('permission:devoluciones');

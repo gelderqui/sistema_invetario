@@ -47,12 +47,10 @@
                 </div>
                 <div class="col-12 col-md-3">
                     <label class="form-label">Último arqueo de caja chica</label>
-                    <div class="input-group">
-                        <div class="form-control bg-light">Q {{ q(resumen.ultimo_arqueo_monto) }}</div>
-                        <button type="button" class="btn btn-outline-brand" @click="openArqueoModal">Nuevo arqueo</button>
-                    </div>
+                    <div class="form-control bg-light">Q {{ q(resumen.ultimo_arqueo_monto) }}</div>
                 </div>
-                <div class="col-12 col-md-3 ms-md-auto d-grid">
+                <div class="col-12 d-flex flex-column flex-sm-row justify-content-end gap-2">
+                    <button type="button" class="btn btn-outline-brand" @click="openArqueoModal">Nuevo arqueo</button>
                     <button class="btn btn-brand" :disabled="savingCuadre">{{ savingCuadre ? 'Guardando...' : 'Guardar nuevo cuadre' }}</button>
                 </div>
             </form>

@@ -66,9 +66,7 @@
 
                         <div class="form-check">
                             <input id="remember" v-model="form.remember" class="form-check-input" type="checkbox">
-                            <label class="form-check-label" for="remember">Mantener sesión iniciada</label>
-                            <label class="form-check-label" for="remember">Usuario: cajero</label>
-                            <label class="form-check-label" for="remember">Contraseña: Cajero123</label>
+                            <label class="form-check-label" for="remember">Mantener sesión iniciada</label>s
                         </div>
 
                         <button type="submit" class="btn btn-dark btn-lg w-100 mt-1" :disabled="loading">

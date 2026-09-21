@@ -54,6 +54,23 @@ class CheckPermission
             return $parsed->unique()->values();
         }
 
+        // Algunas rutas internas no comparten la misma URL pública del permiso
+        // (por ejemplo, /medidas frente a /categorias/medidas). Cuando la ruta
+        // declara su permiso de forma explícita, ese dato es la fuente correcta.
+        $routePermissions = collect($request->route()?->gatherMiddleware() ?? [])
+            ->filter(fn (string $middleware): bool => str_starts_with($middleware, 'permission:'))
+            ->flatMap(function (string $middleware): array {
+                $value = substr($middleware, strlen('permission:'));
+
+                return preg_split('/[|,]/', $value) ?: [];
+            })
+            ->map(fn (string $value) => trim($value))
+            ->filter();
+
+        if ($routePermissions->isNotEmpty()) {
+            return $routePermissions->unique()->values();
+        }
+
         $resolved = $this->permissionFromRoute($request);
 
         if ($resolved === null) {

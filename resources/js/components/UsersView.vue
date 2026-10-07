@@ -166,14 +166,25 @@
                                     <label class="form-label fw-semibold" for="u-password">
                                         Contrasena {{ editingId ? '(dejar vacio para no cambiar)' : '*' }}
                                     </label>
-                                    <input
-                                        id="u-password"
-                                        v-model="form.password"
-                                        type="password"
-                                        class="form-control"
-                                        :required="!editingId"
-                                        autocomplete="new-password"
-                                    >
+                                    <div class="input-group">
+                                        <input
+                                            id="u-password"
+                                            v-model="form.password"
+                                            :type="showPassword ? 'text' : 'password'"
+                                            class="form-control"
+                                            :required="!editingId"
+                                            autocomplete="new-password"
+                                        >
+                                        <button
+                                            type="button"
+                                            class="btn btn-outline-secondary"
+                                            :title="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                                            :aria-label="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                                            @click="showPassword = !showPassword"
+                                        >
+                                            <FontAwesomeIcon :icon="showPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'" />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div class="col-12">
@@ -269,6 +280,7 @@ const confirmError = ref('');
 const toggleUserError = ref('');
 const statusFilter = ref('todos');
 const nameFilter = ref('');
+const showPassword = ref(false);
 
 let bsModal = null;
 
@@ -358,6 +370,7 @@ async function loadCatalogs() {
 function openCreate() {
     editingId.value = null;
     form.value = emptyForm();
+    showPassword.value = false;
     modalErrors.value = [];
     bsModal.show();
 }
@@ -373,6 +386,7 @@ function openEdit(user) {
         activo: user.activo,
         role_id: user.role?.id ?? null,
     };
+    showPassword.value = false;
     modalErrors.value = [];
     bsModal.show();
 }

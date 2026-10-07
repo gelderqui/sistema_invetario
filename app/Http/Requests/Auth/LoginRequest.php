@@ -28,7 +28,7 @@ class LoginRequest extends FormRequest
 
         if (! Auth::attempt($credentials, $this->boolean('remember'))) {
             throw ValidationException::withMessages([
-                'email' => __('The provided credentials are incorrect.'),
+                'email' => __('auth.failed'),
             ]);
         }
     }

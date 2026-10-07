@@ -62,7 +62,7 @@ class AuthController extends Controller
         }
 
         return response()->json([
-            'message' => 'Authenticated successfully.',
+            'message' => 'Sesión iniciada correctamente.',
             'user' => new AuthenticatedUserResource($user),
         ]);
     }
@@ -82,7 +82,7 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return response()->json([
-            'message' => 'Logged out successfully.',
+            'message' => 'Sesión cerrada correctamente.',
         ]);
     }
 

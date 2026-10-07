@@ -15,7 +15,7 @@ class CheckPermission
         $user = $request->user();
 
         if (! $user) {
-            abort(401, 'Unauthenticated.');
+            abort(401, 'No autenticado.');
         }
 
         $user->loadMissing('role.permissions');
@@ -37,7 +37,7 @@ class CheckPermission
         }
 
         if (! $user->hasPermission($requiredPermissions->all())) {
-            abort(403, 'You do not have the required permission.');
+            abort(403, 'No tiene el permiso requerido para realizar esta acción.');
         }
 
         return $next($request);

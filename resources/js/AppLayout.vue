@@ -123,26 +123,48 @@
 
                             <div>
                                 <label class="form-label fw-semibold" for="current-password">Contrasena actual *</label>
-                                <input
-                                    id="current-password"
-                                    v-model="passwordForm.current_password"
-                                    type="password"
-                                    class="form-control"
-                                    autocomplete="current-password"
-                                    required
-                                >
+                                <div class="input-group">
+                                    <input
+                                        id="current-password"
+                                        v-model="passwordForm.current_password"
+                                        :type="passwordVisibility.current ? 'text' : 'password'"
+                                        class="form-control"
+                                        autocomplete="current-password"
+                                        required
+                                    >
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-secondary"
+                                        :title="passwordVisibility.current ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                                        :aria-label="passwordVisibility.current ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                                        @click="passwordVisibility.current = !passwordVisibility.current"
+                                    >
+                                        <FontAwesomeIcon :icon="passwordVisibility.current ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'" />
+                                    </button>
+                                </div>
                             </div>
 
                             <div>
                                 <label class="form-label fw-semibold" for="new-password">Nueva contrasena *</label>
-                                <input
-                                    id="new-password"
-                                    v-model="passwordForm.password"
-                                    type="password"
-                                    class="form-control"
-                                    autocomplete="new-password"
-                                    required
-                                >
+                                <div class="input-group">
+                                    <input
+                                        id="new-password"
+                                        v-model="passwordForm.password"
+                                        :type="passwordVisibility.password ? 'text' : 'password'"
+                                        class="form-control"
+                                        autocomplete="new-password"
+                                        required
+                                    >
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-secondary"
+                                        :title="passwordVisibility.password ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                                        :aria-label="passwordVisibility.password ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                                        @click="passwordVisibility.password = !passwordVisibility.password"
+                                    >
+                                        <FontAwesomeIcon :icon="passwordVisibility.password ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'" />
+                                    </button>
+                                </div>
                                 <div class="form-text">
                                     Minimo 8 caracteres, al menos una mayuscula y un numero. Recomendado incluir simbolo.
                                 </div>
@@ -150,14 +172,25 @@
 
                             <div>
                                 <label class="form-label fw-semibold" for="new-password-confirm">Confirmar nueva contrasena *</label>
-                                <input
-                                    id="new-password-confirm"
-                                    v-model="passwordForm.password_confirmation"
-                                    type="password"
-                                    class="form-control"
-                                    autocomplete="new-password"
-                                    required
-                                >
+                                <div class="input-group">
+                                    <input
+                                        id="new-password-confirm"
+                                        v-model="passwordForm.password_confirmation"
+                                        :type="passwordVisibility.confirmation ? 'text' : 'password'"
+                                        class="form-control"
+                                        autocomplete="new-password"
+                                        required
+                                    >
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-secondary"
+                                        :title="passwordVisibility.confirmation ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                                        :aria-label="passwordVisibility.confirmation ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                                        @click="passwordVisibility.confirmation = !passwordVisibility.confirmation"
+                                    >
+                                        <FontAwesomeIcon :icon="passwordVisibility.confirmation ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'" />
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -271,6 +304,11 @@ const emptyPasswordForm = () => ({
 });
 
 const passwordForm = ref(emptyPasswordForm());
+const passwordVisibility = ref({
+    current: false,
+    password: false,
+    confirmation: false,
+});
 
 const showShell = computed(() => authStore.isAuthenticated && route.name !== 'login');
 const showLoadingOverlay = computed(() => isAppLoading.value && route.name !== 'login');
@@ -384,6 +422,11 @@ function toggleSidebar() {
 function openChangePasswordModal() {
     passwordErrors.value = [];
     passwordForm.value = emptyPasswordForm();
+    passwordVisibility.value = {
+        current: false,
+        password: false,
+        confirmation: false,
+    };
 
     if (!passwordModal && passwordModalRef.value) {
         passwordModal = new Modal(passwordModalRef.value);

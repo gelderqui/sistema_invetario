@@ -443,7 +443,7 @@ async function loadProductos() {
 }
 
 async function loadCatalogs() {
-    const { data } = await axios.get('/productos/get/catalogs');
+    const { data } = await axios.get('/productos/catalogs');
     categoriasActivas.value = data.data?.categorias ?? [];
     medidasActivas.value = data.data?.medidas ?? [];
 }

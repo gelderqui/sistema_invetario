@@ -17,7 +17,11 @@ class ActivoController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $activo = Activo::query()->create([...$this->validated($request), 'usuario_id' => $request->user()->id]);
+        $activo = Activo::query()->create([
+            ...$this->validated($request),
+            'usuario_id' => $request->user()->id,
+            'activo' => true,
+        ]);
 
         return response()->json(['message' => 'Activo creado correctamente.', 'data' => $activo->load('usuario:id,name')], 201);
     }
@@ -29,11 +33,11 @@ class ActivoController extends Controller
         return response()->json(['message' => 'Activo actualizado correctamente.', 'data' => $activo->fresh()->load('usuario:id,name')]);
     }
 
-    public function toggle(Activo $activo): JsonResponse
+    public function destroy(Activo $activo): JsonResponse
     {
-        $activo->update(['activo' => ! $activo->activo]);
+        $activo->delete();
 
-        return response()->json(['message' => 'Estado actualizado correctamente.', 'data' => $activo->fresh()->load('usuario:id,name')]);
+        return response()->json(['message' => 'Activo eliminado correctamente.']);
     }
 
     private function validated(Request $request, ?Activo $activo = null): array
@@ -50,7 +54,6 @@ class ActivoController extends Controller
             'costo_compra' => ['nullable', 'numeric', 'min:0'],
             'estado' => ['required', Rule::in(['activo', 'mantenimiento', 'danado', 'baja'])],
             'descripcion' => ['nullable', 'string', 'max:2000'],
-            'activo' => ['required', 'boolean'],
         ]);
     }
 }

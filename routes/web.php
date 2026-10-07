@@ -7,6 +7,7 @@ use App\Http\Controllers\AgenteBi\AgenteBiController;
 use App\Http\Controllers\Activos\ActivoController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Caja\CajaController;
+use App\Http\Controllers\CajaRural\CajaRuralController;
 use App\Http\Controllers\Capital\CapitalController;
 use App\Http\Controllers\Catalogos\CategoriaController;
 use App\Http\Controllers\Catalogos\ClienteController;
@@ -80,9 +81,11 @@ Route::prefix('api')->group(function (): void {
             Route::delete('/destroy/{categoria}', [CategoriaController::class, 'destroy']);
         });
 
-        Route::prefix('productos')->group(function (): void {
+        Route::prefix('productos')->middleware('permission:productos')->group(function (): void {
+            Route::get('/catalogs', [ProductoController::class, 'catalogs']);
+            // Compatibilidad temporal con versiones anteriores del frontend.
+            Route::get('/get/catalogs', [ProductoController::class, 'catalogs']);
             Route::get('/get', [ProductoController::class, 'index']);
-            Route::get('/get/catalogs', [ProductoController::class, 'catalogs'])->middleware('permission:productos');
             Route::post('/store', [ProductoController::class, 'store']);
             Route::put('/update/{producto}', [ProductoController::class, 'update']);
             Route::patch('/toggle/{producto}', [ProductoController::class, 'toggle']);
@@ -150,11 +153,24 @@ Route::prefix('api')->group(function (): void {
             Route::post('/cuadres', [AgenteBiController::class, 'storeCuadre']);
         });
 
+        Route::prefix('caja-rural')->middleware('permission:caja_rural')->group(function (): void {
+            Route::get('/get', [CajaRuralController::class, 'index']);
+            Route::get('/historial/campo/{campo}', [CajaRuralController::class, 'historialCampo']);
+            Route::post('/deudas', [CajaRuralController::class, 'storeDeuda']);
+            Route::put('/deudas/{deuda}', [CajaRuralController::class, 'updateDeuda']);
+            Route::get('/deudas/{deuda}/movimientos', [CajaRuralController::class, 'movimientosDeuda']);
+            Route::post('/deudas/{deuda}/movimientos', [CajaRuralController::class, 'registrarMovimientoDeuda']);
+            Route::post('/arqueos', [CajaRuralController::class, 'storeArqueo']);
+            Route::get('/cuadres', [CajaRuralController::class, 'cuadres']);
+            Route::get('/cuadres/{cuadre}', [CajaRuralController::class, 'showCuadre']);
+            Route::post('/cuadres', [CajaRuralController::class, 'storeCuadre']);
+        });
+
         Route::prefix('activos')->middleware('permission:activos')->group(function (): void {
             Route::get('/get', [ActivoController::class, 'index']);
             Route::post('/store', [ActivoController::class, 'store']);
             Route::put('/update/{activo}', [ActivoController::class, 'update']);
-            Route::patch('/toggle/{activo}', [ActivoController::class, 'toggle']);
+            Route::delete('/destroy/{activo}', [ActivoController::class, 'destroy']);
         });
 
         Route::prefix('ventas')->group(function (): void {

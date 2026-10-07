@@ -277,42 +277,39 @@ const showLoadingOverlay = computed(() => isAppLoading.value && route.name !== '
 
 const openGroups = ref([]);
 
-// Construye el menú dinámicamente desde los permisos del usuario ordenados por `orden`.
+// `module` decide el grupo y `orden` la posición dentro de ese grupo.
 const menuItems = computed(() => {
     const perms = [...(authStore.user?.permissions ?? [])]
         .filter((p) => Boolean(p.ruta))
-        .map((p) => (p.code === 'gastos' ? { ...p, orden: 64 } : p))
         .sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999));
 
-    const forcedTopLevelCodes = new Set(['gastos']);
-
     const groupedModules = [
-        { module: 'caja', name: 'caja', label: 'Caja', icon: 'fa-solid fa-cash-register' },
-        { module: 'ventas', name: 'ventas', label: 'Ventas', icon: 'fa-solid fa-cart-shopping' },
-        { module: 'operaciones', name: 'operaciones', label: 'Compras', icon: 'fa-solid fa-briefcase' },
-        { module: 'inventario', name: 'inventario', label: 'Inventario', icon: 'fa-solid fa-warehouse' },
-        { module: 'catalogos', name: 'catalogos', label: 'Catalogo', icon: 'fa-solid fa-boxes-stacked' },
-        { module: 'configuracion', name: 'configuracion', label: 'Configuracion', icon: 'fa-solid fa-gears' },
+        { module: 'caja', name: 'caja', label: 'Caja', icon: 'fa-solid fa-cash-register', orden: 10 },
+        { module: 'ventas', name: 'ventas', label: 'Ventas', icon: 'fa-solid fa-cart-shopping', orden: 20 },
+        { module: 'operaciones', name: 'operaciones', label: 'Compras', icon: 'fa-solid fa-briefcase', orden: 30 },
+        { module: 'inventario', name: 'inventario', label: 'Inventario', icon: 'fa-solid fa-warehouse', orden: 40 },
+        { module: 'catalogos', name: 'catalogos', label: 'Catálogos', icon: 'fa-solid fa-boxes-stacked', orden: 50 },
+        { module: 'administracion', name: 'administracion', label: 'Administración', icon: 'fa-solid fa-building-columns', orden: 60 },
+        { module: 'configuracion', name: 'configuracion', label: 'Configuraciones', icon: 'fa-solid fa-gears', orden: 70 },
     ];
 
     const groupedSet = new Set(groupedModules.map((g) => g.module));
-    const topLevel = perms.filter((p) => forcedTopLevelCodes.has(p.code) || !groupedSet.has(p.module));
+    // Los permisos sin módulo son opciones principales y usan un orden global.
+    const topLevel = perms.filter((p) => !groupedSet.has(p.module));
     const result = [...topLevel];
 
     for (const groupDef of groupedModules) {
-        const children = perms.filter((p) => p.module === groupDef.module && !forcedTopLevelCodes.has(p.code));
+        const children = perms.filter((p) => p.module === groupDef.module);
         if (!children.length) continue;
-
-        const minOrden = Math.min(...children.map((p) => p.orden ?? 999));
 
         const group = {
             name: groupDef.name,
             label: groupDef.label,
             icon: groupDef.icon,
-            orden: minOrden,
+            orden: groupDef.orden,
             children,
         };
-        const insertAt = result.findIndex((p) => (p.orden ?? 999) > minOrden);
+        const insertAt = result.findIndex((p) => (p.orden ?? 999) > groupDef.orden);
 
         if (insertAt === -1) {
             result.push(group);

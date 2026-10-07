@@ -8,10 +8,29 @@ return new class extends Migration
 {
     public function up(): void
     {
+        Schema::create('categorias', function (Blueprint $table): void {
+            $table->id();
+            $table->string('nombre')->unique();
+            $table->string('descripcion')->nullable();
+            $table->boolean('activo')->default(true);
+            $table->unsignedBigInteger('add_user')->nullable();
+            $table->unsignedBigInteger('mod_user')->nullable();
+            $table->foreign('add_user')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('mod_user')->references('id')->on('users')->nullOnDelete();
+            $table->timestamps();
+        });
+
+        Schema::create('productos_unidad_medida', function (Blueprint $table): void {
+            $table->id();
+            $table->string('nombre', 80)->unique();
+            $table->string('abreviatura', 10)->unique();
+            $table->boolean('activo')->default(true);
+            $table->timestamps();
+        });
+
         Schema::create('productos', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('categoria_id');
-            $table->foreign('categoria_id')->references('id')->on('categorias')->restrictOnDelete();
             $table->string('nombre');
             $table->string('codigo_barra')->nullable()->unique();
             $table->text('palabras_clave')->nullable();
@@ -28,10 +47,12 @@ return new class extends Migration
             $table->boolean('activo')->default(true);
             $table->unsignedBigInteger('add_user')->nullable();
             $table->unsignedBigInteger('mod_user')->nullable();
-            $table->foreign('add_user')->references('id')->on('users')->nullOnDelete();
-            $table->foreign('mod_user')->references('id')->on('users')->nullOnDelete();
             $table->timestamps();
 
+            $table->foreign('categoria_id')->references('id')->on('categorias')->restrictOnDelete();
+            $table->foreign('unidad_medida_id')->references('id')->on('productos_unidad_medida')->nullOnDelete();
+            $table->foreign('add_user')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('mod_user')->references('id')->on('users')->nullOnDelete();
             $table->index(['activo', 'stock_actual'], 'productos_activo_stock_idx');
         });
     }
@@ -39,5 +60,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('productos');
+        Schema::dropIfExists('productos_unidad_medida');
+        Schema::dropIfExists('categorias');
     }
 };

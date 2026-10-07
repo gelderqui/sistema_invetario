@@ -7,6 +7,7 @@ import { getDefaultAuthorizedPath, hasRoutePermission } from '@/utils/authorizat
 import AgenteBiView from '@/components/AgenteBiView.vue';
 import ActivosView from '@/components/ActivosView.vue';
 import CajaView from '@/components/CajaView.vue';
+import CajaRuralView from '@/components/CajaRuralView.vue';
 import CapitalView from '@/components/CapitalView.vue';
 import CategoriasView from '@/components/CategoriasView.vue';
 import ClientesView from '@/components/ClientesView.vue';
@@ -169,6 +170,14 @@ const routes = [
         path: '/agente-bi',
         name: 'agente-bi',
         component: AgenteBiView,
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
+        path: '/caja-rural',
+        name: 'caja-rural',
+        component: CajaRuralView,
         meta: {
             requiresAuth: true,
         },

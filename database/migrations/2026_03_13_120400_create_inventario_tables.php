@@ -8,6 +8,24 @@ return new class extends Migration
 {
     public function up(): void
     {
+        Schema::create('inventario_lotes', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('producto_id');
+            $table->unsignedBigInteger('compra_detalle_id')->nullable();
+            $table->decimal('cantidad_inicial', 12, 4);
+            $table->decimal('cantidad_disponible', 12, 4);
+            $table->decimal('costo_unitario', 12, 4);
+            $table->date('fecha_vencimiento')->nullable();
+            $table->date('fecha_entrada');
+            $table->timestamps();
+
+            $table->foreign('producto_id')->references('id')->on('productos')->restrictOnDelete();
+            $table->foreign('compra_detalle_id')->references('id')->on('compra_detalles')->nullOnDelete();
+            $table->index(['producto_id', 'fecha_entrada'], 'lotes_fifo_idx');
+            $table->index(['producto_id', 'fecha_vencimiento'], 'lotes_vencimiento_idx');
+            $table->index(['producto_id', 'cantidad_disponible', 'fecha_entrada'], 'lotes_fifo_stock_idx');
+        });
+
         Schema::create('inventario_movimientos', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('producto_id');
@@ -30,6 +48,7 @@ return new class extends Migration
             $table->foreign('producto_id')->references('id')->on('productos')->restrictOnDelete();
             $table->foreign('compra_id')->references('id')->on('compras')->nullOnDelete();
             $table->foreign('compra_detalle_id')->references('id')->on('compra_detalles')->nullOnDelete();
+            $table->foreign('lote_id')->references('id')->on('inventario_lotes')->nullOnDelete();
             $table->foreign('add_user')->references('id')->on('users')->nullOnDelete();
             $table->index(['producto_id', 'created_at']);
             $table->index('venta_id');
@@ -42,5 +61,6 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('inventario_movimientos');
+        Schema::dropIfExists('inventario_lotes');
     }
 };

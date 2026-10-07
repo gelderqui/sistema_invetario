@@ -89,6 +89,22 @@
     filter: invert(1) brightness(2);
 }
 
+/* Formularios dentro de modales desplazables: el pie conserva las acciones
+   visibles y únicamente el cuerpo hace scroll cuando falta altura. */
+.modal-dialog-scrollable .modal-form-scrollable {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.modal-dialog-scrollable .modal-form-scrollable .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
 /* =============================================================
    Encabezados de tabla — fondo azul oscuro, texto blanco
    ============================================================= */

@@ -2,7 +2,7 @@
     <div class="container-fluid py-3 agente-bi-view">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
             <div>
-                <h3 class="mb-1">Agente BI</h3>
+                <h3 class="mb-1">{{ title }}</h3>
             </div>
             <div class="d-flex flex-wrap gap-2">
                 <button class="btn btn-outline-brand btn-sm" @click="openDeudaModal">Gestionar cuentas</button>
@@ -200,7 +200,7 @@
                         <h5 class="modal-title">Arqueo de caja chica</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" />
                     </div>
-                    <form @submit.prevent="saveArqueo">
+                    <form class="modal-form-scrollable" @submit.prevent="saveArqueo">
                         <div class="modal-body">
                             <div class="form-check mb-3">
                                 <input id="cargar-ultimo-arqueo" v-model="cargarUltimoArqueo" class="form-check-input" type="checkbox" :disabled="!arqueos.length" @change="cargarDatosUltimoArqueo">
@@ -242,6 +242,11 @@ import FormErrors from '@/components/FormErrors.vue';
 import TablePagination from '@/components/components_ui/TablePagination.vue';
 import { useAuthStore } from '@/stores/auth';
 import { formatMoney } from '@/utils/formatters';
+
+const props = defineProps({
+    title: { type: String, default: 'Agente BI' },
+    apiPrefix: { type: String, default: '/agente-bi' },
+});
 
 const authStore = useAuthStore();
 const loading = ref(false);
@@ -418,7 +423,7 @@ async function openDebtMovements(deuda) {
     debtMovements.value = [];
     historyTitle.value = `Movimientos: ${deuda.nombre_referencia}`;
     try {
-        const { data } = await axios.get(`/agente-bi/deudas/${deuda.id}/movimientos`);
+        const { data } = await axios.get(`${props.apiPrefix}/deudas/${deuda.id}/movimientos`);
         const payload = data?.data ?? {};
         selectedDebtHistory.value = payload.deuda ?? deuda;
         debtMovements.value = payload.movimientos ?? [];
@@ -439,7 +444,7 @@ async function loadCuadres(page = 1) {
     cuadresLoading.value = true;
     cuadreDetalle.value = null;
     try {
-        const { data } = await axios.get('/agente-bi/cuadres', { params: { page, per_page: cuadresPerPage.value } });
+        const { data } = await axios.get(`${props.apiPrefix}/cuadres`, { params: { page, per_page: cuadresPerPage.value } });
         cuadresHistory.value = data?.data ?? [];
         const meta = data?.meta ?? {};
         cuadresMeta.value = {
@@ -461,7 +466,7 @@ async function openCuadreDetail(cuadre) {
     cuadreDetalle.value = null;
     cuadreDetalleLoadingId.value = cuadre.id;
     try {
-        const { data } = await axios.get(`/agente-bi/cuadres/${cuadre.id}`);
+        const { data } = await axios.get(`${props.apiPrefix}/cuadres/${cuadre.id}`);
         cuadreDetalle.value = data?.data ?? null;
         cuadreDetailModal?.show();
     } catch (error) {
@@ -479,7 +484,7 @@ async function openFieldHistory(campo, title) {
     historyLoading.value = true;
     historyModal?.show();
     try {
-        const { data } = await axios.get(`/agente-bi/historial/campo/${campo}`);
+        const { data } = await axios.get(`${props.apiPrefix}/historial/campo/${campo}`);
         fieldHistory.value = data?.data ?? [];
     } catch (error) {
         setErrors(error, 'No se pudo cargar el historial.');
@@ -533,7 +538,7 @@ function cargarDatosUltimoArqueo() {
 async function loadData() {
     loading.value = true;
     try {
-        const { data } = await axios.get('/agente-bi/get');
+        const { data } = await axios.get(`${props.apiPrefix}/get`);
         const payload = data?.data ?? {};
         deudas.value = payload.deudas ?? [];
         arqueos.value = payload.arqueos ?? [];
@@ -544,7 +549,7 @@ async function loadData() {
             cuadreForm.value.caja = decimalInput(resumen.value.caja);
             cuadreFormInicializado.value = true;
         }
-    } catch (error) { setErrors(error, 'No se pudo cargar Agente BI.'); } finally { loading.value = false; }
+    } catch (error) { setErrors(error, `No se pudo cargar ${props.title}.`); } finally { loading.value = false; }
 }
 
 function openConfirmCuadre() {
@@ -553,7 +558,7 @@ function openConfirmCuadre() {
 async function saveCuadre() {
     errors.value = []; savingCuadre.value = true;
     try {
-        await axios.post('/agente-bi/cuadres', { ...cuadreForm.value, capital: Number(cuadreForm.value.capital || 0), banco: Number(cuadreForm.value.banco || 0), caja: Number(cuadreForm.value.caja || 0) });
+        await axios.post(`${props.apiPrefix}/cuadres`, { ...cuadreForm.value, capital: Number(cuadreForm.value.capital || 0), banco: Number(cuadreForm.value.banco || 0), caja: Number(cuadreForm.value.caja || 0) });
         formatCuadreField('capital');
         formatCuadreField('banco');
         formatCuadreField('caja');
@@ -567,7 +572,7 @@ async function saveCuadre() {
 async function saveDeuda() {
     errors.value = []; savingDeuda.value = true;
     try {
-        await axios.post('/agente-bi/deudas', { ...deudaForm.value, monto: Number(deudaForm.value.monto || 0) });
+        await axios.post(`${props.apiPrefix}/deudas`, { ...deudaForm.value, monto: Number(deudaForm.value.monto || 0) });
         deudaModal?.hide();
         deudaForm.value = emptyDeuda();
         await loadData();
@@ -577,7 +582,7 @@ async function saveDeuda() {
 async function saveMovimientoDeuda() {
     errors.value = []; savingMovimiento.value = true;
     try {
-        await axios.post(`/agente-bi/deudas/${movimientoForm.value.deuda_id}/movimientos`, { ...movimientoForm.value, monto: movimientoForm.value.tipo === 'anulacion' ? null : Number(movimientoForm.value.monto || 0) });
+        await axios.post(`${props.apiPrefix}/deudas/${movimientoForm.value.deuda_id}/movimientos`, { ...movimientoForm.value, monto: movimientoForm.value.tipo === 'anulacion' ? null : Number(movimientoForm.value.monto || 0) });
         deudaModal?.hide();
         movimientoForm.value = emptyMovimiento();
         await loadData();
@@ -587,7 +592,7 @@ async function saveMovimientoDeuda() {
 async function saveArqueo() {
     errors.value = []; savingArqueo.value = true;
     try {
-        await axios.post('/agente-bi/arqueos', { monto_sistema: arqueoForm.value.monto_sistema === null || arqueoForm.value.monto_sistema === '' ? null : Number(arqueoForm.value.monto_sistema), detalles: arqueoForm.value.detalles.map((detalle) => ({ ...detalle, cantidad: Number(detalle.cantidad || 0) })) });
+        await axios.post(`${props.apiPrefix}/arqueos`, { monto_sistema: arqueoForm.value.monto_sistema === null || arqueoForm.value.monto_sistema === '' ? null : Number(arqueoForm.value.monto_sistema), detalles: arqueoForm.value.detalles.map((detalle) => ({ ...detalle, cantidad: Number(detalle.cantidad || 0) })) });
         arqueoForm.value = { monto_sistema: null, detalles: defaultDetalles() };
         arqueoModal?.hide();
         await loadData();

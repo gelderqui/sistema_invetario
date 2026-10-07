@@ -8,6 +8,14 @@ return new class extends Migration
 {
     public function up(): void
     {
+        Schema::create('tipos_gasto', function (Blueprint $table): void {
+            $table->id();
+            $table->string('nombre')->unique();
+            $table->string('descripcion')->nullable();
+            $table->boolean('activo')->default(true);
+            $table->timestamps();
+        });
+
         Schema::create('gastos', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('tipo_gasto_id');
@@ -28,5 +36,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('gastos');
+        Schema::dropIfExists('tipos_gasto');
     }
 };
+

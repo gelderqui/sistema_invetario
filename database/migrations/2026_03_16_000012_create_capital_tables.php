@@ -8,6 +8,19 @@ return new class extends Migration
 {
     public function up(): void
     {
+        Schema::create('capital_cuentas', function (Blueprint $table): void {
+            $table->id();
+            $table->string('codigo', 40)->unique();
+            $table->string('nombre', 100);
+            $table->string('tipo', 30)->default('efectivo');
+            $table->string('descripcion', 255)->nullable();
+            $table->decimal('saldo_actual', 12, 4)->default(0);
+            $table->boolean('activo')->default(true);
+            $table->timestamps();
+
+            $table->index(['activo', 'tipo']);
+        });
+
         Schema::create('capital_movimientos', function (Blueprint $table): void {
             $table->id();
             $table->string('tipo', 40);
@@ -33,5 +46,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('capital_movimientos');
+        Schema::dropIfExists('capital_cuentas');
     }
 };
+

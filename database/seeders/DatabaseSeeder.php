@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
+            //Fase inicial
             ProductoUnidadMedidaSeeder::class,
             TipoGastoSeeder::class,
             MotivoAjusteSeeder::class,
@@ -22,6 +23,7 @@ class DatabaseSeeder extends Seeder
             CapitalSeeder::class,
             AuthorizationSeeder::class,
             CatalogDefaultsSeeder::class,
+            //Fin fase incial
         ]);
     }
 }

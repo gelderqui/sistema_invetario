@@ -5,8 +5,6 @@
             <button class="btn btn-outline-brand" :disabled="loading" @click="reloadAll">Actualizar</button>
         </div>
 
-        <FormErrors :errors="errors" />
-
         <div class="alert alert-info">
             Este modulo carga existencias iniciales sin registrar compras. Solo crea inventario, lotes y trazabilidad.
         </div>
@@ -99,12 +97,10 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import axios from '@/bootstrap';
-import FormErrors from '@/components/FormErrors.vue';
 import TablePagination from '@/components/components_ui/TablePagination.vue';
 
 const loading = ref(false);
 const saving = ref(false);
-const errors = ref([]);
 const productos = ref([]);
 const movimientos = ref([]);
 const pageInicial = ref(1);
@@ -139,7 +135,6 @@ async function reloadAll() {
 }
 
 async function guardar() {
-    errors.value = [];
     saving.value = true;
     try {
         await axios.post('/inventario/inicial/store', {
@@ -158,9 +153,8 @@ async function guardar() {
         };
 
         await reloadAll();
-    } catch (error) {
-        const backend = error.response?.data?.errors;
-        errors.value = backend ? Object.values(backend).flat() : [error.response?.data?.message ?? 'No se pudo registrar inventario inicial.'];
+    } catch {
+        // El interceptor global ya muestra el error en un toast.
     } finally {
         saving.value = false;
     }

@@ -75,6 +75,8 @@ class InventarioInicialController extends Controller
             'fecha_entrada' => ['required', 'date'],
             'fecha_vencimiento' => ['nullable', 'date', 'after_or_equal:fecha_entrada'],
             'observacion' => ['nullable', 'string', 'max:255'],
+        ], [], [
+            'producto_id' => 'producto',
         ]);
 
         $userId = (int) $request->user()->id;

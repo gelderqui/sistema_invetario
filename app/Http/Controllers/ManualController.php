@@ -13,8 +13,8 @@ class ManualController extends Controller
         $isAdmin = $user?->role?->code === 'admin';
 
         $manualPath = $isAdmin
-            ? base_path('readme/README_MANUAL_USUARIO.md')
-            : base_path('readme/README_MANUAL_OPERATIVO.md');
+            ? base_path('readme/manual/README_MANUAL_USUARIO.md')
+            : base_path('readme/manual/README_MANUAL_OPERATIVO.md');
 
         $title = $isAdmin ? 'Manual de Usuario' : 'Manual Operativo';
 
@@ -32,7 +32,7 @@ class ManualController extends Controller
             'data' => [
                 'titulo' => $title,
                 'markdown' => (string) file_get_contents($manualPath),
-                'archivo' => $isAdmin ? 'readme/README_MANUAL_USUARIO.md' : 'readme/README_MANUAL_OPERATIVO.md',
+                'archivo' => $isAdmin ? 'readme/manual/README_MANUAL_USUARIO.md' : 'readme/manual/README_MANUAL_OPERATIVO.md',
             ],
         ]);
     }

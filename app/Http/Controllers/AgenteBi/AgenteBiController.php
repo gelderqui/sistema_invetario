@@ -19,7 +19,7 @@ class AgenteBiController extends Controller
     public function index(): JsonResponse
     {
         $deudas = AgenteBiDeuda::query()
-            ->with('usuario:id,name')
+            ->with('usuario:id,username')
             ->withMax([
                 'movimientos as ultima_actualizacion' => fn ($query) => $query->where('tipo', '!=', 'cargo'),
             ], 'fecha')
@@ -28,14 +28,14 @@ class AgenteBiController extends Controller
             ->get();
 
         $arqueos = AgenteBiArqueoCajaChica::query()
-            ->with(['usuario:id,name', 'detalles'])
+            ->with(['usuario:id,username', 'detalles'])
             ->orderByDesc('fecha')
             ->orderByDesc('id')
             ->limit(20)
             ->get();
 
         $cuadres = AgenteBiCuadre::query()
-            ->with(['usuario:id,name', 'arqueoCajaChica:id,monto_contado,fecha'])
+            ->with(['usuario:id,username', 'arqueoCajaChica:id,monto_contado,fecha'])
             ->orderByDesc('fecha')
             ->orderByDesc('id')
             ->limit(30)
@@ -87,7 +87,7 @@ class AgenteBiController extends Controller
         abort_unless(in_array($campo, $camposPermitidos, true), 404);
 
         $cuadres = AgenteBiCuadre::query()
-            ->with('usuario:id,name')
+            ->with('usuario:id,username')
             ->when($campo === 'caja_chica', fn ($query) => $query->whereNotNull('agente_bi_arqueo_caja_chica_id'))
             ->orderBy('fecha')
             ->orderBy('id')
@@ -106,7 +106,7 @@ class AgenteBiController extends Controller
                 'id' => $cuadre->id,
                 'valor' => $cuadre->{$campo},
                 'fecha' => $cuadre->fecha,
-                'usuario' => $cuadre->usuario?->name,
+                'usuario' => $cuadre->usuario?->username,
             ])
             ->values()
             ->reverse()
@@ -123,7 +123,7 @@ class AgenteBiController extends Controller
         ]);
         $perPage = min(max((int) $request->integer('per_page', 5), 5), 50);
         $paginador = AgenteBiCuadre::query()
-            ->with(['usuario:id,name', 'arqueoCajaChica:id,monto_contado,fecha'])
+            ->with(['usuario:id,username', 'arqueoCajaChica:id,monto_contado,fecha'])
             ->when($validated['fecha_inicio'] ?? null, fn ($query, $fechaInicio) => $query->whereDate('fecha', '>=', $fechaInicio))
             ->when($validated['fecha_fin'] ?? null, fn ($query, $fechaFin) => $query->whereDate('fecha', '<=', $fechaFin))
             ->orderByDesc('fecha')
@@ -144,8 +144,8 @@ class AgenteBiController extends Controller
     public function showCuadre(AgenteBiCuadre $cuadre): JsonResponse
     {
         $cuadre->load([
-            'usuario:id,name',
-            'arqueoCajaChica' => fn ($query) => $query->with(['usuario:id,name', 'detalles']),
+            'usuario:id,username',
+            'arqueoCajaChica' => fn ($query) => $query->with(['usuario:id,username', 'detalles']),
         ]);
 
         return response()->json(['data' => $cuadre]);
@@ -191,7 +191,7 @@ class AgenteBiController extends Controller
 
         return response()->json([
             'message' => 'Cuenta registrada correctamente.',
-            'data' => $deuda->load('usuario:id,name'),
+            'data' => $deuda->load('usuario:id,username'),
         ], 201);
     }
 
@@ -207,14 +207,14 @@ class AgenteBiController extends Controller
 
         return response()->json([
             'message' => 'Datos de cuenta actualizados.',
-            'data' => $deuda->fresh()->load('usuario:id,name'),
+            'data' => $deuda->fresh()->load('usuario:id,username'),
         ]);
     }
 
     public function movimientosDeuda(AgenteBiDeuda $deuda): JsonResponse
     {
         $movimientos = $deuda->movimientos()
-            ->with('usuario:id,name')
+            ->with('usuario:id,username')
             ->orderByDesc('fecha')
             ->orderByDesc('id')
             ->get();
@@ -289,7 +289,7 @@ class AgenteBiController extends Controller
 
         return response()->json([
             'message' => 'Movimiento de cuenta registrado.',
-            'data' => $deuda->fresh()->load('usuario:id,name'),
+            'data' => $deuda->fresh()->load('usuario:id,username'),
         ]);
     }
 
@@ -345,7 +345,7 @@ class AgenteBiController extends Controller
 
         return response()->json([
             'message' => 'Arqueo de caja chica guardado.',
-            'data' => $arqueo->load(['detalles', 'usuario:id,name']),
+            'data' => $arqueo->load(['detalles', 'usuario:id,username']),
         ], 201);
     }
 
@@ -399,7 +399,7 @@ class AgenteBiController extends Controller
 
         return response()->json([
             'message' => 'Cuadre Agente BI guardado.',
-            'data' => $cuadre->load(['usuario:id,name', 'arqueoCajaChica:id,monto_contado,fecha']),
+            'data' => $cuadre->load(['usuario:id,username', 'arqueoCajaChica:id,monto_contado,fecha']),
         ], 201);
     }
 

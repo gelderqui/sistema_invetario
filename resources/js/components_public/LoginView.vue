@@ -17,6 +17,11 @@
                         </ul>
                     </div>
 
+                    <div v-if="sessionExpired" class="alert alert-warning d-flex gap-2" role="status">
+                        <FontAwesomeIcon icon="fa-solid fa-clock" class="mt-1" />
+                        <span>Tu sesión venció. Inicia sesión nuevamente.</span>
+                    </div>
+
                     <form class="d-grid gap-3" novalidate @submit.prevent="submit">
 
                         <div>
@@ -66,7 +71,7 @@
 
                         <div class="form-check">
                             <input id="remember" v-model="form.remember" class="form-check-input" type="checkbox">
-                            <label class="form-check-label" for="remember">Mantener sesión iniciada</label>s
+                            <label class="form-check-label" for="remember">Mantener sesión iniciada</label>
                         </div>
 
                         <button type="submit" class="btn btn-dark btn-lg w-100 mt-1" :disabled="loading">
@@ -82,7 +87,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import axios from '@/bootstrap';
@@ -103,6 +108,7 @@ const errorMessages = ref([]);
 const showPassword = ref(false);
 const nombreSistema = ref('Sistema POS e Inventario');
 const loading = ref(false);
+const sessionExpired = computed(() => route.query.session_expired === '1');
 
 onMounted(async () => {
     try {

@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 import { beginLoading, endLoading } from '@/components/components_ui/loadingState';
+import { useAuthStore } from '@/stores/auth';
 
 window.axios = axios;
 
@@ -9,6 +10,8 @@ window.axios.defaults.withCredentials = true;
 window.axios.defaults.withXSRFToken = true;
 window.axios.defaults.headers.common.Accept = 'application/json';
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+
+let sessionRedirectPending = false;
 
 function extractApiErrorMessage(error) {
 	const data = error?.response?.data;
@@ -52,11 +55,29 @@ function navigateTo(path) {
 	const router = window.__APP_ROUTER__;
 
 	if (router) {
-		router.replace(path);
+		return router.replace(path);
+	}
+
+	return window.location.replace(path);
+}
+
+function redirectExpiredSession(error, currentRelativeUrl) {
+	error.__notifiedToUser = true;
+
+	const authStore = useAuthStore();
+	authStore.clearUser();
+	authStore.setInitialized(true);
+
+	if (sessionRedirectPending) {
 		return;
 	}
 
-	window.location.replace(path);
+	sessionRedirectPending = true;
+	const loginPath = `/login?session_expired=1&redirect=${encodeURIComponent(currentRelativeUrl)}`;
+
+	Promise.resolve(navigateTo(loginPath)).finally(() => {
+		sessionRedirectPending = false;
+	});
 }
 
 window.axios.interceptors.request.use(
@@ -90,8 +111,10 @@ window.axios.interceptors.response.use(
 		const currentPath = window.location.pathname;
 		const currentRelativeUrl = getCurrentRelativeUrl();
 
-		if (status === 401 && currentPath !== '/login') {
-			navigateTo(`/login?redirect=${encodeURIComponent(currentRelativeUrl)}`);
+		if ((status === 401 || status === 419) && currentPath !== '/login') {
+			redirectExpiredSession(error, currentRelativeUrl);
+
+			return Promise.reject(error);
 		}
 
 		if ((status === 403 || status === 404) && currentPath !== '/login' && currentPath !== '/error') {

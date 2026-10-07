@@ -322,12 +322,7 @@ const menuItems = computed(() => {
 });
 
 function toggleGroup(name) {
-    const idx = openGroups.value.indexOf(name);
-    if (idx >= 0) {
-        openGroups.value.splice(idx, 1);
-    } else {
-        openGroups.value.push(name);
-    }
+    openGroups.value = openGroups.value.includes(name) ? [] : [name];
 }
 
 function isGroupOpen(name) {
@@ -340,9 +335,8 @@ watch(
     (currentPath) => {
         for (const item of menuItems.value) {
             if (item.children?.some((child) => child.ruta === currentPath)) {
-                if (!openGroups.value.includes(item.name)) {
-                    openGroups.value.push(item.name);
-                }
+                openGroups.value = [item.name];
+                return;
             }
         }
     },

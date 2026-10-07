@@ -68,7 +68,7 @@
                     <tbody>
                         <tr v-if="!cuadresHistory.length"><td colspan="6" class="text-center text-muted py-3">No hay cuadres registrados.</td></tr>
                         <template v-for="cuadre in cuadresHistory" :key="cuadre.id">
-                            <tr><td>{{ dateTime(cuadre.fecha) }}</td><td class="text-end">Q {{ q(cuadre.total_financiado) }}</td><td class="text-end">Q {{ q(cuadre.total_ubicado) }}</td><td class="text-end" :class="Number(cuadre.diferencia) >= 0 ? 'text-success' : 'text-danger'">Q {{ q(cuadre.diferencia) }}</td><td>{{ cuadre.usuario?.name || '—' }}</td><td class="text-end"><button type="button" class="btn btn-sm btn-outline-brand text-nowrap" :disabled="cuadreDetalleLoadingId === cuadre.id" @click="openCuadreDetail(cuadre)">{{ cuadreDetalleLoadingId === cuadre.id ? 'Cargando...' : 'Ver detalle' }}</button></td></tr>
+                            <tr><td>{{ dateTime(cuadre.fecha) }}</td><td class="text-end">Q {{ q(cuadre.total_financiado) }}</td><td class="text-end">Q {{ q(cuadre.total_ubicado) }}</td><td class="text-end" :class="Number(cuadre.diferencia) >= 0 ? 'text-success' : 'text-danger'">Q {{ q(cuadre.diferencia) }}</td><td>{{ cuadre.usuario?.username || '—' }}</td><td class="text-end"><button type="button" class="btn btn-sm btn-outline-brand text-nowrap" :disabled="cuadreDetalleLoadingId === cuadre.id" @click="openCuadreDetail(cuadre)">{{ cuadreDetalleLoadingId === cuadre.id ? 'Cargando...' : 'Ver detalle' }}</button></td></tr>
                         </template>
                     </tbody>
                 </table>
@@ -131,7 +131,7 @@
                                 <thead><tr><th>Fecha</th><th>Movimiento</th><th>Descripción</th><th>Usuario</th><th class="text-end">Monto</th><th class="text-end">Saldo anterior</th><th class="text-end">Saldo posterior</th></tr></thead>
                                 <tbody>
                                     <tr v-if="!debtMovements.length"><td colspan="7" class="text-center text-muted py-3">Sin movimientos registrados.</td></tr>
-                                    <tr v-for="item in debtMovements" :key="item.id"><td>{{ dateTime(item.fecha) }}</td><td>{{ debtMovementLabel(item.tipo) }}</td><td>{{ item.descripcion || '—' }}</td><td>{{ item.usuario?.name || '—' }}</td><td class="text-end">Q {{ q(item.monto) }}</td><td class="text-end">Q {{ q(item.saldo_anterior) }}</td><td class="text-end">Q {{ q(item.saldo_posterior) }}</td></tr>
+                                    <tr v-for="item in debtMovements" :key="item.id"><td>{{ dateTime(item.fecha) }}</td><td>{{ debtMovementLabel(item.tipo) }}</td><td>{{ item.descripcion || '—' }}</td><td>{{ item.usuario?.username || '—' }}</td><td class="text-end">Q {{ q(item.monto) }}</td><td class="text-end">Q {{ q(item.saldo_anterior) }}</td><td class="text-end">Q {{ q(item.saldo_posterior) }}</td></tr>
                                 </tbody>
                             </table>
                             <table v-else class="table table-sm align-middle mb-0">

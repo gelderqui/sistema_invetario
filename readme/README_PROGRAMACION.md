@@ -51,6 +51,11 @@ Politica de modelos:
 - Todo modelo de dominio debe definir `fillable` para controlar asignacion masiva.
 - Evitar `$guarded = []` en modelos del sistema.
 
+Politica de arqueos:
+
+- Las denominaciones oficiales se centralizan en `denominacionesArqueoPermitidas()` dentro de `app/Support/helpers.php`.
+- Todo arqueo debe ejecutar `validarDenominacionesArqueo()` en backend antes de calcular o persistir sus detalles.
+
 ## Reutilizacion de logica
 
 - Si una funcion se reutiliza en varios modulos: mover a helper.

@@ -302,8 +302,12 @@ class AgenteBiController extends Controller
             'detalles.*.tipo' => ['required', Rule::in(['billete', 'moneda', 'paquete'])],
             'detalles.*.denominacion' => ['required', 'numeric', 'gt:0'],
             'detalles.*.unidades_por_paquete' => ['required', 'integer', 'min:1'],
-            'detalles.*.cantidad' => ['required', 'numeric', 'min:0'],
+            'detalles.*.cantidad' => ['required', 'integer', 'min:0'],
+        ], [
+            'detalles.*.cantidad.integer' => 'La cantidad de cada denominación debe ser un número entero.',
         ]);
+
+        validarDenominacionesArqueo($validated['detalles']);
 
         $arqueo = DB::transaction(function () use ($validated, $request): AgenteBiArqueoCajaChica {
             $detalles = collect($validated['detalles'])->map(function (array $detalle): array {

@@ -43,6 +43,79 @@ if (! function_exists('toMoney')) {
     }
 }
 
+if (! function_exists('denominacionesArqueoPermitidas')) {
+    /**
+     * @return list<array{tipo: string, denominacion: float, unidades_por_paquete: int}>
+     */
+    function denominacionesArqueoPermitidas(): array
+    {
+        return [
+            ['tipo' => 'billete', 'denominacion' => 200.00, 'unidades_por_paquete' => 1],
+            ['tipo' => 'billete', 'denominacion' => 100.00, 'unidades_por_paquete' => 1],
+            ['tipo' => 'billete', 'denominacion' => 50.00, 'unidades_por_paquete' => 1],
+            ['tipo' => 'billete', 'denominacion' => 20.00, 'unidades_por_paquete' => 1],
+            ['tipo' => 'billete', 'denominacion' => 10.00, 'unidades_por_paquete' => 1],
+            ['tipo' => 'billete', 'denominacion' => 5.00, 'unidades_por_paquete' => 1],
+            ['tipo' => 'paquete', 'denominacion' => 1.00, 'unidades_por_paquete' => 100],
+            ['tipo' => 'moneda', 'denominacion' => 1.00, 'unidades_por_paquete' => 1],
+            ['tipo' => 'moneda', 'denominacion' => 0.50, 'unidades_por_paquete' => 1],
+            ['tipo' => 'moneda', 'denominacion' => 0.25, 'unidades_por_paquete' => 1],
+            ['tipo' => 'moneda', 'denominacion' => 0.10, 'unidades_por_paquete' => 1],
+            ['tipo' => 'moneda', 'denominacion' => 0.05, 'unidades_por_paquete' => 1],
+        ];
+    }
+}
+
+if (! function_exists('validarDenominacionesArqueo')) {
+    /**
+     * @param list<array{tipo: string, denominacion: float|int|string, unidades_por_paquete: int|numeric-string, cantidad: float|int|string}> $detalles
+     */
+    function validarDenominacionesArqueo(array $detalles): void
+    {
+        $clave = static fn (string $tipo, float|int|string $denominacion, int|string $unidadesPorPaquete): string => implode('|', [
+            $tipo,
+            number_format(toMoney($denominacion, 2), 2, '.', ''),
+            (string) ((int) $unidadesPorPaquete),
+        ]);
+
+        $permitidas = collect(denominacionesArqueoPermitidas())
+            ->mapWithKeys(fn (array $denominacion): array => [
+                $clave(
+                    $denominacion['tipo'],
+                    $denominacion['denominacion'],
+                    $denominacion['unidades_por_paquete']
+                ) => true,
+            ]);
+
+        $errores = [];
+        $recibidas = [];
+
+        foreach ($detalles as $indice => $detalle) {
+            $detalleClave = $clave(
+                (string) $detalle['tipo'],
+                $detalle['denominacion'],
+                $detalle['unidades_por_paquete']
+            );
+
+            if (! $permitidas->has($detalleClave)) {
+                $errores["detalles.$indice.denominacion"][] = 'La denominación indicada no está permitida para arqueos.';
+                continue;
+            }
+
+            if (isset($recibidas[$detalleClave])) {
+                $errores["detalles.$indice.denominacion"][] = 'No puede repetir una denominación en el mismo arqueo.';
+                continue;
+            }
+
+            $recibidas[$detalleClave] = true;
+        }
+
+        if ($errores !== []) {
+            throw ValidationException::withMessages($errores);
+        }
+    }
+}
+
 if (! function_exists('weightedAverageCost')) {
     function weightedAverageCost(
         float|int|string|null $currentStock,

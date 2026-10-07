@@ -35,15 +35,15 @@
                         <label class="form-label mb-1">Capital</label>
                         <button v-if="esAdmin" type="button" class="btn btn-link btn-sm p-0" @click="capitalEditable = !capitalEditable">{{ capitalEditable ? 'Bloquear' : 'Modificar' }}</button>
                     </div>
-                    <input v-model.number="cuadreForm.capital" class="form-control" :class="{ 'bg-light': !esAdmin || !capitalEditable }" type="number" min="0" step="0.01" required :readonly="!esAdmin || !capitalEditable" @blur="formatCuadreField('capital')">
+                    <input v-model="cuadreForm.capital" class="form-control" :class="{ 'bg-light': !esAdmin || !capitalEditable }" type="text" inputmode="decimal" required :readonly="!esAdmin || !capitalEditable" @blur="formatCuadreField('capital')">
                 </div>
                 <div class="col-12 col-md-3">
                     <label class="form-label">Caja</label>
-                    <input v-model.number="cuadreForm.caja" class="form-control" type="number" min="0" step="0.01" required @blur="formatCuadreField('caja')">
+                    <input v-model="cuadreForm.caja" class="form-control" type="text" inputmode="decimal" required @blur="formatCuadreField('caja')">
                 </div>
                 <div class="col-12 col-md-3">
                     <label class="form-label">Banco</label>
-                    <input v-model.number="cuadreForm.banco" class="form-control" type="number" min="0" step="0.01" required @blur="formatCuadreField('banco')">
+                    <input v-model="cuadreForm.banco" class="form-control" type="text" inputmode="decimal" required @blur="formatCuadreField('banco')">
                 </div>
                 <div class="col-12 col-md-3">
                     <label class="form-label">Último arqueo de caja chica</label>
@@ -215,7 +215,7 @@
                                             <td class="ps-3">{{ detalle.tipo }}</td>
                                             <td>Q {{ q(detalle.denominacion) }}</td>
                                             <td>{{ detalle.unidades_por_paquete }}</td>
-                                            <td><input v-model.number="detalle.cantidad" class="form-control form-control-sm" type="number" min="0" step="0.01"></td>
+                                            <td><input v-model.number="detalle.cantidad" class="form-control form-control-sm" type="number" min="0" step="1"></td>
                                             <td class="text-end pe-3">Q {{ q(subtotalDetalle(detalle)) }}</td>
                                         </tr>
                                     </tbody>
@@ -241,7 +241,7 @@ import axios from '@/bootstrap';
 import FormErrors from '@/components/FormErrors.vue';
 import TablePagination from '@/components/components_ui/TablePagination.vue';
 import { useAuthStore } from '@/stores/auth';
-import { formatMoney } from '@/utils/formatters';
+import { formatMoney, formatMoneyInput, parseMoneyInput } from '@/utils/formatters';
 
 const props = defineProps({
     title: { type: String, default: 'Agente BI' },
@@ -292,6 +292,7 @@ let arqueoModal = null;
 const emptyDeuda = () => ({ tipo: 'cuenta_por_pagar', nombre_referencia: '', descripcion: '', monto: null });
 const emptyMovimiento = () => ({ deuda_id: null, tipo: 'abono', monto: null, descripcion: '' });
 const defaultDetalles = () => [
+    { tipo: 'billete', denominacion: 200, unidades_por_paquete: 1, cantidad: 0 },
     { tipo: 'billete', denominacion: 100, unidades_por_paquete: 1, cantidad: 0 },
     { tipo: 'billete', denominacion: 50, unidades_por_paquete: 1, cantidad: 0 },
     { tipo: 'billete', denominacion: 20, unidades_por_paquete: 1, cantidad: 0 },
@@ -299,6 +300,10 @@ const defaultDetalles = () => [
     { tipo: 'billete', denominacion: 5, unidades_por_paquete: 1, cantidad: 0 },
     { tipo: 'paquete', denominacion: 1, unidades_por_paquete: 100, cantidad: 0 },
     { tipo: 'moneda', denominacion: 1, unidades_por_paquete: 1, cantidad: 0 },
+    { tipo: 'moneda', denominacion: 0.50, unidades_por_paquete: 1, cantidad: 0 },
+    { tipo: 'moneda', denominacion: 0.25, unidades_por_paquete: 1, cantidad: 0 },
+    { tipo: 'moneda', denominacion: 0.10, unidades_por_paquete: 1, cantidad: 0 },
+    { tipo: 'moneda', denominacion: 0.05, unidades_por_paquete: 1, cantidad: 0 },
 ];
 const deudaForm = ref(emptyDeuda());
 const movimientoForm = ref(emptyMovimiento());
@@ -316,9 +321,9 @@ const filteredDebtHistory = computed(() => deudas.value.filter((item) => {
 const totalArqueo = computed(() => arqueoForm.value.detalles.reduce((total, detalle) => total + subtotalDetalle(detalle), 0));
 const esAdmin = computed(() => authStore.user?.role?.code === 'admin');
 const previewCuadre = computed(() => {
-    const capital = Number(cuadreForm.value.capital || 0);
-    const banco = Number(cuadreForm.value.banco || 0);
-    const caja = Number(cuadreForm.value.caja || 0);
+    const capital = parseMoneyInput(cuadreForm.value.capital);
+    const banco = parseMoneyInput(cuadreForm.value.banco);
+    const caja = parseMoneyInput(cuadreForm.value.caja);
     const totalFinanciado = capital + Number(resumen.value.cuentas_por_pagar_total || 0);
     const totalUbicado = banco + caja + Number(resumen.value.ultimo_arqueo_monto || 0) + Number(resumen.value.cuentas_por_cobrar_total || 0);
 
@@ -393,7 +398,7 @@ function openSummaryCard(card) {
 
     if (card.historyField) openFieldHistory(card.historyField, card.historyTitle);
 }
-function decimalInput(value) { return Number(value || 0).toFixed(2); }
+function decimalInput(value) { return formatMoneyInput(value); }
 function formatCuadreField(campo) { cuadreForm.value[campo] = decimalInput(cuadreForm.value[campo]); }
 function dateTime(value) { return value ? new Date(value).toLocaleString('es-GT') : '—'; }
 function dateOnly(value) {
@@ -558,7 +563,7 @@ function openConfirmCuadre() {
 async function saveCuadre() {
     errors.value = []; savingCuadre.value = true;
     try {
-        await axios.post(`${props.apiPrefix}/cuadres`, { ...cuadreForm.value, capital: Number(cuadreForm.value.capital || 0), banco: Number(cuadreForm.value.banco || 0), caja: Number(cuadreForm.value.caja || 0) });
+        await axios.post(`${props.apiPrefix}/cuadres`, { ...cuadreForm.value, capital: parseMoneyInput(cuadreForm.value.capital), banco: parseMoneyInput(cuadreForm.value.banco), caja: parseMoneyInput(cuadreForm.value.caja) });
         formatCuadreField('capital');
         formatCuadreField('banco');
         formatCuadreField('caja');

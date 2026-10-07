@@ -215,7 +215,7 @@
                                             <td class="ps-3">{{ detalle.tipo }}</td>
                                             <td>Q {{ q(detalle.denominacion) }}</td>
                                             <td>{{ detalle.unidades_por_paquete }}</td>
-                                            <td><input v-model.number="detalle.cantidad" class="form-control form-control-sm" type="number" min="0" step="1"></td>
+                                            <td><input v-model.number="detalle.cantidad" class="form-control form-control-sm" type="text" inputmode="numeric"></td>
                                             <td class="text-end pe-3">Q {{ q(subtotalDetalle(detalle)) }}</td>
                                         </tr>
                                     </tbody>

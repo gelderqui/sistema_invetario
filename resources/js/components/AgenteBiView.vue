@@ -516,6 +516,7 @@ async function saveDeudaAction() {
     else await saveMovimientoDeuda();
 }
 function openArqueoModal() {
+    errors.value = [];
     cargarUltimoArqueo.value = false;
     arqueoForm.value = { monto_sistema: null, detalles: defaultDetalles() };
     arqueoModal?.show();
@@ -601,6 +602,6 @@ async function saveArqueo() {
         arqueoForm.value = { monto_sistema: null, detalles: defaultDetalles() };
         arqueoModal?.hide();
         await loadData();
-    } catch (error) { setErrors(error, 'No se pudo guardar el arqueo.'); } finally { savingArqueo.value = false; }
+    } catch (error) { errors.value = []; } finally { savingArqueo.value = false; }
 }
 </script>

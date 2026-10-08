@@ -22,7 +22,7 @@ Reglas clave:
 2. Agregar productos.
 3. Verificar cantidades.
 4. Aplicar descuento si corresponde.
-5. Cobrar en efectivo y guardar.
+5. Elegir efectivo o crédito y guardar.
 
 Reglas clave:
 
@@ -36,7 +36,16 @@ Anulaciones y devoluciones:
 - Venta del mismo dia: se anula venta.
 - Venta de dias anteriores: se registra devolucion.
 - Una venta con devoluciones activas no puede anularse.
-- Al anular venta/devolucion, el sistema ajusta inventario y caja automaticamente.
+- En una devolución de venta al contado debes tener caja abierta, porque el sistema registra el reembolso.
+- En una devolución de venta a crédito, el sistema reduce primero la deuda; solo devuelve efectivo si queda un excedente después de cubrirla.
+- Al anular venta/devolución, el sistema ajusta inventario y sus efectos financieros automáticamente.
+
+## 2.1 Cuentas por cobrar
+
+- Una venta a crédito crea una cuenta pendiente del cliente.
+- Para registrar un abono debes tener caja abierta.
+- Usa **Anular** únicamente si el último abono fue equivocado; se requiere que la misma caja siga abierta.
+- Usa **Incobrable** solo cuando la deuda no podrá recuperarse; debes escribir el motivo.
 
 ## 3. Compras
 

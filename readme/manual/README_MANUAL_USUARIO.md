@@ -39,7 +39,7 @@ Este es el orden recomendado cuando empiezas a usar el sistema:
 ### 2.2 Reglas importantes
 
 - Para vender, el usuario debe tener caja abierta.
-- Metodo de pago en venta nueva: solo `efectivo`.
+- Metodo de pago en venta nueva: `efectivo` o `credito`.
 - El precio unitario de venta lo toma backend desde el producto.
 - El arqueo no bloquea; el cierre si bloquea cuando hay faltante sobre umbral.
 - Si existe arqueo, el cierre usa el monto contado del ultimo arqueo.
@@ -48,7 +48,22 @@ Este es el orden recomendado cuando empiezas a usar el sistema:
 
 - Venta del mismo dia: anular venta.
 - Venta de dias anteriores: devolucion.
-- No se elimina historico fisico; se compensa con movimientos de inventario/caja.
+- Cualquier usuario con permiso de Devoluciones puede procesar una devolución.
+- La fecha se asigna automáticamente al día actual.
+- Una venta al contado se reembolsa desde la caja abierta del usuario.
+- En una venta a crédito, el sistema baja primero la deuda. Si lo devuelto supera el saldo, reembolsa el excedente desde caja.
+- Al anular una devolución, el sistema revierte inventario y el efecto en caja o crédito. Si hubo reembolso, la caja original debe seguir abierta y pertenecer al usuario que lo realizó.
+- No se elimina histórico físico; se compensa con movimientos trazables.
+
+### 2.4 Ventas a crédito y cuentas por cobrar
+
+Al guardar una venta a crédito debes seleccionar un cliente. El sistema crea la cuenta por cobrar por el total de la venta.
+
+- Un abono se recibe en efectivo y requiere que quien lo registre tenga caja abierta.
+- El abono disminuye el saldo de la cuenta y aumenta la caja.
+- En el detalle de la cuenta, el último abono vigente puede anularse si la misma caja sigue abierta y pertenece al usuario que lo recibió.
+- La anulación del abono vuelve a aumentar la deuda y saca el mismo monto de caja.
+- Si una deuda ya no se recuperará, se puede marcar como **incobrable** indicando el motivo. Esto cierra su saldo y se refleja como pérdida en Reportes.
 
 ---
 
@@ -127,6 +142,7 @@ Muestra la foto actual del negocio:
 - Caja general.
 - Banco.
 - Total efectivo.
+- Cuentas por cobrar.
 - Inventario valorizado.
 - Total negocio.
 - Inversion inicial.
@@ -134,7 +150,7 @@ Muestra la foto actual del negocio:
 
 Formula principal:
 
-- `total_negocio = efectivo_total + inventario_valorizado`
+- `total_negocio = efectivo_total + cuentas_por_cobrar + inventario_valorizado`
 - `resultado = total_negocio - inversion_inicial`
 
 ### 5.2 Utilidad del periodo
@@ -149,6 +165,7 @@ Muestra:
 - Ganancia bruta.
 - Gastos.
 - Perdidas de inventario.
+- Pérdidas por cuentas incobrables.
 - Ganancia neta.
 
 ### 5.3 Flujo de caja

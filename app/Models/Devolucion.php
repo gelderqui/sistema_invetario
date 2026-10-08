@@ -16,6 +16,13 @@ class Devolucion extends Model
         'fecha',
         'estado',
         'total',
+        'tipo_reintegro',
+        'monto_reembolso_efectivo',
+        'monto_aplicado_credito',
+        'movimiento_caja_id',
+        'venta_credito_movimiento_id',
+        'movimiento_caja_reversion_id',
+        'venta_credito_movimiento_reversion_id',
     ];
 
     protected function casts(): array
@@ -24,6 +31,8 @@ class Devolucion extends Model
             'fecha' => 'date',
             'estado' => 'string',
             'total' => 'decimal:4',
+            'monto_reembolso_efectivo' => 'decimal:4',
+            'monto_aplicado_credito' => 'decimal:4',
         ];
     }
 

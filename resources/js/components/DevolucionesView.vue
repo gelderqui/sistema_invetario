@@ -12,19 +12,22 @@
                 <strong>Registrar devolucion</strong>
             </div>
             <div class="card-body">
+                <div class="alert alert-light border small mb-3">
+                    Las ventas al contado se reembolsan desde la caja abierta. En ventas a crédito, primero se reduce la deuda y solo se reembolsa efectivo si el valor devuelto supera el saldo pendiente.
+                </div>
                 <div class="row g-3 align-items-end">
                     <div class="col-12 col-md-6">
                         <label class="form-label fw-semibold">Venta</label>
                         <select v-model="selectedVentaId" class="form-select" @change="onVentaChange">
                             <option :value="null">Seleccione una venta</option>
                             <option v-for="v in ventasCatalogo" :key="v.id" :value="v.id">
-                                {{ v.numero }} | {{ fmtDate(v.fecha_venta) }} | Q {{ formatMoney(v.total) }}
+                                {{ v.numero }} | {{ fmtDate(v.fecha_venta) }} | {{ v.metodo_pago === 'credito' ? 'Crédito' : 'Efectivo' }} | {{ v.usuario?.username || '—' }} | Q {{ formatMoney(v.total) }}
                             </option>
                         </select>
                     </div>
                     <div class="col-12 col-md-3">
                         <label class="form-label fw-semibold">Fecha</label>
-                        <input v-model="form.fecha" type="date" class="form-control">
+                        <input :value="today" type="date" class="form-control" readonly>
                     </div>
                     <div class="col-12 col-md-3 d-grid">
                         <button class="btn btn-brand" :disabled="saving || !form.items.length" @click="guardar">Guardar devolucion</button>
@@ -76,25 +79,31 @@
                             <th>Fecha</th>
                             <th>Usuario</th>
                             <th>Estado</th>
+                            <th>Resolución</th>
                             <th>Total</th>
+                            <th>Reembolso</th>
+                            <th>Aplicado a deuda</th>
                             <th class="text-end">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-if="!totalDevoluciones">
-                            <td colspan="7" class="text-center text-body-secondary py-3">Sin devoluciones registradas.</td>
+                            <td colspan="10" class="text-center text-body-secondary py-3">Sin devoluciones registradas.</td>
                         </tr>
                         <tr v-for="d in paginatedDevoluciones" :key="d.id">
                             <td>#{{ d.id }}</td>
                             <td>{{ d.venta?.numero || '-' }}</td>
                             <td>{{ fmtDate(d.fecha) }}</td>
-                            <td>{{ d.usuario?.name || '-' }}</td>
+                            <td>{{ d.usuario?.username || '-' }}</td>
                             <td>
                                 <span :class="['badge text-uppercase', d.estado === 'anulada' ? 'text-bg-danger' : 'text-bg-success']">
                                     {{ d.estado }}
                                 </span>
                             </td>
+                            <td>{{ resolutionLabel(d.tipo_reintegro) }}</td>
                             <td class="fw-semibold">Q {{ formatMoney(d.total) }}</td>
+                            <td>Q {{ formatMoney(d.monto_reembolso_efectivo) }}</td>
+                            <td>Q {{ formatMoney(d.monto_aplicado_credito) }}</td>
                             <td class="text-end">
                                 <button type="button" class="btn btn-sm btn-outline-brand" title="Imprimir recibo" @click="openTicket(d.id)">
                                     <FontAwesomeIcon icon="fa-solid fa-print" />
@@ -142,11 +151,9 @@ const selectedVentaId = ref(null);
 const receiptModalRef = ref(null);
 const pageDevoluciones = ref(1);
 const perPageDevoluciones = ref(10);
+const today = new Date().toISOString().slice(0, 10);
 
-const form = ref({
-    fecha: new Date().toISOString().slice(0, 10),
-    items: [],
-});
+const form = ref({ items: [] });
 
 const detallesVenta = computed(() => {
     const venta = ventasCatalogo.value.find((v) => v.id === Number(selectedVentaId.value));
@@ -202,7 +209,6 @@ async function guardar() {
 
         const { data } = await axios.post('/ventas/devoluciones/store', {
             venta_id: Number(selectedVentaId.value),
-            fecha: form.value.fecha,
             items,
         });
 
@@ -223,6 +229,10 @@ async function guardar() {
 function fmtDate(value) {
     if (!value) return '-';
     return new Date(value).toLocaleString('es-GT');
+}
+
+function resolutionLabel(value) {
+    return ({ efectivo: 'Efectivo', credito: 'Cuenta por cobrar', mixto: 'Mixto' }[value] ?? 'Histórica');
 }
 
 async function openTicket(id) {

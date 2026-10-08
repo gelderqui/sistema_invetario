@@ -36,7 +36,7 @@ Este documento describe flujos operativos punta a punta que impactan dinero, inv
 4. Se actualiza stock y costos del producto.
 5. No se crea compra ni se afecta historial de proveedores.
 
-## 3. Venta -> inventario -> caja
+## 3. Venta -> inventario -> caja o cuenta por cobrar
 
 1. Se valida que el usuario tenga caja abierta, cliente (si aplica) y productos activos con stock.
 2. Precio unitario se toma desde `productos.precio_venta`.
@@ -44,6 +44,15 @@ Este documento describe flujos operativos punta a punta que impactan dinero, inv
 4. Se descargan lotes FIFO en inventario.
 5. Se crean movimientos de inventario (`salida_venta`).
 6. Si es efectivo, se registra movimiento automatico en caja.
+7. Si es crédito, se crea una cuenta por cobrar y su movimiento inicial.
+
+## 3.1 Abono, anulación de abono e incobrable
+
+1. Un abono requiere una caja abierta del usuario que lo recibe.
+2. El abono disminuye la deuda y genera un ingreso `abono_venta_credito` en caja.
+3. Solo se puede anular el último abono vigente, desde la misma caja abierta y por el mismo usuario.
+4. La anulación repone la deuda y crea `anulacion_abono_venta_credito` como salida de caja.
+5. Una cuenta activa con saldo puede marcarse como incobrable; el saldo se cierra y se registra una pérdida de utilidad, sin movimiento de caja.
 
 ## 4. Arqueo y cierre de caja
 
@@ -57,7 +66,11 @@ Este documento describe flujos operativos punta a punta que impactan dinero, inv
 
 1. Se valida politica por fecha y estado.
 2. No se borra historico; se marca/anula y compensa.
-3. Se registran movimientos de inventario/caja para trazabilidad.
+3. Se repone inventario con trazabilidad de los lotes originales.
+4. Venta al contado: se crea un egreso de caja por el reembolso.
+5. Venta a crédito: se reduce primero la deuda; si el retorno excede el saldo, el excedente se reembolsa desde caja.
+6. La devolución conserva los vínculos a sus movimientos financieros.
+7. Al anularla, se retira de nuevo el inventario y se revierten deuda y/o caja. Si hubo efectivo, la caja original debe seguir abierta y pertenecer al usuario que hizo el reembolso.
 
 ## 6. Flujo de hora del sistema
 

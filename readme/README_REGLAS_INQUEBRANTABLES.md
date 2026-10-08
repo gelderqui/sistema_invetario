@@ -14,12 +14,16 @@ Este documento define reglas de negocio que no deben romperse. Cualquier cambio 
 
 ## 2. Ventas
 
-- Metodo de pago permitido para venta nueva: solo `efectivo`.
+- Metodo de pago permitido para venta nueva: `efectivo` o `credito`.
 - Para registrar una venta, el usuario debe tener caja abierta.
 - Precio unitario de venta: backend toma siempre `productos.precio_venta`.
 - El precio no se confia desde payload del frontend.
 - Cliente inactivo no puede usarse en nuevas ventas.
 - Producto inactivo no puede venderse.
+- Una venta a crédito debe crear y mantener una sola cuenta por cobrar asociada.
+- Un abono no puede superar el saldo pendiente y requiere caja abierta.
+- Solo el último abono vigente puede anularse; la misma caja que lo recibió debe continuar abierta y pertenecer al usuario que lo anula.
+- Una cuenta incobrable cierra su saldo y registra una pérdida; no acepta más abonos ni devoluciones.
 
 ## 3. Compras e inventario
 
@@ -31,10 +35,11 @@ Este documento define reglas de negocio que no deben romperse. Cualquier cambio 
 
 ## 3.1 Reportes financieros
 
-- El estado general del negocio se calcula como `efectivo_total + inventario_valorizado`.
+- El estado general del negocio se calcula como `efectivo_total + cuentas_por_cobrar + inventario_valorizado`.
 - El resultado se compara contra `inversion_inicial`.
 - `inversion_inicial` se toma del primer movimiento `ingreso_capital` en orden cronologico.
 - `inversion_inicial` no debe alterarse automaticamente por compras, ventas o ajustes.
+- Las pérdidas por cuentas incobrables deben descontarse de la ganancia neta del período.
 
 ## 4. Caja
 
@@ -44,6 +49,7 @@ Este documento define reglas de negocio que no deben romperse. Cualquier cambio 
 - Arqueo registra historial y no bloquea por umbral.
 - Cierre valida umbral `caja_alerta_faltante_monto`.
 - Si existe arqueo, cierre usa monto contado del ultimo arqueo.
+- Todo reembolso de devolución en efectivo requiere caja abierta y crea un egreso trazable.
 
 ## 5. Clientes y proveedores
 
@@ -54,6 +60,8 @@ Este documento define reglas de negocio que no deben romperse. Cualquier cambio 
 
 - No eliminar fisicamente ventas/compras/devoluciones historicas para anular.
 - Anulaciones se manejan por estado y compensaciones de inventario/caja.
+- Una devolución de venta a crédito reduce primero la deuda; solo el excedente sobre el saldo se reembolsa en efectivo.
+- Al anular una devolución se deben revertir inventario y todos sus impactos financieros. Si el reembolso fue en caja, la caja original debe seguir abierta.
 
 ## 7. Hora del sistema
 

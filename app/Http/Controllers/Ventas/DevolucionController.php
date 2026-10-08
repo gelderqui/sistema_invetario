@@ -8,8 +8,11 @@ use App\Models\DetalleDevolucion;
 use App\Models\Devolucion;
 use App\Models\InventarioLote;
 use App\Models\InventarioMovimiento;
+use App\Models\MovimientoCaja;
 use App\Models\Producto;
 use App\Models\Venta;
+use App\Models\VentaCredito;
+use App\Models\VentaCreditoMovimiento;
 use App\Models\VentaDetalle;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
@@ -40,14 +43,13 @@ class DevolucionController extends Controller
         $items = Devolucion::query()
             ->with([
                 'venta:id,numero,fecha_venta',
-                'usuario:id,name',
+                'usuario:id,username',
                 'detalles.producto:id,nombre',
             ])
-            ->where('usuario_id', (int) $request->user()->id)
             ->whereBetween('fecha', [$desde, $hasta])
             ->orderByDesc('fecha')
             ->orderByDesc('id')
-            ->get(['id', 'venta_id', 'usuario_id', 'fecha', 'estado', 'total', 'created_at']);
+            ->get(['id', 'venta_id', 'usuario_id', 'fecha', 'estado', 'total', 'tipo_reintegro', 'monto_reembolso_efectivo', 'monto_aplicado_credito', 'created_at']);
 
         return response()->json([
             'data' => $items,
@@ -67,10 +69,10 @@ class DevolucionController extends Controller
         $ventas = Venta::query()
             ->with([
                 'cliente:id,nombre',
+                'usuario:id,username',
                 'detalles:id,venta_id,producto_id,cantidad,precio_unitario,subtotal',
                 'detalles.producto:id,nombre,stock_actual,costo_promedio,control_vencimiento',
             ])
-            ->where('add_user', (int) $user->id)
             ->where('estado', 'activo')
             ->whereDate('fecha_venta', '<', Carbon::today()->toDateString())
             ->when($user->role?->code === 'cajero', function ($query) use ($limiteMinutosCajero): void {
@@ -79,7 +81,7 @@ class DevolucionController extends Controller
             ->orderByDesc('fecha_venta')
             ->orderByDesc('id')
             ->limit(120)
-            ->get(['id', 'numero', 'cliente_id', 'fecha_venta', 'total']);
+            ->get(['id', 'numero', 'cliente_id', 'fecha_venta', 'metodo_pago', 'total', 'add_user']);
 
         $detalleIds = $ventas->flatMap(fn (Venta $venta) => $venta->detalles->pluck('id'))->unique()->values();
 
@@ -114,7 +116,6 @@ class DevolucionController extends Controller
     {
         $validated = $request->validate([
             'venta_id' => ['required', Rule::exists('ventas', 'id')],
-            'fecha' => ['required', 'date'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.venta_detalle_id' => ['required', Rule::exists('venta_detalles', 'id')],
             'items.*.cantidad' => ['required', 'integer', 'min:1'],
@@ -125,18 +126,13 @@ class DevolucionController extends Controller
         $userId = (int) $user->id;
         $limiteDiasCajero = $this->limiteDiasCajero();
         $limiteMinutosCajero = $limiteDiasCajero * 24 * 60;
+        $fechaDevolucion = now()->toDateString();
 
-        $devolucion = DB::transaction(function () use ($validated, $userId, $user, $limiteMinutosCajero, $limiteDiasCajero) {
+        $devolucion = DB::transaction(function () use ($validated, $userId, $user, $limiteMinutosCajero, $limiteDiasCajero, $fechaDevolucion) {
             $venta = Venta::query()
                 ->with('detalles.producto:id,nombre,stock_actual,costo_promedio,control_vencimiento')
                 ->lockForUpdate()
                 ->findOrFail($validated['venta_id']);
-
-            if ((int) $venta->add_user !== $userId) {
-                throw ValidationException::withMessages([
-                    'venta_id' => ['La venta seleccionada no pertenece al usuario en sesion.'],
-                ]);
-            }
 
             if ($venta->estado !== 'activo') {
                 throw ValidationException::withMessages([
@@ -166,7 +162,7 @@ class DevolucionController extends Controller
             $devolucion = Devolucion::query()->create([
                 'venta_id' => $venta->id,
                 'usuario_id' => $userId,
-                'fecha' => $validated['fecha'],
+                'fecha' => $fechaDevolucion,
                 'estado' => 'activo',
                 'total' => 0,
             ]);
@@ -303,7 +299,7 @@ class DevolucionController extends Controller
                             'cantidad_disponible' => $cantidad,
                             'costo_unitario' => toMoney($producto->costo_promedio, 4),
                             'fecha_vencimiento' => null,
-                            'fecha_entrada' => $validated['fecha'],
+                            'fecha_entrada' => $fechaDevolucion,
                         ]);
                         $loteCreadoId = (int) $lote->id;
                     }
@@ -334,8 +330,79 @@ class DevolucionController extends Controller
                 $total += $subtotal;
             }
 
+            $total = toMoney($total, 4);
+            $montoAplicadoCredito = 0.0;
+            $montoReembolsoEfectivo = $total;
+            $movimientoCreditoId = null;
+
+            if ($venta->metodo_pago === 'credito') {
+                $credito = VentaCredito::query()
+                    ->where('venta_id', $venta->id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $credito || in_array($credito->estado, ['anulada', 'incobrable'], true)) {
+                    throw ValidationException::withMessages([
+                        'venta_id' => ['No se puede devolver una venta cuya cuenta de crédito está anulada o marcada como incobrable.'],
+                    ]);
+                }
+
+                $saldoAnterior = toMoney($credito->saldo_pendiente, 4);
+                $montoAplicadoCredito = toMoney(min($total, $saldoAnterior), 4);
+                $montoReembolsoEfectivo = toMoney($total - $montoAplicadoCredito, 4);
+
+                if ($montoAplicadoCredito > 0) {
+                    $saldoPosterior = toMoney($saldoAnterior - $montoAplicadoCredito, 4);
+                    $credito->update([
+                        'saldo_pendiente' => $saldoPosterior,
+                        'estado' => $saldoPosterior === 0.0 ? 'pagada' : 'activa',
+                        'mod_user' => $userId,
+                    ]);
+
+                    $movimientoCredito = VentaCreditoMovimiento::query()->create([
+                        'venta_credito_id' => $credito->id,
+                        'tipo' => 'devolucion',
+                        'monto' => $montoAplicadoCredito,
+                        'saldo_anterior' => $saldoAnterior,
+                        'saldo_posterior' => $saldoPosterior,
+                        'fecha' => now(),
+                        'descripcion' => 'Devolución DEV-'.$devolucion->id.' aplicada a la cuenta.',
+                        'usuario_id' => $userId,
+                    ]);
+                    $movimientoCreditoId = $movimientoCredito->id;
+                }
+            }
+
+            $movimientoCajaId = null;
+            if ($montoReembolsoEfectivo > 0) {
+                $movimientoCaja = registrarMovimientoCajaAutomatico(
+                    $userId,
+                    'devolucion_venta',
+                    -$montoReembolsoEfectivo,
+                    'Reembolso por devolución DEV-'.$devolucion->id.' de venta '.$venta->numero,
+                    now()->toDateTimeString(),
+                    'devolucion',
+                    $devolucion->id,
+                );
+
+                if (! $movimientoCaja) {
+                    throw ValidationException::withMessages([
+                        'caja' => ['Debe tener una caja abierta para registrar el reembolso en efectivo.'],
+                    ]);
+                }
+
+                $movimientoCajaId = $movimientoCaja->id;
+            }
+
             $devolucion->update([
-                'total' => toMoney($total, 4),
+                'total' => $total,
+                'tipo_reintegro' => $montoAplicadoCredito > 0 && $montoReembolsoEfectivo > 0
+                    ? 'mixto'
+                    : ($montoAplicadoCredito > 0 ? 'credito' : 'efectivo'),
+                'monto_reembolso_efectivo' => $montoReembolsoEfectivo,
+                'monto_aplicado_credito' => $montoAplicadoCredito,
+                'movimiento_caja_id' => $movimientoCajaId,
+                'venta_credito_movimiento_id' => $movimientoCreditoId,
             ]);
 
             return $devolucion;
@@ -345,7 +412,7 @@ class DevolucionController extends Controller
             'message' => 'Devolucion registrada correctamente.',
             'data' => $devolucion->load([
                 'venta:id,numero,fecha_venta',
-                'usuario:id,name',
+                'usuario:id,username',
                 'detalles.producto:id,nombre',
             ]),
         ], 201);
@@ -358,14 +425,96 @@ class DevolucionController extends Controller
         return max(2, $valor);
     }
 
-    public function anular(Request $request, Devolucion $devolucion): JsonResponse
+    private function revertirImpactoFinanciero(Devolucion $devolucion, int $userId): void
     {
-        if ((int) $devolucion->usuario_id !== (int) $request->user()->id) {
-            return response()->json([
-                'message' => 'No autorizado para anular esta devolucion.',
-            ], 403);
+        $montoCredito = toMoney($devolucion->monto_aplicado_credito ?? 0, 4);
+        if ($montoCredito > 0) {
+            if (! $devolucion->venta_credito_movimiento_id) {
+                throw ValidationException::withMessages([
+                    'devolucion' => ['La devolución no tiene trazabilidad del ajuste de cuenta por cobrar.'],
+                ]);
+            }
+
+            $movimientoOriginal = VentaCreditoMovimiento::query()
+                ->lockForUpdate()
+                ->findOrFail($devolucion->venta_credito_movimiento_id);
+            $credito = VentaCredito::query()
+                ->lockForUpdate()
+                ->findOrFail($movimientoOriginal->venta_credito_id);
+
+            if (in_array($credito->estado, ['anulada', 'incobrable'], true)) {
+                throw ValidationException::withMessages([
+                    'devolucion' => ['No se puede anular una devolución cuya cuenta fue anulada o marcada como incobrable.'],
+                ]);
+            }
+
+            $saldoAnterior = toMoney($credito->saldo_pendiente, 4);
+            $saldoPosterior = toMoney($saldoAnterior + $montoCredito, 4);
+            if ($saldoPosterior > toMoney($credito->monto_original, 4)) {
+                throw ValidationException::withMessages([
+                    'devolucion' => ['La anulación excedería el saldo original de la cuenta por cobrar.'],
+                ]);
+            }
+
+            $credito->update([
+                'saldo_pendiente' => $saldoPosterior,
+                'estado' => 'activa',
+                'mod_user' => $userId,
+            ]);
+
+            $movimientoReversion = VentaCreditoMovimiento::query()->create([
+                'venta_credito_id' => $credito->id,
+                'tipo' => 'anulacion_devolucion',
+                'monto' => $montoCredito,
+                'saldo_anterior' => $saldoAnterior,
+                'saldo_posterior' => $saldoPosterior,
+                'fecha' => now(),
+                'descripcion' => 'Anulación de devolución DEV-'.$devolucion->id.' aplicada a la cuenta.',
+                'usuario_id' => $userId,
+                'movimiento_origen_id' => $movimientoOriginal->id,
+            ]);
+
+            $devolucion->venta_credito_movimiento_reversion_id = $movimientoReversion->id;
         }
 
+        $montoEfectivo = toMoney($devolucion->monto_reembolso_efectivo ?? 0, 4);
+        if ($montoEfectivo > 0) {
+            if (! $devolucion->movimiento_caja_id) {
+                throw ValidationException::withMessages([
+                    'devolucion' => ['La devolución no tiene trazabilidad del reembolso en efectivo.'],
+                ]);
+            }
+
+            $movimientoOriginal = MovimientoCaja::query()
+                ->with('caja:id,usuario_id,estado')
+                ->lockForUpdate()
+                ->findOrFail($devolucion->movimiento_caja_id);
+
+            if (! $movimientoOriginal->caja || $movimientoOriginal->caja->estado !== 'abierta' || (int) $movimientoOriginal->caja->usuario_id !== $userId) {
+                throw ValidationException::withMessages([
+                    'caja' => ['Solo puede anular el reembolso desde la misma caja abierta por el usuario que lo realizó.'],
+                ]);
+            }
+
+            $movimientoReversion = MovimientoCaja::query()->create([
+                'caja_id' => $movimientoOriginal->caja_id,
+                'tipo' => 'anulacion_devolucion_venta',
+                'monto' => $montoEfectivo,
+                'descripcion' => 'Anulación de reembolso por devolución DEV-'.$devolucion->id,
+                'referencia_tipo' => 'devolucion',
+                'referencia_id' => $devolucion->id,
+                'fecha' => now(),
+                'usuario_id' => $userId,
+            ]);
+
+            $devolucion->movimiento_caja_reversion_id = $movimientoReversion->id;
+        }
+
+        $devolucion->save();
+    }
+
+    public function anular(Request $request, Devolucion $devolucion): JsonResponse
+    {
         if ($devolucion->estado !== 'activo') {
             return response()->json([
                 'message' => 'Solo se pueden anular devoluciones activas.',
@@ -379,6 +528,14 @@ class DevolucionController extends Controller
                 ->with(['detalles:id,devolucion_id,venta_detalle_id,producto_id,cantidad'])
                 ->lockForUpdate()
                 ->findOrFail($devolucion->id);
+
+            if ($devolucion->estado !== 'activo') {
+                throw ValidationException::withMessages([
+                    'devolucion' => ['Solo se pueden anular devoluciones activas.'],
+                ]);
+            }
+
+            $this->revertirImpactoFinanciero($devolucion, $userId);
 
             foreach ($devolucion->detalles as $detalle) {
                 $producto = Producto::query()->lockForUpdate()->findOrFail($detalle->producto_id);
@@ -521,7 +678,7 @@ class DevolucionController extends Controller
             'message' => 'Devolucion anulada correctamente.',
             'data' => $devolucion->fresh([
                 'venta:id,numero,fecha_venta',
-                'usuario:id,name',
+                'usuario:id,username',
                 'detalles.producto:id,nombre',
             ]),
         ]);
@@ -529,10 +686,6 @@ class DevolucionController extends Controller
 
     public function ticketSignedUrl(Request $request, Devolucion $devolucion): JsonResponse
     {
-        if ((int) $devolucion->usuario_id !== (int) $request->user()->id) {
-            return response()->json(['message' => 'No autorizado para ver este ticket.'], 403);
-        }
-
         $url = URL::temporarySignedRoute(
             'api.ventas.devoluciones.ticket',
             now()->addMinutes(30),

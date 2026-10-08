@@ -49,6 +49,8 @@ Este documento describe las tablas actuales y sus relaciones principales.
 - `arqueos_caja`
 - `ventas`
 - `venta_detalles`
+- `ventas_credito`
+- `ventas_credito_movimientos`
 - `devoluciones`
 - `detalle_devoluciones`
 
@@ -108,8 +110,17 @@ Este documento describe las tablas actuales y sus relaciones principales.
 - `ventas.cliente_id -> clientes.id` (M:1)
 - `venta_detalles.venta_id -> ventas.id` (1:N)
 - `venta_detalles.producto_id -> productos.id` (M:1)
+- `ventas_credito.venta_id -> ventas.id` (1:1)
+- `ventas_credito.cliente_id -> clientes.id` (M:1)
+- `ventas_credito_movimientos.venta_credito_id -> ventas_credito.id` (1:N)
+- `ventas_credito_movimientos.movimiento_caja_id -> movimientos_caja.id` (M:1, opcional; abonos y sus anulaciones)
+- `ventas_credito_movimientos.movimiento_origen_id -> ventas_credito_movimientos.id` (M:1, opcional; enlaza una reversión con su movimiento original)
 - `devoluciones.venta_id -> ventas.id` (M:1)
 - `devoluciones.usuario_id -> users.id` (M:1)
+- `devoluciones.movimiento_caja_id -> movimientos_caja.id` (M:1, opcional; reembolso)
+- `devoluciones.venta_credito_movimiento_id -> ventas_credito_movimientos.id` (M:1, opcional; reducción de deuda)
+- `devoluciones.movimiento_caja_reversion_id -> movimientos_caja.id` (M:1, opcional; anulación de reembolso)
+- `devoluciones.venta_credito_movimiento_reversion_id -> ventas_credito_movimientos.id` (M:1, opcional; anulación de reducción de deuda)
 - `detalle_devoluciones.devolucion_id -> devoluciones.id` (1:N)
 - `detalle_devoluciones.venta_detalle_id -> venta_detalles.id` (M:1)
 - `detalle_devoluciones.producto_id -> productos.id` (M:1)
@@ -148,6 +159,8 @@ Este documento describe las tablas actuales y sus relaciones principales.
 - Para anulaciones se usa `estado` y movimientos de compensacion.
 - El precio en venta se toma en backend desde `productos.precio_venta`.
 - En caja, cierre puede depender del ultimo arqueo y umbral configurado.
+- `ventas_credito` conserva el saldo vigente de una venta a crédito; su historial inmutable se registra en `ventas_credito_movimientos`.
+- `devoluciones` guarda `tipo_reintegro`, monto reembolsado en efectivo y monto aplicado a crédito para que inventario, caja y cuentas por cobrar puedan revertirse de forma auditable.
 
 ## 4. Indices de rendimiento adicionales
 
@@ -156,9 +169,9 @@ Migracion: `2026_03_17_120000_add_performance_indexes_for_historial_and_inventar
 - `ventas_user_fecha_id_idx` en `ventas(add_user, fecha_venta, id)`:
 	- acelera historial de ventas por usuario y rango de fecha.
 - `ventas_user_estado_fecha_id_idx` en `ventas(add_user, estado, fecha_venta, id)`:
-	- acelera catalogos de devolucion y reportes filtrados por usuario + estado.
+	- acelera consultas de ventas por usuario, estado y fecha.
 - `devoluciones_usuario_fecha_id_idx` en `devoluciones(usuario_id, fecha, id)`:
-	- acelera historial de devoluciones por usuario y rango.
+	- acelera auditorías de devoluciones por usuario y rango.
 - `detalle_devoluciones_venta_detalle_idx` en `detalle_devoluciones(venta_detalle_id)`:
 	- acelera sumatorias de cantidades devueltas por detalle de venta.
 - `lotes_fifo_stock_idx` en `inventario_lotes(producto_id, cantidad_disponible, fecha_entrada)`:

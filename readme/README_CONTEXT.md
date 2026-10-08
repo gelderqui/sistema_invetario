@@ -12,16 +12,15 @@ Estado funcional actual:
 - RBAC propio por rol/permisos
 - Modulos activos y orden de menu:
   - Dashboard
-  - Capital
   - Agente BI
-  - Activos
-  - Reportes
+  - Caja Rural
   - Caja
   - Ventas
   - Compras
   - Inventario
-  - Catalogo
-  - Configuracion
+  - Catalogos
+  - Administracion (Capital, Activos y Reportes)
+  - Configuraciones
   - Manual (solo admin)
 
 ## 2) Reglas funcionales vigentes
@@ -62,7 +61,11 @@ Estado funcional actual:
 - No se eliminan ventas/compras/devoluciones fisicamente para anular.
 - Se usa `estado` (`activo` o `anulada`) y se registra compensacion en inventario/caja.
 - En ventas nuevas, el usuario debe tener caja abierta para poder registrar la venta.
-- En ventas nuevas, el metodo de pago permitido es solo `efectivo`.
+- En ventas nuevas, el metodo de pago puede ser `efectivo` o `credito`.
+- Una venta a crédito crea una cuenta por cobrar con saldo original y movimientos auditables.
+- Los abonos requieren una caja abierta y generan un ingreso `abono_venta_credito` en esa caja.
+- Un abono solo se puede anular si es el último abono vigente y la misma caja del abono sigue abierta para el usuario que lo recibió; la anulación restituye la deuda y crea la salida de caja compensatoria.
+- Una cuenta activa con saldo puede marcarse como `incobrable`; se cierra el saldo y su pérdida se descuenta de la utilidad del período.
 - En ventas nuevas, el precio unitario se toma siempre del producto en backend (no se acepta override por request).
 - El descuento en UI se habilita manualmente por checkbox.
 - En historial de ventas, `admin` puede ver todas las ventas y filtrar por usuario; los demas roles solo ven sus propios registros.
@@ -86,6 +89,17 @@ Compensaciones:
   - Inventario: movimiento `anulacion_compra` (-stock), con validacion de lotes no consumidos
 - Anulacion de devolucion:
   - Inventario: movimiento `anulacion_devolucion` (-stock)
+  - Crédito: restituye la deuda que la devolución había reducido.
+  - Caja: si hubo reembolso, crea el ingreso compensatorio en la misma caja abierta.
+
+Devoluciones financieras:
+
+- Cualquier usuario con permiso `devoluciones` puede procesar devoluciones de ventas anteriores.
+- La fecha la asigna el servidor al día actual; una venta del mismo día se anula, no se devuelve.
+- Venta en efectivo: la devolución crea un egreso `devolucion_venta` desde la caja abierta del usuario.
+- Venta a crédito: primero reduce el saldo pendiente; solo si el total devuelto supera la deuda vigente, el excedente se reembolsa en efectivo.
+- No se permiten devoluciones de cuentas anuladas o incobrables.
+- La devolución conserva los enlaces a sus movimientos de caja y crédito; al anularla se revierten ambos efectos, con la caja original aún abierta.
 
 ### Recibos PDF
 
@@ -101,12 +115,12 @@ Compensaciones:
 
 ### Reportes
 
-- Existe un modulo `Reportes` con cuatro bloques: estado general, utilidad, flujo de caja e inventario valorizado.
+- Existe un modulo `Reportes` con cinco bloques: estado general, ventas a crédito y cobros, utilidad, flujo de caja e inventario valorizado.
 - Estado general del negocio:
   - Caja POS abierta: suma de movimientos de cajas en estado abierta
   - Caja general y banco: saldos actuales de cuentas de capital
   - Inversion inicial: primer movimiento `ingreso_capital` (por fecha/id)
-  - Total negocio: `efectivo_total + inventario_valorizado`
+  - Total negocio: `efectivo_total + cuentas_por_cobrar + inventario_valorizado`
   - Resultado: `total_negocio - inversion_inicial`
 - Utilidad del periodo:
   - Ventas brutas: `ventas.total` activas en rango
@@ -114,6 +128,7 @@ Compensaciones:
   - Costo de ventas: `inventario_movimientos` tipo `salida_venta`
   - Reversion de costo por devoluciones: `inventario_movimientos` tipo `devolucion_venta`
   - Perdidas de inventario: ajustes negativos desde `inventario_movimientos` tipo `ajuste_inventario`
+  - Pérdidas por incobrables: movimientos de crédito tipo `incobrable`
 - Flujo de caja:
   - Se consolida desde `movimientos_caja` del rango seleccionado.
 - Inventario valorizado:

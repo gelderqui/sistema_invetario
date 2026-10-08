@@ -117,7 +117,7 @@
                             <td>#{{ row.id }}</td>
                             <td>{{ row.venta?.numero || '-' }}</td>
                             <td>{{ fmtDate(row.fecha) }}</td>
-                            <td>{{ row.usuario?.name || '-' }}</td>
+                            <td>{{ row.usuario?.username || '-' }}</td>
                             <td>
                                 <span :class="['badge text-uppercase', row.estado === 'anulada' ? 'text-bg-danger' : 'text-bg-success']">
                                     {{ row.estado }}

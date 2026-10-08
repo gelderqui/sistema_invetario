@@ -4,13 +4,16 @@ Documentacion general del sistema de inventario, su estado funcional y las guias
 
 ## Estado funcional reciente
 
-- Modulos activos en menu: Dashboard, Capital, Reportes, Caja, Ventas, Compras, Inventario, Catalogo, Configuracion.
+- Modulos principales en menu: Dashboard, Agente BI, Caja Rural, Caja, Ventas, Compras, Inventario, Catalogos, Administracion y Configuraciones.
 - En caja: el arqueo registra historial; el umbral de faltante bloquea en cierre, no en arqueo.
 - En cierre de caja: si existe arqueo, se usa el monto contado del ultimo arqueo.
 - Configuracion nueva: `caja_aperturas_maximas_por_dia` para controlar aperturas por usuario al dia.
-- En ventas: metodo de pago solo efectivo, precio tomado del producto en backend y descuento controlado por checkbox.
+- En ventas: pago en efectivo o crédito; el precio se toma del producto en backend y el descuento se controla por checkbox.
+- Cuentas por cobrar: los abonos ingresan a una caja abierta; se pueden anular con trazabilidad mientras la caja original siga abierta.
+- Una cuenta pendiente puede marcarse como incobrable, dejando su pérdida reflejada en la utilidad.
+- Devoluciones: reponen inventario y resuelven el valor financiero automáticamente (reembolso en caja, reducción de deuda o ambos).
 - En clientes: inactivo no puede vender y con historial de ventas no se elimina.
-- En reportes: estado general del negocio + utilidad + flujo de caja + inventario valorizado.
+- En reportes: estado general del negocio, utilidad, flujo de caja, cuentas por cobrar e inventario valorizado.
 - En reportes: la inversion inicial se toma del primer ingreso registrado en Capital.
 - Inventario inicial: carga de existencias de arranque sin registrarlo como compra.
 - Formato monetario frontend estandar: 2 decimales, separador de miles con coma y decimal con punto.

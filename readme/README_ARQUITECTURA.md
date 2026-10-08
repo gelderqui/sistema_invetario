@@ -32,6 +32,7 @@ Frontend:
   - `app/Http/Controllers/Admin/RoleManagementController.php`
   - `app/Http/Controllers/Caja/CajaController.php`
   - `app/Http/Controllers/Ventas/VentaController.php`
+  - `app/Http/Controllers/Ventas/VentaCreditoController.php`
   - `app/Http/Controllers/Ventas/DevolucionController.php`
   - `app/Http/Controllers/Capital/CapitalController.php`
   - `app/Http/Controllers/Compras/CompraController.php`
@@ -47,6 +48,7 @@ Frontend:
 - Vistas principales:
   - `resources/js/components/CajaView.vue`
   - `resources/js/components/VentasView.vue`
+  - `resources/js/components/VentasCreditoView.vue`
   - `resources/js/components/HistorialVentasView.vue`
   - `resources/js/components/DevolucionesView.vue`
   - `resources/js/components/ComprasView.vue`
@@ -70,6 +72,7 @@ Frontend:
 - MariaDB almacena la información transaccional del sistema.
 - Laravel Sail ejecuta la aplicación y sus servicios mediante Docker Compose.
 - DomPDF genera tickets de ventas y devoluciones.
+- Los movimientos financieros de crédito y devoluciones se enlazan a sus movimientos de caja para mantener trazabilidad y permitir reversión controlada.
 - La ruta pública para DomPDF usa fallbacks para entornos locales y hosting compartido.
 
 ### Módulos principales
@@ -79,6 +82,7 @@ Frontend:
 - Reportes
 - Caja
 - Ventas
+- Cuentas por cobrar
 - Compras
 - Inventario
 - Catálogo

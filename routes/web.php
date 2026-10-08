@@ -235,7 +235,7 @@ Route::prefix('api')->group(function (): void {
             Route::get('/{venta}/ticket/signed-url', [VentaController::class, 'ticketSignedUrl']);
 
             Route::prefix('devoluciones')->group(function (): void {
-                Route::get('/{devolucion}/ticket/signed-url', [DevolucionController::class, 'ticketSignedUrl']);
+                Route::get('/{devolucion}/ticket/signed-url', [DevolucionController::class, 'ticketSignedUrl'])->middleware('permission:devoluciones');
             });
         });
     });

@@ -11,6 +11,9 @@ Este documento define reglas de negocio que no deben romperse. Cualquier cambio 
 - admin visualiza manual completo.
 - operador/cajero visualizan manual operativo.
 - Usuario inactivo o eliminado no puede iniciar sesion.
+- Un permiso con `activo = 0` no se muestra en el menú de ningún rol.
+- Para roles no administradores, un permiso inactivo no autoriza rutas ni APIs.
+- El administrador conserva acceso directo a las rutas y APIs inactivas, aunque estas no aparezcan en su menú.
 
 ## 2. Ventas
 

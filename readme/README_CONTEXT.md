@@ -160,6 +160,9 @@ Devoluciones financieras:
 - No se puede eliminar un rol con usuarios asociados.
 - Restriccion aplicada en negocio y en FK (`users.role_id` con `restrictOnDelete`).
 - Orden esperado en listado: Administrador, Operador, Cajero.
+- El campo `permissions.activo` controla visibilidad del menú para todos los roles: en `0` la opción no aparece.
+- Para roles distintos de admin, un permiso inactivo también bloquea sus rutas SPA y APIs aunque el permiso siga asignado al rol.
+- El admin mantiene acceso directo a rutas y APIs de permisos inactivos para administración o diagnóstico, pero tampoco los ve en el menú.
 
 ## 3) Configuraciones (tipos y reglas)
 

@@ -318,7 +318,7 @@ const openGroups = ref([]);
 // `module` decide el grupo y `orden` la posición dentro de ese grupo.
 const menuItems = computed(() => {
     const perms = [...(authStore.user?.permissions ?? [])]
-        .filter((p) => Boolean(p.ruta))
+        .filter((p) => Boolean(p.ruta) && p.activo !== false)
         .sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999));
 
     const groupedModules = [

@@ -92,7 +92,8 @@ class User extends Authenticatable
         }
 
         return $this->allPermissions()->contains(function (Permission $permission) use ($permissionValues): bool {
-            return $permissionValues->contains($permission->code) || $permissionValues->contains($permission->name);
+            return $permission->activo
+                && ($permissionValues->contains($permission->code) || $permissionValues->contains($permission->name));
         });
     }
 }

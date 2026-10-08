@@ -32,6 +32,7 @@ class AuthenticatedUserResource extends JsonResource
                 'ruta' => $permission->ruta,
                 'icono' => $permission->icono,
                 'orden' => $permission->orden,
+                'activo' => $permission->activo,
             ])->values(),
         ];
     }

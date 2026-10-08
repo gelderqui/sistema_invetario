@@ -8,7 +8,7 @@ function normalizePath(path) {
 
 export function getDefaultAuthorizedPath(user) {
     const permissions = [...(user?.permissions ?? [])]
-        .filter((permission) => Boolean(normalizePath(permission.ruta)))
+        .filter((permission) => permission.activo !== false && Boolean(normalizePath(permission.ruta)))
         .sort((a, b) => (a.orden ?? Number.MAX_SAFE_INTEGER) - (b.orden ?? Number.MAX_SAFE_INTEGER));
 
     return normalizePath(permissions[0]?.ruta);
@@ -19,7 +19,11 @@ export function hasRoutePermission(user, path) {
 
     if (!targetPath) return false;
 
+    if (user?.role?.code === 'admin') {
+        return true;
+    }
+
     return (user?.permissions ?? []).some(
-        (permission) => normalizePath(permission.ruta) === targetPath,
+        (permission) => permission.activo !== false && normalizePath(permission.ruta) === targetPath,
     );
 }

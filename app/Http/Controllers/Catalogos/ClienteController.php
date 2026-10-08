@@ -32,9 +32,11 @@ class ClienteController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $this->normalizarNit($request);
+
         $validated = $request->validate([
             'nombre' => ['required', 'string', 'max:255', 'unique:clientes,nombre'],
-            'nit' => ['nullable', 'string', 'max:40', 'unique:clientes,nit'],
+            'nit' => $this->nitRules(),
             'email' => ['nullable', 'email', 'max:255'],
             'telefono' => ['nullable', 'string', 'max:100'],
             'direccion' => ['nullable', 'string', 'max:255'],
@@ -56,9 +58,11 @@ class ClienteController extends Controller
 
     public function update(Request $request, Cliente $cliente): JsonResponse
     {
+        $this->normalizarNit($request);
+
         $validated = $request->validate([
             'nombre' => ['required', 'string', 'max:255', Rule::unique('clientes', 'nombre')->ignore($cliente->id)],
-            'nit' => ['nullable', 'string', 'max:40', Rule::unique('clientes', 'nit')->ignore($cliente->id)],
+            'nit' => $this->nitRules($cliente),
             'email' => ['nullable', 'email', 'max:255'],
             'telefono' => ['nullable', 'string', 'max:100'],
             'direccion' => ['nullable', 'string', 'max:255'],
@@ -104,5 +108,24 @@ class ClienteController extends Controller
         return response()->json([
             'message' => 'Cliente eliminado correctamente.',
         ]);
+    }
+
+    private function normalizarNit(Request $request): void
+    {
+        $nit = strtoupper(trim((string) $request->input('nit', '')));
+        $request->merge(['nit' => $nit === '' ? null : $nit]);
+    }
+
+    private function nitRules(?Cliente $cliente = null): array
+    {
+        $rules = ['nullable', 'string', 'max:40'];
+
+        if (request('nit') !== 'CF') {
+            $unique = Rule::unique('clientes', 'nit');
+            if ($cliente) $unique->ignore($cliente->id);
+            $rules[] = $unique;
+        }
+
+        return $rules;
     }
 }

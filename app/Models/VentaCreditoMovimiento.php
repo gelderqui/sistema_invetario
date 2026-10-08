@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class VentaCreditoMovimiento extends Model
 {
@@ -11,7 +12,7 @@ class VentaCreditoMovimiento extends Model
 
     protected $fillable = [
         'venta_credito_id', 'tipo', 'monto', 'saldo_anterior', 'saldo_posterior',
-        'fecha', 'metodo_pago', 'descripcion', 'usuario_id',
+        'fecha', 'metodo_pago', 'descripcion', 'usuario_id', 'movimiento_caja_id', 'movimiento_origen_id',
     ];
 
     protected function casts(): array
@@ -21,4 +22,5 @@ class VentaCreditoMovimiento extends Model
 
     public function credito(): BelongsTo { return $this->belongsTo(VentaCredito::class, 'venta_credito_id'); }
     public function usuario(): BelongsTo { return $this->belongsTo(User::class, 'usuario_id')->withTrashed(); }
+    public function reversion(): HasOne { return $this->hasOne(self::class, 'movimiento_origen_id'); }
 }

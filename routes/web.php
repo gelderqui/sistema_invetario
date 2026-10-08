@@ -184,6 +184,8 @@ Route::prefix('api')->group(function (): void {
                 Route::get('/get', [VentaCreditoController::class, 'index']);
                 Route::get('/{credito}/movimientos', [VentaCreditoController::class, 'movimientos']);
                 Route::post('/{credito}/abonos', [VentaCreditoController::class, 'abonar']);
+                Route::post('/{credito}/abonos/{movimiento}/anular', [VentaCreditoController::class, 'anularAbono']);
+                Route::post('/{credito}/incobrable', [VentaCreditoController::class, 'marcarIncobrable']);
             });
 
             Route::prefix('devoluciones')->group(function (): void {

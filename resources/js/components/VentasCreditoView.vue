@@ -16,6 +16,7 @@
                     <option value="pagada">Pagadas</option>
                     <option value="vencida">Vencidas</option>
                     <option value="anulada">Anuladas</option>
+                    <option value="incobrable">Incobrables</option>
                     <option value="todas">Todas</option>
                 </select>
             </div>
@@ -32,7 +33,7 @@
                             <td><span class="badge" :class="statusClass(credito)">{{ statusLabel(credito) }}</span></td>
                             <td class="text-end">Q {{ formatMoney(credito.monto_original) }}</td>
                             <td class="text-end fw-semibold">Q {{ formatMoney(credito.saldo_pendiente) }}</td>
-                            <td class="text-end"><div class="btn-group btn-group-sm"><button class="btn btn-outline-brand" @click="openDetail(credito)">Detalle</button><button v-if="credito.estado === 'activa'" class="btn btn-brand" @click="openPayment(credito)">Abonar</button></div></td>
+                            <td class="text-end"><div class="btn-group btn-group-sm"><button class="btn btn-outline-brand" @click="openDetail(credito)">Detalle</button><button v-if="credito.estado === 'activa'" class="btn btn-brand" @click="openPayment(credito)">Abonar</button><button v-if="credito.estado === 'activa'" class="btn btn-outline-danger" @click="openWriteOff(credito)">Incobrable</button></div></td>
                         </tr>
                     </tbody>
                 </table>
@@ -40,9 +41,11 @@
             <TablePagination :page="meta.currentPage" :per-page="perPage" :total-items="meta.total" :page-size-options="[5, 10, 25, 50]" @update:page="loadData" @update:per-page="changePerPage" />
         </div>
 
-        <div ref="detailModalRef" class="modal fade" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content"><div class="modal-header modal-header-brand"><h5 class="modal-title">Movimientos de la cuenta</h5><button type="button" class="btn-close" data-bs-dismiss="modal" /></div><div class="modal-body"><div v-if="detailLoading" class="text-center text-body-secondary py-4">Cargando movimientos...</div><template v-else><div class="row g-2 mb-3"><div class="col-12 col-sm-6"><strong>{{ selected?.cliente?.nombre }}</strong><small class="d-block text-body-secondary">Venta {{ selected?.venta?.numero }}</small></div><div class="col-12 col-sm-6 text-sm-end"><span class="text-body-secondary">Saldo actual</span><strong class="d-block">Q {{ formatMoney(selected?.saldo_pendiente) }}</strong></div></div><div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Fecha</th><th>Movimiento</th><th>Descripción</th><th>Usuario</th><th class="text-end">Monto</th><th class="text-end">Saldo</th></tr></thead><tbody><tr v-if="!movimientos.length"><td colspan="6" class="text-center text-body-secondary py-3">Sin movimientos.</td></tr><tr v-for="movimiento in movimientos" :key="movimiento.id"><td>{{ formatDateTime(movimiento.fecha) }}</td><td>{{ movementLabel(movimiento.tipo) }}</td><td>{{ movimiento.descripcion || '—' }}</td><td>{{ movimiento.usuario?.name || '—' }}</td><td class="text-end">Q {{ formatMoney(movimiento.monto) }}</td><td class="text-end">Q {{ formatMoney(movimiento.saldo_posterior) }}</td></tr></tbody></table></div></template></div><div class="modal-footer"><button type="button" class="btn btn-outline-brand" data-bs-dismiss="modal">Cerrar</button></div></div></div></div>
+        <div ref="detailModalRef" class="modal fade" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content"><div class="modal-header modal-header-brand"><h5 class="modal-title">Movimientos de la cuenta</h5><button type="button" class="btn-close" data-bs-dismiss="modal" /></div><div class="modal-body"><div v-if="detailLoading" class="text-center text-body-secondary py-4">Cargando movimientos...</div><template v-else><div class="row g-2 mb-3"><div class="col-12 col-sm-6"><strong>{{ selected?.cliente?.nombre }}</strong><small class="d-block text-body-secondary">Venta {{ selected?.venta?.numero }}</small></div><div class="col-12 col-sm-6 text-sm-end"><span class="text-body-secondary">Saldo actual</span><strong class="d-block">Q {{ formatMoney(selected?.saldo_pendiente) }}</strong></div></div><div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Fecha</th><th>Movimiento</th><th>Descripción</th><th>Usuario</th><th class="text-end">Monto</th><th class="text-end">Saldo</th><th></th></tr></thead><tbody><tr v-if="!movimientos.length"><td colspan="7" class="text-center text-body-secondary py-3">Sin movimientos.</td></tr><tr v-for="movimiento in movimientos" :key="movimiento.id"><td>{{ formatDateTime(movimiento.fecha) }}</td><td>{{ movementLabel(movimiento.tipo) }}</td><td>{{ movimiento.descripcion || '—' }}</td><td>{{ movimiento.usuario?.username || '—' }}</td><td class="text-end">Q {{ formatMoney(movimiento.monto) }}</td><td class="text-end">Q {{ formatMoney(movimiento.saldo_posterior) }}</td><td class="text-end"><button v-if="movimiento.tipo === 'abono' && !movimiento.reversion" class="btn btn-sm btn-outline-danger" @click="openReversePayment(movimiento)">Anular</button></td></tr></tbody></table></div></template></div><div class="modal-footer"><button type="button" class="btn btn-outline-brand" data-bs-dismiss="modal">Cerrar</button></div></div></div></div>
 
         <div ref="paymentModalRef" class="modal fade" tabindex="-1" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><div class="modal-header modal-header-brand"><h5 class="modal-title">Registrar abono</h5><button type="button" class="btn-close" data-bs-dismiss="modal" /></div><form @submit.prevent="savePayment"><div class="modal-body d-grid gap-3"><FormErrors :errors="formErrors" /><div class="alert alert-light border mb-0"><div>{{ selected?.cliente?.nombre }}</div><strong>Saldo pendiente: Q {{ formatMoney(selected?.saldo_pendiente) }}</strong></div><div><label class="form-label fw-semibold">Monto recibido en efectivo *</label><input v-model.number="payment.monto" type="number" class="form-control" min="0.01" step="0.01" required></div><div><label class="form-label fw-semibold">Nota</label><input v-model="payment.descripcion" class="form-control" maxlength="255" placeholder="Ej. Abono de cliente"></div><small class="text-body-secondary">El abono se registrará como ingreso en la caja abierta del usuario.</small></div><div class="modal-footer"><button type="button" class="btn btn-outline-brand" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-brand" :disabled="saving">{{ saving ? 'Guardando...' : 'Registrar abono' }}</button></div></form></div></div></div>
+
+        <div ref="actionModalRef" class="modal fade" tabindex="-1" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><div class="modal-header modal-header-brand"><h5 class="modal-title">{{ actionType === 'reverse' ? 'Anular abono' : 'Marcar cuenta incobrable' }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal" /></div><form @submit.prevent="saveAction"><div class="modal-body d-grid gap-3"><FormErrors :errors="actionErrors" /><div class="alert mb-0" :class="actionType === 'reverse' ? 'alert-warning' : 'alert-danger'"><template v-if="actionType === 'reverse'">Se revertirá el abono de <strong>Q {{ formatMoney(actionPayment?.monto) }}</strong>, se restituirá la deuda y saldrá el dinero de la caja original.</template><template v-else>Se cerrará la cuenta con saldo de <strong>Q {{ formatMoney(actionCredit?.saldo_pendiente) }}</strong> y se registrará como pérdida.</template></div><div><label class="form-label fw-semibold">Motivo *</label><textarea v-model.trim="actionReason" class="form-control" rows="3" minlength="3" maxlength="255" required placeholder="Indique el motivo"></textarea></div></div><div class="modal-footer"><button type="button" class="btn btn-outline-brand" data-bs-dismiss="modal">Cancelar</button><button class="btn" :class="actionType === 'reverse' ? 'btn-warning' : 'btn-danger'" :disabled="actionSaving">{{ actionSaving ? 'Guardando...' : (actionType === 'reverse' ? 'Anular abono' : 'Confirmar incobrable') }}</button></div></form></div></div></div>
     </div>
 </template>
 
@@ -66,12 +69,20 @@ const movimientos = ref([]);
 const detailLoading = ref(false);
 const formErrors = ref([]);
 const payment = ref({ monto: null, descripcion: '' });
+const actionType = ref('');
+const actionCredit = ref(null);
+const actionPayment = ref(null);
+const actionReason = ref('');
+const actionErrors = ref([]);
+const actionSaving = ref(false);
 const detailModalRef = ref(null);
 const paymentModalRef = ref(null);
+const actionModalRef = ref(null);
 let detailModal;
 let paymentModal;
+let actionModal;
 
-onMounted(() => { detailModal = new Modal(detailModalRef.value); paymentModal = new Modal(paymentModalRef.value); loadData(); });
+onMounted(() => { detailModal = new Modal(detailModalRef.value); paymentModal = new Modal(paymentModalRef.value); actionModal = new Modal(actionModalRef.value); loadData(); });
 
 async function loadData(page = meta.value.currentPage) {
     loading.value = true;
@@ -85,10 +96,41 @@ function changePerPage(value) { perPage.value = Number(value); loadData(1); }
 async function openDetail(credito) { selected.value = credito; movimientos.value = []; detailLoading.value = true; detailModal.show(); try { const { data } = await axios.get(`/ventas/creditos/${credito.id}/movimientos`); movimientos.value = data.data ?? []; } finally { detailLoading.value = false; } }
 function openPayment(credito) { selected.value = credito; payment.value = { monto: null, descripcion: '' }; formErrors.value = []; paymentModal.show(); }
 async function savePayment() { saving.value = true; formErrors.value = []; try { await axios.post(`/ventas/creditos/${selected.value.id}/abonos`, payment.value); paymentModal.hide(); await loadData(); } catch (error) { const errors = error.response?.data?.errors; formErrors.value = errors ? Object.values(errors).flat() : [error.response?.data?.message ?? 'No se pudo registrar el abono.']; } finally { saving.value = false; } }
+function openReversePayment(movimiento) {
+    actionType.value = 'reverse';
+    actionCredit.value = selected.value;
+    actionPayment.value = movimiento;
+    actionReason.value = '';
+    actionErrors.value = [];
+    detailModalRef.value.addEventListener('hidden.bs.modal', () => actionModal.show(), { once: true });
+    detailModal.hide();
+}
+function openWriteOff(credito) { actionType.value = 'writeoff'; actionCredit.value = credito; actionPayment.value = null; actionReason.value = ''; actionErrors.value = []; actionModal.show(); }
+async function saveAction() {
+    actionSaving.value = true;
+    actionErrors.value = [];
+    try {
+        const url = actionType.value === 'reverse'
+            ? `/ventas/creditos/${actionCredit.value.id}/abonos/${actionPayment.value.id}/anular`
+            : `/ventas/creditos/${actionCredit.value.id}/incobrable`;
+        await axios.post(url, { motivo: actionReason.value });
+        actionModal.hide();
+        await loadData();
+        if (selected.value?.id === actionCredit.value.id) {
+            const { data } = await axios.get(`/ventas/creditos/${selected.value.id}/movimientos`);
+            movimientos.value = data.data ?? [];
+            const updated = creditos.value.find((credito) => credito.id === selected.value.id);
+            if (updated) selected.value = updated;
+        }
+    } catch (error) {
+        const errors = error.response?.data?.errors;
+        actionErrors.value = errors ? Object.values(errors).flat() : [error.response?.data?.message ?? 'No se pudo completar la acción.'];
+    } finally { actionSaving.value = false; }
+}
 function isOverdue(credito) { return credito.estado === 'activa' && credito.fecha_vencimiento && credito.fecha_vencimiento < new Date().toISOString().slice(0, 10); }
 function statusLabel(credito) { return isOverdue(credito) ? 'Vencida' : ({ activa: 'Activa', pagada: 'Pagada', anulada: 'Anulada', incobrable: 'Incobrable' }[credito.estado] ?? credito.estado); }
 function statusClass(credito) { return isOverdue(credito) ? 'text-bg-danger' : ({ activa: 'text-bg-warning', pagada: 'text-bg-success', anulada: 'text-bg-secondary', incobrable: 'text-bg-dark' }[credito.estado] ?? 'text-bg-secondary'); }
-function movementLabel(tipo) { return ({ cargo_inicial: 'Venta a crédito', abono: 'Abono', anulacion: 'Anulación' }[tipo] ?? tipo); }
+function movementLabel(tipo) { return ({ cargo_inicial: 'Venta a crédito', abono: 'Abono', anulacion: 'Anulación', anulacion_abono: 'Anulación de abono', incobrable: 'Cuenta incobrable' }[tipo] ?? tipo); }
 function formatDate(value) { return value ? new Date(`${value}T00:00:00`).toLocaleDateString('es-GT') : '—'; }
 function formatDateTime(value) { return value ? new Date(value).toLocaleString('es-GT') : '—'; }
 </script>

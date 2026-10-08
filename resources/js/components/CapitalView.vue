@@ -3,7 +3,7 @@
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
             <div>
                 <h3 class="mb-1">Capital</h3>
-                <small class="text-muted">Caja general, banco y transferencias entre fondos.</small>
+                <small class="text-muted">Efectivo real con el que cuenta el negocio, poder hacer transferencias entre fondos.</small>
             </div>
             <button class="btn btn-outline-brand btn-sm" :disabled="loading" @click="loadData">Recargar</button>
         </div>

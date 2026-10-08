@@ -3,7 +3,7 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h2 class="h4 mb-0">Reportes</h2>
-                <p class="text-body-secondary mb-0 small">Utilidad e inventario valorizado.</p>
+                <p class="text-body-secondary mb-0 small">Utilidad, crédito, efectivo e inventario valorizado.</p>
             </div>
             <button class="btn btn-outline-brand" :disabled="loading" @click="loadReport">Actualizar</button>
         </div>
@@ -16,7 +16,7 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white">
                     <h6 class="mb-1">Estado general del negocio</h6>
-                    <small class="text-body-secondary">Foto actual: efectivo disponible + inventario valorizado.</small>
+                    <small class="text-body-secondary">Foto actual: efectivo disponible + cuentas por cobrar + inventario valorizado.</small>
                 </div>
                 <div class="card-body">
                     <div class="row g-3 mb-4">
@@ -58,9 +58,44 @@
                                     <td class="text-end">Q {{ formatMoney(report.estado_general.inventario) }}</td>
                                 </tr>
                                 <tr>
+                                    <td>Cuentas por cobrar</td>
+                                    <td class="text-end">Q {{ formatMoney(report.estado_general.cuentas_por_cobrar) }}</td>
+                                </tr>
+                                <tr>
                                     <td>Total negocio</td>
                                     <td class="text-end fw-semibold">Q {{ formatMoney(report.estado_general.total_negocio) }}</td>
                                 </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-1">Ventas a crédito y cobros</h6>
+                    <small class="text-body-secondary">Ventas y cobros del período: {{ rangeLabel }}. Los saldos son la situación actual.</small>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3 mb-4">
+                        <div class="col-12 col-sm-6 col-xl-3" v-for="item in creditoCards" :key="item.label">
+                            <div class="report-stat h-100">
+                                <div class="report-stat-label">{{ item.label }}</div>
+                                <div class="report-stat-value" :class="item.className">Q {{ formatMoney(item.value) }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead><tr><th>Concepto</th><th class="text-end">Monto</th></tr></thead>
+                            <tbody>
+                                <tr><td>Ventas al contado del período</td><td class="text-end">Q {{ formatMoney(report.creditos.ventas_efectivo_periodo) }}</td></tr>
+                                <tr><td>Ventas a crédito del período</td><td class="text-end">Q {{ formatMoney(report.creditos.ventas_credito_periodo) }}</td></tr>
+                                <tr><td>Cobros recibidos del período</td><td class="text-end text-success">Q {{ formatMoney(report.creditos.cobros_recibidos_periodo) }}</td></tr>
+                                <tr><td>Cuentas activas</td><td class="text-end">{{ report.creditos.cuentas_activas }}</td></tr>
+                                <tr><td>Saldo pendiente actual</td><td class="text-end fw-semibold">Q {{ formatMoney(report.creditos.saldo_pendiente_actual) }}</td></tr>
+                                <tr><td>Saldo vencido actual</td><td class="text-end fw-semibold" :class="Number(report.creditos.saldo_vencido_actual) > 0 ? 'text-danger' : ''">Q {{ formatMoney(report.creditos.saldo_vencido_actual) }}</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -143,6 +178,10 @@
                                 <tr>
                                     <td>Perdidas de inventario</td>
                                     <td class="text-end text-danger">Q {{ formatMoney(report.utilidad.perdidas_inventario) }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Pérdidas por cuentas incobrables</td>
+                                    <td class="text-end text-danger">Q {{ formatMoney(report.utilidad.perdidas_credito) }}</td>
                                 </tr>
                                 <tr>
                                     <td>Ganancia neta</td>
@@ -259,6 +298,11 @@ const estadoGeneralCards = computed(() => [
         className: '',
     },
     {
+        label: 'Cuentas por cobrar',
+        value: report.value.estado_general.cuentas_por_cobrar,
+        className: '',
+    },
+    {
         label: 'Total negocio',
         value: report.value.estado_general.total_negocio,
         className: '',
@@ -269,7 +313,14 @@ const utilidadCards = computed(() => [
     { label: 'Ganancia bruta', value: report.value.utilidad.ganancia_bruta, className: numberTone(report.value.utilidad.ganancia_bruta) },
     { label: 'Gastos', value: report.value.utilidad.gastos, className: 'text-danger' },
     { label: 'Perdidas inventario', value: report.value.utilidad.perdidas_inventario, className: 'text-danger' },
+    { label: 'Pérdidas incobrables', value: report.value.utilidad.perdidas_credito, className: 'text-danger' },
     { label: 'Ganancia neta', value: report.value.utilidad.ganancia_neta, className: numberTone(report.value.utilidad.ganancia_neta) },
+]);
+const creditoCards = computed(() => [
+    { label: 'Ventas al contado', value: report.value.creditos.ventas_efectivo_periodo, className: '' },
+    { label: 'Ventas a crédito', value: report.value.creditos.ventas_credito_periodo, className: '' },
+    { label: 'Cobros recibidos', value: report.value.creditos.cobros_recibidos_periodo, className: 'text-success' },
+    { label: 'Saldo pendiente', value: report.value.creditos.saldo_pendiente_actual, className: '' },
 ]);
 const inventarioCategoriasOrdenadas = computed(() => {
     return [...(report.value.inventario_valorizado.categorias ?? [])]
@@ -326,6 +377,7 @@ function emptyReport() {
                 banco: 0,
                 total_efectivo: 0,
             },
+            cuentas_por_cobrar: 0,
             inventario: 0,
             total_negocio: 0,
             inversion_inicial: 0,
@@ -341,7 +393,16 @@ function emptyReport() {
             ganancia_bruta: 0,
             gastos: 0,
             perdidas_inventario: 0,
+            perdidas_credito: 0,
             ganancia_neta: 0,
+        },
+        creditos: {
+            ventas_efectivo_periodo: 0,
+            ventas_credito_periodo: 0,
+            cobros_recibidos_periodo: 0,
+            cuentas_activas: 0,
+            saldo_pendiente_actual: 0,
+            saldo_vencido_actual: 0,
         },
         flujo_caja: {
             ingresos: 0,

@@ -12,6 +12,8 @@ use App\Models\InventarioMovimiento;
 use App\Models\MovimientoCaja;
 use App\Models\Producto;
 use App\Models\Venta;
+use App\Models\VentaCredito;
+use App\Models\VentaCreditoMovimiento;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -36,10 +38,13 @@ class ReporteController extends Controller
         $desdeFecha = $desde->toDateString();
         $hastaFecha = $hasta->toDateString();
 
-        $ventasBrutas = (float) Venta::query()
+        $ventasBase = Venta::query()
             ->where('estado', 'activo')
-            ->whereBetween('fecha_venta', [$desdeFecha, $hastaFecha])
-            ->sum('total');
+            ->whereBetween('fecha_venta', [$desdeFecha, $hastaFecha]);
+
+        $ventasBrutas = (float) (clone $ventasBase)->sum('total');
+        $ventasEfectivo = (float) (clone $ventasBase)->where('metodo_pago', 'efectivo')->sum('total');
+        $ventasCredito = (float) (clone $ventasBase)->where('metodo_pago', 'credito')->sum('total');
 
         $devoluciones = (float) Devolucion::query()
             ->where('estado', 'activo')
@@ -74,7 +79,12 @@ class ReporteController extends Controller
             ->selectRaw('COALESCE(SUM(ABS(cantidad) * costo_unitario), 0) as total')
             ->value('total');
 
-        $gananciaNeta = toMoney($gananciaBruta - $gastos - $perdidasInventario, 4);
+        $perdidasCredito = (float) VentaCreditoMovimiento::query()
+            ->where('tipo', 'incobrable')
+            ->whereBetween('fecha', [$desde, $hasta])
+            ->sum('monto');
+
+        $gananciaNeta = toMoney($gananciaBruta - $gastos - $perdidasInventario - $perdidasCredito, 4);
 
         $flujoRows = MovimientoCaja::query()
             ->whereBetween('fecha', [$desde, $hasta])
@@ -100,6 +110,19 @@ class ReporteController extends Controller
         $flujoIngresos = (float) $flujoRows->sum('ingresos');
         $flujoEgresos = (float) $flujoRows->sum('egresos');
         $flujoNeto = toMoney($flujoIngresos - $flujoEgresos, 4);
+
+        $cobrosCredito = (float) MovimientoCaja::query()
+            ->where('tipo', 'abono_venta_credito')
+            ->whereBetween('fecha', [$desde, $hasta])
+            ->sum('monto');
+
+        $creditosActivos = VentaCredito::query()->where('estado', 'activa');
+        $saldoPorCobrar = (float) (clone $creditosActivos)->sum('saldo_pendiente');
+        $saldoVencido = (float) (clone $creditosActivos)
+            ->whereNotNull('fecha_vencimiento')
+            ->whereDate('fecha_vencimiento', '<', now()->toDateString())
+            ->sum('saldo_pendiente');
+        $cuentasActivas = (int) (clone $creditosActivos)->count();
 
         $productosInventario = Producto::query()
             ->with('categoria:id,nombre')
@@ -181,7 +204,7 @@ class ReporteController extends Controller
         $efectivoTotal = toMoney($cajaPosDisponible + $cajaGeneral + $banco, 4);
 
         $inventarioTotal = toMoney((float) $inventarioValorizado->sum('valor_total'), 4);
-        $totalNegocio = toMoney($efectivoTotal + $inventarioTotal, 4);
+        $totalNegocio = toMoney($efectivoTotal + $inventarioTotal + $saldoPorCobrar, 4);
         $inversionInicialMovimiento = CapitalMovimiento::query()
             ->where('tipo', 'ingreso_capital')
             ->orderBy('fecha')
@@ -206,7 +229,16 @@ class ReporteController extends Controller
                     'ganancia_bruta' => (float) $gananciaBruta,
                     'gastos' => (float) toMoney($gastos, 4),
                     'perdidas_inventario' => (float) toMoney($perdidasInventario, 4),
+                    'perdidas_credito' => (float) toMoney($perdidasCredito, 4),
                     'ganancia_neta' => (float) $gananciaNeta,
+                ],
+                'creditos' => [
+                    'ventas_efectivo_periodo' => (float) toMoney($ventasEfectivo, 4),
+                    'ventas_credito_periodo' => (float) toMoney($ventasCredito, 4),
+                    'cobros_recibidos_periodo' => (float) toMoney($cobrosCredito, 4),
+                    'cuentas_activas' => $cuentasActivas,
+                    'saldo_pendiente_actual' => (float) toMoney($saldoPorCobrar, 4),
+                    'saldo_vencido_actual' => (float) toMoney($saldoVencido, 4),
                 ],
                 'flujo_caja' => [
                     'ingresos' => (float) toMoney($flujoIngresos, 4),
@@ -227,6 +259,7 @@ class ReporteController extends Controller
                         'banco' => (float) toMoney($banco, 4),
                         'total_efectivo' => (float) $efectivoTotal,
                     ],
+                    'cuentas_por_cobrar' => (float) toMoney($saldoPorCobrar, 4),
                     'inventario' => (float) $inventarioTotal,
                     'total_negocio' => (float) $totalNegocio,
                     'inversion_inicial' => (float) $inversionInicial,

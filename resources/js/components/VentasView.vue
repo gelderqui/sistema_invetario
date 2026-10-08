@@ -319,7 +319,6 @@ watch(
     (metodo) => {
         if (metodo === 'credito') {
             form.value.monto_recibido = null;
-            if (form.value.cliente?.id === consumidorFinal.value?.id) form.value.cliente = null;
         }
     }
 );

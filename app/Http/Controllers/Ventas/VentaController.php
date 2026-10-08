@@ -209,11 +209,6 @@ class VentaController extends Controller
                 ]);
             }
 
-            if (($cliente->nit ?? null) === 'CF') {
-                throw ValidationException::withMessages([
-                    'cliente_id' => ['No puede registrar crédito a Consumidor final.'],
-                ]);
-            }
         }
 
         if ($validated['metodo_pago'] === 'efectivo') {

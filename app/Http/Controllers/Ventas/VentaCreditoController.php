@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Ventas;
 use App\Http\Controllers\Controller;
 use App\Models\VentaCredito;
 use App\Models\VentaCreditoMovimiento;
+use App\Models\MovimientoCaja;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -47,7 +48,7 @@ class VentaCreditoController extends Controller
     {
         return response()->json([
             'data' => $credito->movimientos()
-                ->with('usuario:id,name')
+                ->with(['usuario:id,username', 'reversion:id,movimiento_origen_id'])
                 ->orderByDesc('fecha')
                 ->orderByDesc('id')
                 ->get(),
@@ -108,6 +109,7 @@ class VentaCreditoController extends Controller
                 'metodo_pago' => 'efectivo',
                 'descripcion' => $validated['descripcion'] ?? 'Abono recibido en efectivo.',
                 'usuario_id' => $userId,
+                'movimiento_caja_id' => $movimientoCaja->id,
             ]);
 
             return $credito;
@@ -117,5 +119,133 @@ class VentaCreditoController extends Controller
             'message' => 'Abono registrado correctamente.',
             'data' => $credito->fresh()->load(['cliente:id,nombre,telefono', 'venta:id,numero,fecha_venta,total']),
         ]);
+    }
+
+    public function anularAbono(Request $request, VentaCredito $credito, VentaCreditoMovimiento $movimiento): JsonResponse
+    {
+        $validated = $request->validate([
+            'motivo' => ['required', 'string', 'min:3', 'max:255'],
+        ]);
+
+        $userId = (int) $request->user()->id;
+
+        DB::transaction(function () use ($credito, $movimiento, $validated, $userId): void {
+            $credito = VentaCredito::query()->lockForUpdate()->findOrFail($credito->id);
+            $movimiento = VentaCreditoMovimiento::query()->lockForUpdate()->findOrFail($movimiento->id);
+
+            if ($movimiento->venta_credito_id !== $credito->id || $movimiento->tipo !== 'abono') {
+                throw ValidationException::withMessages(['abono' => ['El movimiento seleccionado no es un abono de esta cuenta.']]);
+            }
+
+            if ($movimiento->movimiento_origen_id || $movimiento->reversion()->exists()) {
+                throw ValidationException::withMessages(['abono' => ['Este abono ya fue anulado.']]);
+            }
+
+            $hayAbonoPosterior = VentaCreditoMovimiento::query()
+                ->where('venta_credito_id', $credito->id)
+                ->where('tipo', 'abono')
+                ->where('id', '>', $movimiento->id)
+                ->whereDoesntHave('reversion')
+                ->exists();
+
+            if ($hayAbonoPosterior) {
+                throw ValidationException::withMessages(['abono' => ['Solo puede anular el último abono vigente de la cuenta.']]);
+            }
+
+            if (! in_array($credito->estado, ['activa', 'pagada'], true)) {
+                throw ValidationException::withMessages(['credito' => ['No se puede anular un abono de una cuenta anulada o incobrable.']]);
+            }
+
+            if (! $movimiento->movimiento_caja_id) {
+                throw ValidationException::withMessages(['abono' => ['Este abono antiguo no tiene trazabilidad de caja y no puede anularse automáticamente.']]);
+            }
+
+            $movimientoCajaOriginal = MovimientoCaja::query()
+                ->with('caja:id,usuario_id,estado')
+                ->lockForUpdate()
+                ->findOrFail($movimiento->movimiento_caja_id);
+
+            if (! $movimientoCajaOriginal->caja || $movimientoCajaOriginal->caja->estado !== 'abierta' || (int) $movimientoCajaOriginal->caja->usuario_id !== $userId) {
+                throw ValidationException::withMessages(['caja' => ['Solo puede anular el abono desde la misma caja abierta por el usuario que lo recibió.']]);
+            }
+
+            $monto = toMoney($movimiento->monto, 4);
+            $saldoAnterior = toMoney($credito->saldo_pendiente, 4);
+            $saldoPosterior = toMoney($saldoAnterior + $monto, 4);
+
+            if ($saldoPosterior > toMoney($credito->monto_original, 4)) {
+                throw ValidationException::withMessages(['abono' => ['La anulación excedería el saldo original de la cuenta.']]);
+            }
+
+            $movimientoCajaReversion = MovimientoCaja::query()->create([
+                'caja_id' => $movimientoCajaOriginal->caja_id,
+                'tipo' => 'anulacion_abono_venta_credito',
+                'monto' => -$monto,
+                'descripcion' => 'Anulación de abono de venta '.$credito->venta->numero.'. Motivo: '.$validated['motivo'],
+                'referencia_tipo' => 'venta_credito',
+                'referencia_id' => $credito->id,
+                'fecha' => now(),
+                'usuario_id' => $userId,
+            ]);
+
+            $credito->update([
+                'saldo_pendiente' => $saldoPosterior,
+                'estado' => 'activa',
+                'mod_user' => $userId,
+            ]);
+
+            VentaCreditoMovimiento::query()->create([
+                'venta_credito_id' => $credito->id,
+                'tipo' => 'anulacion_abono',
+                'monto' => $monto,
+                'saldo_anterior' => $saldoAnterior,
+                'saldo_posterior' => $saldoPosterior,
+                'fecha' => now(),
+                'metodo_pago' => 'efectivo',
+                'descripcion' => 'Anulación de abono. Motivo: '.$validated['motivo'],
+                'usuario_id' => $userId,
+                'movimiento_caja_id' => $movimientoCajaReversion->id,
+                'movimiento_origen_id' => $movimiento->id,
+            ]);
+        });
+
+        return response()->json(['message' => 'Abono anulado y saldo de la cuenta restituido correctamente.']);
+    }
+
+    public function marcarIncobrable(Request $request, VentaCredito $credito): JsonResponse
+    {
+        $validated = $request->validate([
+            'motivo' => ['required', 'string', 'min:3', 'max:255'],
+        ]);
+
+        $userId = (int) $request->user()->id;
+
+        DB::transaction(function () use ($credito, $validated, $userId): void {
+            $credito = VentaCredito::query()->lockForUpdate()->findOrFail($credito->id);
+
+            if ($credito->estado !== 'activa' || toMoney($credito->saldo_pendiente, 4) <= 0) {
+                throw ValidationException::withMessages(['credito' => ['Solo se puede marcar como incobrable una cuenta activa con saldo pendiente.']]);
+            }
+
+            $saldoAnterior = toMoney($credito->saldo_pendiente, 4);
+            $credito->update([
+                'saldo_pendiente' => 0,
+                'estado' => 'incobrable',
+                'mod_user' => $userId,
+            ]);
+
+            VentaCreditoMovimiento::query()->create([
+                'venta_credito_id' => $credito->id,
+                'tipo' => 'incobrable',
+                'monto' => $saldoAnterior,
+                'saldo_anterior' => $saldoAnterior,
+                'saldo_posterior' => 0,
+                'fecha' => now(),
+                'descripcion' => 'Cuenta marcada como incobrable. Motivo: '.$validated['motivo'],
+                'usuario_id' => $userId,
+            ]);
+        });
+
+        return response()->json(['message' => 'Cuenta marcada como incobrable y pérdida registrada correctamente.']);
     }
 }

@@ -19,6 +19,7 @@ class InventarioController extends Controller
             'solo_bajo_stock' => ['nullable', 'boolean'],
             'search' => ['nullable', 'string', 'max:120'],
             'categoria_id' => ['nullable', 'integer', 'exists:categorias,id'],
+            'respaldo_fiscal' => ['nullable', 'in:con_factura,sin_factura'],
         ]);
 
         $query = Producto::query()
@@ -58,7 +59,14 @@ class InventarioController extends Controller
         ]);
         $stockConsignado = InventarioLote::query()->where('cantidad_disponible', '>', 0)->where('es_consignacion', true)
             ->selectRaw('producto_id, SUM(cantidad_disponible) as cantidad')->groupBy('producto_id')->pluck('cantidad', 'producto_id');
-        $productos = $productosBase->map(function (Producto $producto) use ($stockConsignado): array {
+        $stockFiscal = InventarioLote::query()
+            ->where('cantidad_disponible', '>', 0)
+            ->selectRaw("producto_id, SUM(CASE WHEN respaldo_fiscal = 'con_factura' THEN cantidad_disponible ELSE 0 END) as con_factura, SUM(CASE WHEN respaldo_fiscal = 'sin_factura' THEN cantidad_disponible ELSE 0 END) as sin_factura")
+            ->groupBy('producto_id')
+            ->get()
+            ->keyBy('producto_id');
+        $productos = $productosBase->map(function (Producto $producto) use ($stockConsignado, $stockFiscal): array {
+            $fiscal = $stockFiscal->get($producto->id);
             return [
                 'id' => $producto->id,
                 'categoria_id' => $producto->categoria_id,
@@ -68,6 +76,8 @@ class InventarioController extends Controller
                 'stock_actual' => $producto->stock_actual,
                 'stock_consignado' => (float) ($stockConsignado->get($producto->id) ?? 0),
                 'stock_propio' => toMoney((float) $producto->stock_actual - (float) ($stockConsignado->get($producto->id) ?? 0), 4),
+                'stock_con_factura' => toMoney((float) ($fiscal?->con_factura ?? 0), 4),
+                'stock_sin_factura' => toMoney((float) ($fiscal?->sin_factura ?? 0), 4),
                 'stock_minimo' => $producto->stock_minimo,
                 'costo_promedio' => $producto->costo_promedio,
                 'precio_venta_promedio' => $producto->precio_venta_promedio,
@@ -77,7 +87,10 @@ class InventarioController extends Controller
                 'activo' => $producto->activo,
                 'updated_at' => $producto->updated_at,
             ];
-        });
+        })->when(
+            ! empty($validated['respaldo_fiscal']),
+            fn ($items) => $items->filter(fn (array $item): bool => (float) $item['stock_'.$validated['respaldo_fiscal']] > 0)->values()
+        );
 
         $categorias = Categoria::query()
             ->where('activo', true)

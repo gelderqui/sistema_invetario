@@ -127,10 +127,10 @@ class ConfiguracionController extends Controller
         $codigo = strtolower($codigo);
         $valorTexto = trim((string) $value);
 
-        if ($codigo === 'nombre_empresa') {
+        if (in_array($codigo, ['nombre_empresa', 'nit_empresa'], true)) {
             if ($valorTexto === '') {
                 throw ValidationException::withMessages([
-                    'value' => ['El nombre de empresa es obligatorio.'],
+                    'value' => [$codigo === 'nit_empresa' ? 'El NIT de empresa es obligatorio.' : 'El nombre de empresa es obligatorio.'],
                 ]);
             }
 
@@ -187,6 +187,11 @@ class ConfiguracionController extends Controller
         Configuracion::query()->updateOrCreate(
             ['codigo' => 'habilitar_consignacion'],
             ['descripcion' => 'Habilita compras en consignación y cuentas por pagar a proveedores.', 'value' => Configuracion::query()->where('codigo', 'habilitar_consignacion')->value('value') ?? '0', 'activo' => true]
+        );
+
+        Configuracion::query()->updateOrCreate(
+            ['codigo' => 'nit_empresa'],
+            ['descripcion' => 'NIT al que deben emitirse las facturas de compra con crédito fiscal.', 'value' => Configuracion::query()->where('codigo', 'nit_empresa')->value('value') ?? '', 'activo' => true]
         );
 
         Configuracion::query()->updateOrCreate(

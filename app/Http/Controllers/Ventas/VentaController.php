@@ -283,6 +283,7 @@ class VentaController extends Controller
                     ->with('compraDetalle.compra')
                     ->where('producto_id', $producto->id)
                     ->where('cantidad_disponible', '>', 0)
+                    ->orderByRaw("CASE WHEN respaldo_fiscal = 'sin_factura' THEN 0 ELSE 1 END")
                     ->orderBy('fecha_entrada')
                     ->orderBy('id')
                     ->lockForUpdate()

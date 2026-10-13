@@ -82,6 +82,9 @@ Estado funcional actual:
 - Inventario muestra el stock físico separado en propio y consignado.
 - La ruta de operación es `Cuentas por pagar`; allí se aplican pagos parciales o totales a cargos pendientes de un solo proveedor, ya sean de crédito o consignación.
 - El pago a proveedor crea un movimiento de capital `pago_proveedor` desde Caja general o Banco.
+- Una factura puede emitirse como `CF` o al `nit_empresa` configurado. Solo la segunda clasifica sus lotes como `con_factura`; CF se clasifica como `sin_factura`.
+- En ventas, los lotes `sin_factura` tienen prioridad antes de los lotes `con_factura`, conservando FIFO dentro de cada grupo.
+- Inventario muestra y filtra existencias con/sin factura; Compras permite exportar el libro histórico de compras facturadas a PDF o Excel.
 
 ### Clientes
 

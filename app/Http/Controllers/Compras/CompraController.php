@@ -13,11 +13,17 @@ use App\Models\InventarioMovimiento;
 use App\Models\Producto;
 use App\Models\Proveedor;
 use App\Models\ProveedorCuentaPorPagar;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Facades\Excel;
 
 class CompraController extends Controller
 {
@@ -40,6 +46,10 @@ class CompraController extends Controller
                 'total',
                 'tipo_documento',
                 'numero_documento',
+                'factura_receptor',
+                'nit_receptor',
+                'nit_proveedor',
+                'serie_documento',
                 'created_at',
             ]);
 
@@ -97,6 +107,7 @@ class CompraController extends Controller
                     ->where('activo', true)
                     ->orderBy('id')
                     ->get(['id', 'codigo', 'nombre', 'saldo_actual']),
+                'nit_empresa' => Configuracion::valor('nit_empresa', ''),
                 'productos'           => $productos,
             ],
         ]);
@@ -115,6 +126,35 @@ class CompraController extends Controller
         ]);
     }
 
+    public function exportarComprasFiscalesExcel()
+    {
+        $compras = $this->comprasFiscales();
+
+        return Excel::download(new class($compras) implements FromCollection, WithHeadings, WithMapping {
+            public function __construct(private readonly Collection $compras) {}
+            public function collection(): Collection { return $this->compras; }
+            public function headings(): array { return ['Fecha', 'Compra', 'Proveedor', 'NIT proveedor', 'Serie/DTE', 'Factura', 'NIT receptor', 'Subtotal', 'Total', 'Estado']; }
+            public function map($compra): array {
+                return [
+                    optional($compra->fecha_compra)->format('d/m/Y'), $compra->numero, $compra->proveedor?->nombre,
+                    $compra->nit_proveedor, $compra->serie_documento, $compra->numero_documento, $compra->nit_receptor,
+                    round((float) $compra->total / 1.12, 2), (float) $compra->total, $compra->estado,
+                ];
+            }
+        }, 'compras-fiscales-'.now()->format('Ymd').'.xlsx');
+    }
+
+    public function exportarComprasFiscalesPdf()
+    {
+        $compras = $this->comprasFiscales();
+
+        return Pdf::loadView('reportes.compras-fiscales', [
+            'compras' => $compras,
+            'empresa' => Configuracion::valor('nombre_empresa', config('app.name')),
+            'nitEmpresa' => Configuracion::valor('nit_empresa', ''),
+        ])->setPaper('letter', 'landscape')->stream('compras-fiscales-'.now()->format('Ymd').'.pdf');
+    }
+
     public function store(Request $request): JsonResponse
     {
         $this->normalizarMontos($request);
@@ -128,6 +168,9 @@ class CompraController extends Controller
                 'es_consignacion' => ['sometimes', 'boolean'],
                 'tipo_documento' => ['nullable', Rule::in(['sin_documento', 'recibo', 'factura'])],
                 'numero_documento' => ['nullable', 'string', 'max:100'],
+                'factura_receptor' => ['nullable', Rule::in(['cf', 'nit_empresa'])],
+                'nit_proveedor' => ['nullable', 'string', 'max:30'],
+                'serie_documento' => ['nullable', 'string', 'max:50'],
                 'items' => ['required', 'array', 'min:1'],
                 'items.*.producto_id' => ['required', Rule::exists('productos', 'id'), 'distinct'],
                 'items.*.cantidad' => ['required', 'integer', 'min:1'],
@@ -148,6 +191,28 @@ class CompraController extends Controller
         if (in_array(($validated['tipo_documento'] ?? null), ['recibo', 'factura'], true) && empty($validated['numero_documento'])) {
             throw ValidationException::withMessages([
                 'numero_documento' => 'El numero de documento es obligatorio cuando el tipo es recibo o factura.',
+            ]);
+        }
+
+        $esFacturaFiscal = ($validated['tipo_documento'] ?? null) === 'factura'
+            && ($validated['factura_receptor'] ?? null) === 'nit_empresa';
+
+        if (($validated['tipo_documento'] ?? null) === 'factura' && empty($validated['factura_receptor'])) {
+            throw ValidationException::withMessages([
+                'factura_receptor' => ['Indique si la factura fue emitida como CF o a su NIT.'],
+            ]);
+        }
+
+        if ($esFacturaFiscal && empty($validated['nit_proveedor'])) {
+            throw ValidationException::withMessages([
+                'nit_proveedor' => ['El NIT del proveedor es obligatorio para una factura emitida a su NIT.'],
+            ]);
+        }
+
+        $nitEmpresa = trim((string) Configuracion::valor('nit_empresa', ''));
+        if ($esFacturaFiscal && $nitEmpresa === '') {
+            throw ValidationException::withMessages([
+                'factura_receptor' => ['Configure primero el NIT de la empresa en Configuraciones.'],
             ]);
         }
 
@@ -174,10 +239,16 @@ class CompraController extends Controller
             throw ValidationException::withMessages(['es_consignacion' => ['La consignación está deshabilitada para esta tienda.']]);
         }
 
+        if ($tipoCompra === 'consignacion' && $esFacturaFiscal) {
+            throw ValidationException::withMessages([
+                'factura_receptor' => ['La mercancía en consignación no puede registrarse como factura a su NIT mientras siga siendo propiedad del proveedor.'],
+            ]);
+        }
+
         $porcentajeUtilidadCompra = max(0, (int) Configuracion::valor('porcentaje_utilidad_compra', 25));
         $userId = (int) $request->user()->id;
 
-        $result = DB::transaction(function () use ($validated, $porcentajeUtilidadCompra, $userId, $tipoCompra) {
+        $result = DB::transaction(function () use ($validated, $porcentajeUtilidadCompra, $userId, $tipoCompra, $esFacturaFiscal, $nitEmpresa) {
             $esConsignacion = $tipoCompra === 'consignacion';
             $numeroCompra = sprintf(
                 'CMP-%s-%03d',
@@ -196,6 +267,10 @@ class CompraController extends Controller
                 'total' => 0,
                 'tipo_documento' => $validated['tipo_documento'] ?? null,
                 'numero_documento' => $validated['numero_documento'] ?? null,
+                'factura_receptor' => ($validated['tipo_documento'] ?? null) === 'factura' ? ($validated['factura_receptor'] ?? null) : null,
+                'nit_receptor' => $esFacturaFiscal ? $nitEmpresa : null,
+                'nit_proveedor' => ($validated['tipo_documento'] ?? null) === 'factura' ? ($validated['nit_proveedor'] ?? null) : null,
+                'serie_documento' => ($validated['tipo_documento'] ?? null) === 'factura' ? ($validated['serie_documento'] ?? null) : null,
                 'add_user' => $userId,
             ]);
 
@@ -257,6 +332,7 @@ class CompraController extends Controller
                     'producto_id'        => $producto->id,
                     'compra_detalle_id'  => $detalle->id,
                     'es_consignacion'    => $esConsignacion,
+                    'respaldo_fiscal'    => $esFacturaFiscal ? 'con_factura' : 'sin_factura',
                     'cantidad_inicial'   => $cantidad,
                     'cantidad_disponible' => $cantidad,
                     'costo_unitario'     => $costoUnitario,
@@ -359,6 +435,17 @@ class CompraController extends Controller
         $factor = 1 + ($porcentajeUtilidadCompra / 100);
 
         return toMoney($costoUnitario * $factor, 4);
+    }
+
+    private function comprasFiscales(): Collection
+    {
+        return Compra::query()
+            ->with('proveedor:id,nombre')
+            ->where('tipo_documento', 'factura')
+            ->where('factura_receptor', 'nit_empresa')
+            ->orderByDesc('fecha_compra')
+            ->orderByDesc('id')
+            ->get(['id', 'numero', 'proveedor_id', 'fecha_compra', 'estado', 'total', 'numero_documento', 'serie_documento', 'nit_proveedor', 'nit_receptor']);
     }
 
     private function normalizarMontos(Request $request): void

@@ -13,6 +13,7 @@ class InventarioLote extends Model
         'producto_id',
         'compra_detalle_id',
         'es_consignacion',
+        'respaldo_fiscal',
         'cantidad_inicial',
         'cantidad_disponible',
         'costo_unitario',
@@ -25,6 +26,7 @@ class InventarioLote extends Model
         return [
             'cantidad_inicial'    => 'decimal:4',
             'es_consignacion'     => 'bool',
+            'respaldo_fiscal'     => 'string',
             'cantidad_disponible' => 'decimal:4',
             'costo_unitario'      => 'decimal:4',
             'fecha_vencimiento'   => 'date',

@@ -32,6 +32,14 @@
                         <label class="form-check-label" for="only-low">Solo bajo stock</label>
                     </div>
                 </div>
+                <div class="col-12 col-md-2">
+                    <label class="form-label fw-semibold">Respaldo fiscal</label>
+                    <select v-model="respaldoFiscal" class="form-select" @change="loadExistencias">
+                        <option value="">Todos</option>
+                        <option value="con_factura">Con factura a mi NIT</option>
+                        <option value="sin_factura">Sin factura fiscal</option>
+                    </select>
+                </div>
                 <div class="col-12 col-md-2 d-grid">
                     <button class="btn btn-brand" :disabled="loading" @click="loadExistencias">Filtrar</button>
                 </div>
@@ -49,6 +57,7 @@
                             <th>Categoria</th>
                             <th>Stock</th>
                             <th>Propio / Consig.</th>
+                            <th>Con fact. / Sin fact.</th>
                             <th>Stock Min.</th>
                             <th>Costo Prom.</th>
                             <th>Venta Prom.</th>
@@ -59,7 +68,7 @@
                     </thead>
                     <tbody>
                         <tr v-if="!existencias.length">
-                            <td colspan="10" class="text-center text-body-secondary py-4">Sin datos de inventario.</td>
+                            <td colspan="11" class="text-center text-body-secondary py-4">Sin datos de inventario.</td>
                         </tr>
                         <tr v-for="item in existencias" :key="item.id">
                             <td>
@@ -71,6 +80,7 @@
                                 {{ Number(item.stock_actual || 0).toFixed(0) }} {{ item.unidad_medida_abreviatura || '' }}
                             </td>
                             <td>{{ Number(item.stock_propio || 0).toFixed(0) }} / {{ Number(item.stock_consignado || 0).toFixed(0) }}</td>
+                            <td>{{ Number(item.stock_con_factura || 0).toFixed(0) }} / {{ Number(item.stock_sin_factura || 0).toFixed(0) }}</td>
                             <td>{{ Number(item.stock_minimo || 0).toFixed(0) }}</td>
                             <td>Q {{ Number(item.costo_promedio || 0).toFixed(2) }}</td>
                             <td>Q {{ Number(item.precio_venta_promedio || 0).toFixed(2) }}</td>
@@ -177,6 +187,7 @@ const loading = ref(true);
 const search = ref('');
 const categoriaId = ref(null);
 const soloBajoStock = ref(false);
+const respaldoFiscal = ref('');
 const existencias = ref([]);
 const categorias = ref([]);
 const movimientos = ref([]);
@@ -226,6 +237,7 @@ async function loadExistencias() {
             params: {
                 search: search.value || null,
                 categoria_id: categoriaId.value || null,
+                respaldo_fiscal: respaldoFiscal.value || null,
                 solo_bajo_stock: soloBajoStock.value ? 1 : 0,
             },
         });

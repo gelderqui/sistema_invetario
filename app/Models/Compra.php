@@ -21,6 +21,10 @@ class Compra extends Model
         'total',
         'tipo_documento',
         'numero_documento',
+        'factura_receptor',
+        'nit_receptor',
+        'nit_proveedor',
+        'serie_documento',
         'add_user',
         'mod_user',
     ];
@@ -35,6 +39,10 @@ class Compra extends Model
             'total' => 'decimal:4',
             'tipo_documento' => 'string',
             'numero_documento' => 'string',
+            'factura_receptor' => 'string',
+            'nit_receptor' => 'string',
+            'nit_proveedor' => 'string',
+            'serie_documento' => 'string',
         ];
     }
 

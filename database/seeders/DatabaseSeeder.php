@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             //Fin fase incial
             //segunda fase
                 ConsignacionSeeder::class,
+                ComprasFiscalesSeeder::class,
             //fin seguda fase
         ]);
     }

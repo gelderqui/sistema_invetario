@@ -1,11 +1,15 @@
 <template>
     <div>
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
             <h2 class="h4 mb-0">Compras</h2>
-            <button class="btn btn-brand" :disabled="actionLocked" @click="openCreate">
-                <FontAwesomeIcon icon="fa-solid fa-cart-plus" class="me-2" />
-                Nueva compra
-            </button>
+            <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-outline-brand" :disabled="actionLocked" @click="exportFiscal('pdf')">PDF facturas</button>
+                <button class="btn btn-outline-brand" :disabled="actionLocked" @click="exportFiscal('excel')">Excel facturas</button>
+                <button class="btn btn-brand" :disabled="actionLocked" @click="openCreate">
+                    <FontAwesomeIcon icon="fa-solid fa-cart-plus" class="me-2" />
+                    Nueva compra
+                </button>
+            </div>
         </div>
 
         <div v-if="loading" class="text-center py-5">
@@ -236,6 +240,26 @@
                                         placeholder="Numero de recibo o factura"
                                     >
                                 </div>
+                                <template v-if="form.tipo_documento === 'factura'">
+                                    <div class="col-12 col-md-4">
+                                        <label class="form-label fw-semibold">Factura emitida a *</label>
+                                        <select v-model="form.factura_receptor" class="form-select">
+                                            <option value="cf">CF / Consumidor final</option>
+                                            <option value="nit_empresa">Mi NIT</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-12 col-md-4">
+                                        <label class="form-label fw-semibold">NIT del proveedor <span v-if="form.factura_receptor === 'nit_empresa'">*</span></label>
+                                        <input v-model.trim="form.nit_proveedor" type="text" class="form-control" placeholder="NIT emisor">
+                                    </div>
+                                    <div class="col-12 col-md-4">
+                                        <label class="form-label fw-semibold">Serie de factura</label>
+                                        <input v-model.trim="form.serie_documento" type="text" class="form-control" placeholder="Serie o DTE">
+                                    </div>
+                                    <div v-if="form.factura_receptor === 'nit_empresa'" class="col-12">
+                                        <div class="form-text">Esta compra se clasificará como inventario con factura a nombre de: <strong>{{ catalogs.nit_empresa || 'Configure el NIT en Configuraciones' }}</strong>.</div>
+                                    </div>
+                                </template>
                             </div>
 
                             <div class="d-flex justify-content-between align-items-center">
@@ -438,6 +462,9 @@ const emptyForm = () => ({
     tipo_compra: 'contado',
     tipo_documento: 'sin_documento',
     numero_documento: '',
+    factura_receptor: 'cf',
+    nit_proveedor: '',
+    serie_documento: '',
     items: [emptyItem()],
 });
 
@@ -488,6 +515,21 @@ async function loadCatalogs() {
     if (generalId) {
         const prov = data.data.proveedores.find((p) => p.id === generalId);
         if (prov) proveedorGeneral.value = prov;
+    }
+}
+
+async function exportFiscal(format) {
+    try {
+        const { data } = await axios.get(`/compras/fiscales/export/${format}`, { responseType: 'blob' });
+        const url = URL.createObjectURL(data);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `compras-fiscales.${format === 'excel' ? 'xlsx' : 'pdf'}`;
+        link.target = format === 'pdf' ? '_blank' : '_self';
+        link.click();
+        URL.revokeObjectURL(url);
+    } catch (error) {
+        formErrors.value = [error.response?.data?.message ?? 'No se pudo generar el reporte fiscal.'];
     }
 }
 
@@ -693,6 +735,10 @@ async function save() {
         validationErrors.push('Debe ingresar el numero de documento cuando el tipo es recibo o factura.');
     }
 
+    if (form.value.tipo_documento === 'factura' && form.value.factura_receptor === 'nit_empresa' && !String(form.value.nit_proveedor || '').trim()) {
+        validationErrors.push('Debe ingresar el NIT del proveedor para una factura emitida a su NIT.');
+    }
+
     if (!form.value.items.length) {
         validationErrors.push('Debe agregar al menos un item.');
     }
@@ -724,6 +770,9 @@ async function save() {
             es_consignacion: form.value.tipo_compra === 'consignacion',
             tipo_documento: form.value.tipo_documento,
             numero_documento: form.value.tipo_documento === 'sin_documento' ? null : (form.value.numero_documento || null),
+            factura_receptor: form.value.tipo_documento === 'factura' ? form.value.factura_receptor : null,
+            nit_proveedor: form.value.tipo_documento === 'factura' ? (form.value.nit_proveedor || null) : null,
+            serie_documento: form.value.tipo_documento === 'factura' ? (form.value.serie_documento || null) : null,
             items: form.value.items.map((item) => ({
                 producto_id: item.producto_id,
                 cantidad: Math.max(1, Math.trunc(Number(item.cantidad || 0))),

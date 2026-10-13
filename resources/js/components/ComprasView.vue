@@ -38,7 +38,7 @@
                             <td>{{ compra.detalles_count ?? 0 }}</td>
                             <td class="fw-semibold">
                                 Q {{ formatMoney(compra.total) }}
-                                <span v-if="compra.es_consignacion" class="badge text-bg-info ms-1">Consignación</span>
+                                <span :class="['badge ms-1', purchaseTypeBadge(compra)]">{{ purchaseTypeLabel(compra) }}</span>
                             </td>
                             <td>
                                 <span :class="['badge text-uppercase', compra.estado === 'anulada' ? 'text-bg-danger' : 'text-bg-success']">
@@ -198,14 +198,16 @@
                                         deselect-label="Quitar"
                                     />
                                 </div>
-                                <div v-if="catalogs.consignacion_habilitada" class="col-12 col-md-4">
-                                    <div class="form-check form-switch pt-4">
-                                        <input id="compra-consignacion" v-model="form.es_consignacion" class="form-check-input" type="checkbox">
-                                        <label class="form-check-label fw-semibold" for="compra-consignacion">Mercancía en consignación</label>
-                                        <div class="form-text">Se paga al proveedor cuando se venda.</div>
-                                    </div>
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label fw-semibold">Tipo de compra *</label>
+                                    <select v-model="form.tipo_compra" class="form-select">
+                                        <option value="contado">Pago inmediato</option>
+                                        <option value="credito_proveedor">Compra a crédito</option>
+                                        <option v-if="catalogs.consignacion_habilitada" value="consignacion">Consignación</option>
+                                    </select>
+                                    <div class="form-text">{{ purchaseTypeHelp(form.tipo_compra) }}</div>
                                 </div>
-                                <div v-if="!form.es_consignacion" class="col-12 col-md-4">
+                                <div v-if="form.tipo_compra === 'contado'" class="col-12 col-md-4">
                                     <label class="form-label fw-semibold">Metodo de pago *</label>
                                     <select v-model="form.metodo_pago" class="form-select" required>
                                         <option
@@ -433,7 +435,7 @@ const emptyForm = () => ({
     proveedor: proveedorGeneral.value,
     fecha_compra: new Date().toISOString().slice(0, 10),
     metodo_pago: 'caja_general',
-    es_consignacion: false,
+    tipo_compra: 'contado',
     tipo_documento: 'sin_documento',
     numero_documento: '',
     items: [emptyItem()],
@@ -683,7 +685,7 @@ async function save() {
         validationErrors.push('Seleccione un proveedor válido de la lista.');
     }
 
-    if (!form.value.es_consignacion && !['caja_general', 'banco'].includes(String(form.value.metodo_pago || ''))) {
+    if (form.value.tipo_compra === 'contado' && !['caja_general', 'banco'].includes(String(form.value.metodo_pago || ''))) {
         validationErrors.push('Seleccione un metodo de pago valido.');
     }
 
@@ -717,8 +719,9 @@ async function save() {
         const payload = {
             proveedor_id: form.value.proveedor.id,
             fecha_compra: form.value.fecha_compra,
-            metodo_pago: form.value.metodo_pago,
-            es_consignacion: Boolean(form.value.es_consignacion),
+            metodo_pago: form.value.tipo_compra === 'contado' ? form.value.metodo_pago : null,
+            tipo_compra: form.value.tipo_compra,
+            es_consignacion: form.value.tipo_compra === 'consignacion',
             tipo_documento: form.value.tipo_documento,
             numero_documento: form.value.tipo_documento === 'sin_documento' ? null : (form.value.numero_documento || null),
             items: form.value.items.map((item) => ({
@@ -752,6 +755,26 @@ function documentTypeLabel(value) {
     if (value === 'recibo') return 'Recibo';
     if (value === 'factura') return 'Factura';
     return 'Sin documento';
+}
+
+function purchaseTypeLabel(compra) {
+    const type = compra?.tipo_compra ?? (compra?.es_consignacion ? 'consignacion' : 'contado');
+    if (type === 'credito_proveedor') return 'Crédito proveedor';
+    if (type === 'consignacion') return 'Consignación';
+    return 'Pago inmediato';
+}
+
+function purchaseTypeBadge(compra) {
+    const type = compra?.tipo_compra ?? (compra?.es_consignacion ? 'consignacion' : 'contado');
+    if (type === 'credito_proveedor') return 'text-bg-warning';
+    if (type === 'consignacion') return 'text-bg-info';
+    return 'text-bg-secondary';
+}
+
+function purchaseTypeHelp(type) {
+    if (type === 'credito_proveedor') return 'La deuda se registra al recibir la mercancía.';
+    if (type === 'consignacion') return 'Se paga al proveedor únicamente cuando se venda.';
+    return 'El importe se descuenta de Caja general o Banco al guardar.';
 }
 
 function openAnularCompra(compra) {

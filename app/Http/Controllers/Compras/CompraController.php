@@ -12,6 +12,7 @@ use App\Models\InventarioLote;
 use App\Models\InventarioMovimiento;
 use App\Models\Producto;
 use App\Models\Proveedor;
+use App\Models\ProveedorCuentaPorPagar;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -34,6 +35,7 @@ class CompraController extends Controller
                 'fecha_compra',
                 'estado',
                 'metodo_pago',
+                'tipo_compra',
                 'es_consignacion',
                 'total',
                 'tipo_documento',
@@ -121,7 +123,8 @@ class CompraController extends Controller
             [
                 'proveedor_id' => ['required', Rule::exists('proveedores', 'id')],
                 'fecha_compra' => ['required', 'date'],
-                'metodo_pago' => ['required', Rule::in(['caja_general', 'banco'])],
+                'metodo_pago' => ['nullable', Rule::in(['caja_general', 'banco'])],
+                'tipo_compra' => ['nullable', Rule::in(['contado', 'credito_proveedor', 'consignacion'])],
                 'es_consignacion' => ['sometimes', 'boolean'],
                 'tipo_documento' => ['nullable', Rule::in(['sin_documento', 'recibo', 'factura'])],
                 'numero_documento' => ['nullable', 'string', 'max:100'],
@@ -159,15 +162,23 @@ class CompraController extends Controller
             ]);
         }
 
-        if ((bool) ($validated['es_consignacion'] ?? false) && ! (bool) Configuracion::valor('habilitar_consignacion', false)) {
+        $tipoCompra = $validated['tipo_compra'] ?? ((bool) ($validated['es_consignacion'] ?? false) ? 'consignacion' : 'contado');
+
+        if ($tipoCompra === 'contado' && ! in_array($validated['metodo_pago'] ?? null, ['caja_general', 'banco'], true)) {
+            throw ValidationException::withMessages([
+                'metodo_pago' => 'Debe seleccionar Caja general o Banco para una compra con pago inmediato.',
+            ]);
+        }
+
+        if ($tipoCompra === 'consignacion' && ! (bool) Configuracion::valor('habilitar_consignacion', false)) {
             throw ValidationException::withMessages(['es_consignacion' => ['La consignación está deshabilitada para esta tienda.']]);
         }
 
         $porcentajeUtilidadCompra = max(0, (int) Configuracion::valor('porcentaje_utilidad_compra', 25));
         $userId = (int) $request->user()->id;
 
-        $result = DB::transaction(function () use ($validated, $porcentajeUtilidadCompra, $userId) {
-            $esConsignacion = (bool) ($validated['es_consignacion'] ?? false);
+        $result = DB::transaction(function () use ($validated, $porcentajeUtilidadCompra, $userId, $tipoCompra) {
+            $esConsignacion = $tipoCompra === 'consignacion';
             $numeroCompra = sprintf(
                 'CMP-%s-%03d',
                 now()->format('YmdHis'),
@@ -179,7 +190,8 @@ class CompraController extends Controller
                 'proveedor_id' => $validated['proveedor_id'],
                 'fecha_compra' => $validated['fecha_compra'],
                 'estado' => 'activo',
-                'metodo_pago' => $validated['metodo_pago'],
+                'metodo_pago' => $tipoCompra === 'contado' ? $validated['metodo_pago'] : null,
+                'tipo_compra' => $tipoCompra,
                 'es_consignacion' => $esConsignacion,
                 'total' => 0,
                 'tipo_documento' => $validated['tipo_documento'] ?? null,
@@ -284,6 +296,23 @@ class CompraController extends Controller
             ]);
 
             if ($esConsignacion) {
+                return [
+                    'compra' => $compra->load(['proveedor:id,nombre', 'detalles.producto:id,nombre'])->loadCount('detalles'),
+                    'alerts' => $alerts,
+                ];
+            }
+
+            if ($tipoCompra === 'credito_proveedor') {
+                ProveedorCuentaPorPagar::query()->create([
+                    'proveedor_id' => $compra->proveedor_id,
+                    'origen' => 'compra_credito',
+                    'compra_id' => $compra->id,
+                    'monto_original' => $compra->total,
+                    'saldo_pendiente' => $compra->total,
+                    'estado' => 'pendiente',
+                    'add_user' => $userId,
+                ]);
+
                 return [
                     'compra' => $compra->load(['proveedor:id,nombre', 'detalles.producto:id,nombre'])->loadCount('detalles'),
                     'alerts' => $alerts,
@@ -431,7 +460,28 @@ class CompraController extends Controller
                 'mod_user' => $userId,
             ]);
 
-            if ($compra->es_consignacion) {
+            if ($compra->tipo_compra === 'consignacion' || $compra->es_consignacion) {
+                return;
+            }
+
+            if ($compra->tipo_compra === 'credito_proveedor') {
+                $cuentaPorPagar = ProveedorCuentaPorPagar::query()
+                    ->where('compra_id', $compra->id)
+                    ->where('origen', 'compra_credito')
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($cuentaPorPagar && abs((float) $cuentaPorPagar->saldo_pendiente - (float) $cuentaPorPagar->monto_original) > 0.0001) {
+                    throw ValidationException::withMessages([
+                        'compra' => ['No se puede anular una compra a crédito que ya tiene pagos aplicados.'],
+                    ]);
+                }
+
+                $cuentaPorPagar?->update([
+                    'saldo_pendiente' => 0,
+                    'estado' => 'anulada',
+                ]);
+
                 return;
             }
 

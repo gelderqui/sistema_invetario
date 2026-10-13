@@ -79,8 +79,8 @@ class ProveedorCuentaPorPagarController extends Controller
                 $cuenta->update(['saldo_pendiente' => $saldo, 'estado' => $saldo <= 0.0001 ? 'pagada' : 'parcial']);
                 ProveedorPagoAplicacion::query()->create(['proveedor_pago_id' => $pago->id, 'proveedor_cuenta_por_pagar_id' => $cuenta->id, 'monto' => $monto]);
             }
-            registrarMovimientoCapital('pago_proveedor_consignacion', $total, (int) $request->user()->id, (int) $cuentaCapital->id, null,
-                'Pago de consignación '.$pago->numero, $pago->fecha->toDateTimeString(), 'proveedor_pago', $pago->id, ['proveedor_id' => $pago->proveedor_id]);
+            registrarMovimientoCapital('pago_proveedor', $total, (int) $request->user()->id, (int) $cuentaCapital->id, null,
+                'Pago a proveedor '.$pago->numero, $pago->fecha->toDateTimeString(), 'proveedor_pago', $pago->id, ['proveedor_id' => $pago->proveedor_id]);
             return $pago;
         });
         return response()->json(['message' => 'Pago al proveedor registrado correctamente.', 'data' => $pago->load('proveedor:id,nombre')], 201);

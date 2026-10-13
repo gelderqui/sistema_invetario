@@ -16,6 +16,7 @@ class Compra extends Model
         'fecha_compra',
         'estado',
         'metodo_pago',
+        'tipo_compra',
         'es_consignacion',
         'total',
         'tipo_documento',
@@ -29,6 +30,7 @@ class Compra extends Model
         return [
             'fecha_compra' => 'date',
             'metodo_pago' => 'string',
+            'tipo_compra' => 'string',
             'es_consignacion' => 'bool',
             'total' => 'decimal:4',
             'tipo_documento' => 'string',

@@ -72,14 +72,16 @@ Estado funcional actual:
 - Cuando una venta consume un lote consignado, crea un cargo al proveedor por el costo de las unidades consumidas.
 - Una devolución o anulación reduce el cargo de consignación solamente si todavía no tiene pagos aplicados; si ya fue pagado, se bloquea para conservar trazabilidad.
 
-### Compras y consignación
+### Compras, crédito de proveedor y consignación
 
+- En Compras, `tipo_compra` define `contado`, `credito_proveedor` o `consignacion`; por defecto es contado.
 - Una compra normal descuenta Caja general o Banco según su método de pago.
+- Una compra a crédito entra como inventario propio, no descuenta capital al recibirla y crea una cuenta por pagar por el total de la compra.
 - La consignación es opcional y se habilita con `habilitar_consignacion = 1`.
 - Una compra consignada entra al inventario y crea lotes FIFO, pero no genera salida de capital al recibirla.
 - Inventario muestra el stock físico separado en propio y consignado.
-- La ruta de operación es `Cuentas por pagar`; allí se aplican pagos parciales o totales a cargos pendientes de un solo proveedor.
-- El pago de consignación crea un movimiento de capital `pago_proveedor_consignacion` desde Caja general o Banco.
+- La ruta de operación es `Cuentas por pagar`; allí se aplican pagos parciales o totales a cargos pendientes de un solo proveedor, ya sean de crédito o consignación.
+- El pago a proveedor crea un movimiento de capital `pago_proveedor` desde Caja general o Banco.
 
 ### Clientes
 

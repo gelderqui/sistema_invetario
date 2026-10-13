@@ -359,6 +359,7 @@ class VentaController extends Controller
                     if ($lote?->es_consignacion && $compra?->es_consignacion) {
                         ProveedorCuentaPorPagar::query()->create([
                             'proveedor_id' => $compra->proveedor_id,
+                            'origen' => 'consignacion_venta',
                             'compra_id' => $compra->id,
                             'compra_detalle_id' => $lote->compra_detalle_id,
                             'venta_id' => $venta->id,

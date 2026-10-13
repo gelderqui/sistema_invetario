@@ -96,7 +96,7 @@ Al guardar una venta a crédito debes seleccionar un cliente. El sistema crea la
 Use consignación solo cuando el proveedor entrega la mercancía y el negocio debe pagarla después de venderla.
 
 1. Un administrador habilita `habilitar_consignacion` con valor `1` en `Configuraciones`.
-2. Ve a `Compras` y marca **Mercancía en consignación**.
+2. Ve a `Compras` y selecciona **Consignación** como tipo de compra.
 3. Selecciona proveedor, productos, cantidades, costo y precio de venta; no se solicita método de pago.
 4. Guarda la recepción.
 
@@ -104,7 +104,18 @@ Al guardar, las unidades entran al inventario y pueden venderse normalmente, per
 
 Cuando se vende una unidad consignada, el sistema calcula automáticamente lo que se debe al proveedor según el costo de su lote.
 
-### 3.5 Cuentas por pagar a proveedores
+### 3.5 Compra a crédito
+
+Use **Compra a crédito** cuando la mercancía pasa a ser del negocio al recibirla, pero el proveedor se cobrará después.
+
+1. Ve a `Compras` y selecciona **Compra a crédito**.
+2. Registra proveedor, documento y productos normalmente.
+3. Guarda la compra: el inventario entra como propio y no se descuenta Caja general ni Banco.
+4. El total se crea automáticamente como una cuenta pendiente del proveedor.
+
+Después, registra un abono o pago total desde `Cuentas por pagar`, seleccionando Caja general o Banco.
+
+### 3.6 Cuentas por pagar a proveedores
 
 Ruta: `Cuentas por pagar`.
 

@@ -2,7 +2,6 @@ import './bootstrap';
 import '../css/app.css';
 import 'bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import '@coreui/coreui/dist/css/coreui.min.css';
 
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { fab } from '@fortawesome/free-brands-svg-icons';

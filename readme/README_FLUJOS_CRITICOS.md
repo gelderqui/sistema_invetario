@@ -36,6 +36,14 @@ Este documento describe flujos operativos punta a punta que impactan dinero, inv
 4. Se actualiza stock y costos del producto.
 5. No se crea compra ni se afecta historial de proveedores.
 
+## 2.1.1 Documento fiscal de compra -> clasificación del lote
+
+1. En una compra de contado, crédito o consignación se puede registrar sin documento, recibo o factura.
+2. Si es factura, se indica si fue emitida como `CF` o a `nit_empresa`.
+3. Una factura a `nit_empresa` requiere NIT de proveedor y clasifica el lote como `con_factura`.
+4. CF, recibo o ausencia de documento clasifican el lote como `sin_factura`.
+5. Esta clasificación se usa para filtros y exportaciones de Compras e Inventario; no crea ni cancela pagos por sí misma.
+
 ## 2.2 Compra a crédito -> inventario propio + cuenta por pagar
 
 1. En Compras se selecciona **Compra a crédito**.

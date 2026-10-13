@@ -162,6 +162,7 @@ class CompraController extends Controller
     public function store(Request $request): JsonResponse
     {
         $this->normalizarMontos($request);
+        $this->normalizarDatosFiscales($request);
 
         $validated = $request->validate(
             [
@@ -501,6 +502,17 @@ class CompraController extends Controller
         }
 
         $request->merge(['items' => $items]);
+    }
+
+    private function normalizarDatosFiscales(Request $request): void
+    {
+        if (! $request->has('nit_proveedor')) {
+            return;
+        }
+
+        $request->merge([
+            'nit_proveedor' => preg_replace('/\D+/', '', (string) $request->input('nit_proveedor')) ?? '',
+        ]);
     }
 
     public function anular(Request $request, Compra $compra): JsonResponse

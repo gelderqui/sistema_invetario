@@ -82,9 +82,9 @@ Estado funcional actual:
 - Inventario muestra el stock físico separado en propio y consignado.
 - La ruta de operación es `Cuentas por pagar`; allí se aplican pagos parciales o totales a cargos pendientes de un solo proveedor, ya sean de crédito o consignación.
 - El pago a proveedor crea un movimiento de capital `pago_proveedor` desde Caja general o Banco.
-- Una factura puede emitirse como `CF` o al `nit_empresa` configurado. Solo la segunda clasifica sus lotes como `con_factura`; CF se clasifica como `sin_factura`.
+- Una factura puede emitirse como `CF` o al `nit_empresa` configurado en compras de contado, crédito de proveedor y consignación. Solo la segunda clasifica sus lotes como `con_factura`; CF se clasifica como `sin_factura`.
 - En ventas, los lotes `sin_factura` tienen prioridad antes de los lotes `con_factura`, conservando FIFO dentro de cada grupo.
-- Inventario muestra y filtra existencias con/sin factura; Compras permite exportar el libro histórico de compras facturadas a PDF o Excel.
+- Compras filtra por proveedor, tipo de documento y receptor de factura; Inventario filtra existencias por el documento de la compra que originó el lote. Ambos módulos exportan a PDF o Excel exactamente los resultados de los filtros aplicados.
 
 ### Clientes
 
@@ -192,10 +192,11 @@ Codigos base:
 - `porcentaje_utilidad_compra`: entero (%)
 - `caja_aperturas_maximas_por_dia`: entero (aperturas por usuario por dia)
 - `habilitar_consignacion`: entero booleano (`0` u `1`)
+- `nit_empresa`: texto; NIT usado para identificar facturas emitidas a nombre del negocio.
 
 Reglas:
 
-- Solo `nombre_empresa` acepta texto.
+- `nombre_empresa` y `nit_empresa` aceptan texto.
 - Las demas configuraciones aceptan entero.
 - Enteros: minimo `0`.
 - Excepcion: `devolucion_limite_dias_cajero` minimo `2`.

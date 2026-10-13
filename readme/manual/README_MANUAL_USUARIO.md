@@ -91,7 +91,21 @@ Al guardar una venta a crédito debes seleccionar un cliente. El sistema crea la
 - La columna **Precio sugerido** se calcula desde el costo y el porcentaje configurado. Debajo se muestra el precio actual del producto para compararlo antes de guardar.
 - Una compra actualiza el precio normal aplicado; el precio mayorista se administra desde el catálogo de Productos.
 
-### 3.4 Mercancía en consignación
+### 3.4 Documento de compra y factura a Mi NIT
+
+En toda compra seleccione el documento que le entregó el proveedor:
+
+- **Sin documento**: no se registra comprobante.
+- **Recibo**: ingrese el número del recibo.
+- **Factura**: ingrese número, serie/DTE y defina si fue emitida como **CF** o a **Mi NIT**.
+
+Una factura a **Mi NIT** requiere que el NIT del negocio esté configurado en `Configuraciones`, además del NIT del proveedor. El sistema marca las unidades recibidas como **inventario con factura**. Una factura CF y los demás documentos se consideran inventario sin factura fiscal.
+
+Esta elección está disponible para pago inmediato, compra a crédito y consignación. El documento no cambia la forma de pago: una compra a crédito continúa pendiente de pago y una consignación continúa liquidándose según lo vendido.
+
+En la tabla de Compras puede filtrar por proveedor, documento y receptor de factura. Los botones **Exportar PDF** y **Exportar Excel** generan exactamente el listado filtrado. En `Inventario` se puede aplicar el mismo filtro para identificar productos con existencias provenientes de cada tipo de documento y exportar el resultado.
+
+### 3.5 Mercancía en consignación
 
 Use consignación solo cuando el proveedor entrega la mercancía y el negocio debe pagarla después de venderla.
 
@@ -104,7 +118,7 @@ Al guardar, las unidades entran al inventario y pueden venderse normalmente, per
 
 Cuando se vende una unidad consignada, el sistema calcula automáticamente lo que se debe al proveedor según el costo de su lote.
 
-### 3.5 Compra a crédito
+### 3.6 Compra a crédito
 
 Use **Compra a crédito** cuando la mercancía pasa a ser del negocio al recibirla, pero el proveedor se cobrará después.
 
@@ -115,7 +129,7 @@ Use **Compra a crédito** cuando la mercancía pasa a ser del negocio al recibir
 
 Después, registra un abono o pago total desde `Cuentas por pagar`, seleccionando Caja general o Banco.
 
-### 3.6 Cuentas por pagar a proveedores
+### 3.7 Cuentas por pagar a proveedores
 
 Ruta: `Cuentas por pagar`.
 
@@ -130,7 +144,7 @@ Si una venta consignada se anula o se devuelve antes de pagar al proveedor, el s
 
 ---
 
-## 3.4 Clientes mayoristas
+## 3.8 Clientes mayoristas
 
 En `Catálogo -> Clientes`, seleccione el tipo **Minorista** o **Mayorista**. Todos los clientes existentes y nuevos inician como minoristas por defecto. El tipo define el precio aplicado automáticamente en el POS; no depende del NIT ni del nombre del cliente.
 
@@ -248,12 +262,13 @@ Codigos relevantes:
 - `porcentaje_utilidad_compra`
 - `caja_aperturas_maximas_por_dia`
 - `habilitar_consignacion` (`0` la oculta; `1` permite usarla)
+- `nit_empresa` (NIT del negocio para identificar facturas emitidas a su nombre)
 - `inversion_inicial`
 
 Reglas de valor:
 
 - `nombre_empresa` acepta texto.
-- Las demas aceptan enteros.
+- Las demas aceptan enteros, excepto `nit_empresa`, que acepta texto.
 - Minimo general: `0`.
 - `devolucion_limite_dias_cajero` minimo `2`.
 - `caja_aperturas_maximas_por_dia` minimo `1`.

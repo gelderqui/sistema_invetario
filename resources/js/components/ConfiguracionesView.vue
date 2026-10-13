@@ -75,11 +75,13 @@
                                 <input
                                     v-model="form.value"
                                     :type="inputTypePorCodigo(form.codigo)"
+                                    :inputmode="form.codigo === 'nit_empresa' ? 'numeric' : undefined"
                                     class="form-control"
                                     :min="inputMinPorCodigo(form.codigo)"
                                     step="1"
                                     maxlength="255"
                                     required
+                                    @input="normalizarEntradaPorCodigo"
                                 >
                                 <div class="form-text">{{ ayudaPorCodigo(form.codigo) }}</div>
                             </div>
@@ -198,6 +200,7 @@ function inputMinPorCodigo(codigo) {
 
 function ayudaPorCodigo(codigo) {
     if (codigo === 'nombre_empresa') return 'Texto requerido.';
+    if (codigo === 'nit_empresa') return 'Solo números, sin guiones ni espacios.';
     if (codigo === 'habilitar_consignacion') return 'Use 1 para habilitar consignación o 0 para ocultarla.';
     if (codigo === 'devolucion_limite_dias_cajero') return 'Solo entero. Minimo 2.';
     if (codigo === 'caja_aperturas_maximas_por_dia') return 'Solo entero. Minimo 1.';
@@ -207,6 +210,12 @@ function ayudaPorCodigo(codigo) {
 }
 
 function esCodigoEntero(codigo) {
-    return codigo !== 'nombre_empresa';
+    return !['nombre_empresa', 'nit_empresa'].includes(codigo);
+}
+
+function normalizarEntradaPorCodigo(event) {
+    if (form.value.codigo !== 'nit_empresa') return;
+
+    form.value.value = String(event.target.value ?? '').replace(/\D/g, '');
 }
 </script>

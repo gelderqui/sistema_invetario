@@ -95,7 +95,7 @@ Este documento describe las tablas actuales y sus relaciones principales.
 - `inventario_lotes.producto_id -> productos.id` (M:1)
 - `inventario_lotes.compra_detalle_id -> compra_detalles.id` (M:1)
 - `compras.tipo_compra` distingue contado, crédito de proveedor y consignación. `compras.es_consignacion` y `inventario_lotes.es_consignacion` identifican específicamente mercancía de terceros.
-- `compras.factura_receptor`, `nit_receptor`, `nit_proveedor` y `serie_documento` conservan trazabilidad fiscal para compras de pago inmediato, crédito a proveedor y consignación. `inventario_lotes.respaldo_fiscal` clasifica cada lote como `con_factura` o `sin_factura`.
+- `compras.factura_receptor`, `nit_receptor`, `nit_proveedor` y `serie_documento` conservan trazabilidad fiscal para compras de pago inmediato, crédito a proveedor y consignación. Con `factura_receptor = nit_empresa`, el lote recibido se clasifica como `con_factura`; con `CF`, recibo o sin documento se clasifica como `sin_factura`. Esta clasificación no altera el tipo de compra ni sus movimientos financieros.
 - `inventario_movimientos.producto_id -> productos.id` (M:1)
 - `inventario_movimientos.compra_id -> compras.id` (M:1)
 - `inventario_movimientos.compra_detalle_id -> compra_detalles.id` (M:1)

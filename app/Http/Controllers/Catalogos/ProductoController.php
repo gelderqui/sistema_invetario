@@ -75,7 +75,6 @@ class ProductoController extends Controller
             'unidad_medida_id'  => ['required', Rule::exists('productos_unidad_medida', 'id')->where(fn ($q) => $q->where('activo', true))],
             'control_vencimiento' => ['sometimes', 'boolean'],
             'dias_alerta_vencimiento' => ['nullable', 'integer', 'min:1', 'max:365'],
-            'dias_alerta_vencimiento' => ['nullable', 'integer', 'min:1', 'max:365'],
             'peso_referencial' => ['nullable', 'numeric', 'gte:0'],
             'activo'        => ['sometimes', 'boolean'],
         ], [

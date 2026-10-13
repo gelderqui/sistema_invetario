@@ -127,14 +127,26 @@ class ConfiguracionController extends Controller
         $codigo = strtolower($codigo);
         $valorTexto = trim((string) $value);
 
-        if (in_array($codigo, ['nombre_empresa', 'nit_empresa'], true)) {
+        if ($codigo === 'nombre_empresa') {
             if ($valorTexto === '') {
                 throw ValidationException::withMessages([
-                    'value' => [$codigo === 'nit_empresa' ? 'El NIT de empresa es obligatorio.' : 'El nombre de empresa es obligatorio.'],
+                    'value' => ['El nombre de empresa es obligatorio.'],
                 ]);
             }
 
             return $valorTexto;
+        }
+
+        if ($codigo === 'nit_empresa') {
+            $nit = preg_replace('/\D+/', '', $valorTexto) ?? '';
+
+            if ($nit === '' || strlen($nit) > 30) {
+                throw ValidationException::withMessages([
+                    'value' => ['El NIT de empresa debe contener entre 1 y 30 números.'],
+                ]);
+            }
+
+            return $nit;
         }
 
         if ($codigo === 'habilitar_consignacion') {

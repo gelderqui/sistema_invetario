@@ -91,6 +91,32 @@ Al guardar una venta a crédito debes seleccionar un cliente. El sistema crea la
 - La columna **Precio sugerido** se calcula desde el costo y el porcentaje configurado. Debajo se muestra el precio actual del producto para compararlo antes de guardar.
 - Una compra actualiza el precio normal aplicado; el precio mayorista se administra desde el catálogo de Productos.
 
+### 3.4 Mercancía en consignación
+
+Use consignación solo cuando el proveedor entrega la mercancía y el negocio debe pagarla después de venderla.
+
+1. Un administrador habilita `habilitar_consignacion` con valor `1` en `Configuraciones`.
+2. Ve a `Compras` y marca **Mercancía en consignación**.
+3. Selecciona proveedor, productos, cantidades, costo y precio de venta; no se solicita método de pago.
+4. Guarda la recepción.
+
+Al guardar, las unidades entran al inventario y pueden venderse normalmente, pero no se descuenta Caja general ni Banco. La compra queda identificada como consignación.
+
+Cuando se vende una unidad consignada, el sistema calcula automáticamente lo que se debe al proveedor según el costo de su lote.
+
+### 3.5 Cuentas por pagar a proveedores
+
+Ruta: `Cuentas por pagar`.
+
+1. Selecciona uno o más cargos del mismo proveedor.
+2. Presiona **Registrar pago**.
+3. Indica la fecha, Caja general o Banco y el monto para cada cargo.
+4. Guarda el pago.
+
+Puedes pagar un cargo de forma parcial. El sistema muestra el saldo restante y al completarlo lo marca como pagado. No registres este pago como gasto, porque el costo ya se usa para calcular la utilidad de la venta.
+
+Si una venta consignada se anula o se devuelve antes de pagar al proveedor, el sistema reduce el cargo automáticamente. Cuando ya existe un pago aplicado, esa operación se bloquea para no perder la trazabilidad.
+
 ---
 
 ## 3.4 Clientes mayoristas
@@ -108,6 +134,7 @@ El modulo Capital administra fondos globales del negocio (`caja_general` y `banc
 - No se permite transferir de una cuenta hacia la misma cuenta.
 - La fecha de transaccion se toma del sistema.
 - Gastos pagados con `caja_general` o `banco` afectan saldos de capital.
+- Los pagos de consignación desde `Cuentas por pagar` también reducen Caja general o Banco.
 
 ### 4.2 Recomendacion operativa
 
@@ -151,14 +178,16 @@ Muestra la foto actual del negocio:
 - Banco.
 - Total efectivo.
 - Cuentas por cobrar.
+- Cuentas por pagar a proveedores.
 - Inventario valorizado.
+- Mercancía en consignación en custodia.
 - Total negocio.
 - Inversion inicial.
 - Resultado vs inversion.
 
 Formula principal:
 
-- `total_negocio = efectivo_total + cuentas_por_cobrar + inventario_valorizado`
+- `total_negocio = efectivo_total + cuentas_por_cobrar + inventario_valorizado - cuentas_por_pagar_proveedores`
 - `resultado = total_negocio - inversion_inicial`
 
 ### 5.2 Utilidad del periodo
@@ -207,6 +236,7 @@ Codigos relevantes:
 - `devolucion_limite_dias_cajero`
 - `porcentaje_utilidad_compra`
 - `caja_aperturas_maximas_por_dia`
+- `habilitar_consignacion` (`0` la oculta; `1` permite usarla)
 - `inversion_inicial`
 
 Reglas de valor:

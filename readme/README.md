@@ -16,6 +16,9 @@ Documentacion general del sistema de inventario, su estado funcional y las guias
 - En reportes: estado general del negocio, utilidad, flujo de caja, cuentas por cobrar e inventario valorizado.
 - En reportes: la inversion inicial se toma del primer ingreso registrado en Capital.
 - Inventario inicial: carga de existencias de arranque sin registrarlo como compra.
+- Consignación opcional: al habilitar `habilitar_consignacion = 1`, Compras permite recibir mercancía sin descontar capital; al venderla se genera una cuenta por pagar al proveedor.
+- Compras incluye `Cuentas por pagar`: permite registrar pagos parciales o completos de consignación desde Caja general o Banco.
+- Inventario y Reportes separan mercancía propia de la consignada en custodia; el estado general resta las cuentas pendientes a proveedores.
 - Formato monetario frontend estandar: 2 decimales, separador de miles con coma y decimal con punto.
 - Reloj de header sincronizado desde backend al login y resincronizado cada 30 minutos.
 

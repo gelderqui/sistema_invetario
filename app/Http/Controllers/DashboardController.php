@@ -23,7 +23,7 @@ class DashboardController extends Controller
         $finMes = Carbon::today()->endOfMonth();
 
         $ventasQuery = Venta::query()->where('estado', 'activo');
-        $comprasQuery = Compra::query()->where('estado', 'activo');
+        $comprasQuery = Compra::query()->where('estado', 'activo')->where('es_consignacion', false);
         $gastosQuery = Gasto::query();
 
         if (! $isAdmin && $user) {
@@ -35,6 +35,9 @@ class DashboardController extends Controller
         $ventasHoy = (float) (clone $ventasQuery)->whereDate('fecha_venta', $hoy)->sum('total');
         $comprasHoy = (float) (clone $comprasQuery)->whereDate('fecha_compra', $hoy)->sum('total');
         $gastosHoy = (float) (clone $gastosQuery)->whereDate('fecha', $hoy)->sum('monto');
+        $costoVentasHoyQuery = InventarioMovimiento::query()->where('tipo', 'salida_venta')->whereDate('created_at', $hoy);
+        if (! $isAdmin && $user) $costoVentasHoyQuery->where('add_user', $user->id);
+        $costoVentasHoy = (float) $costoVentasHoyQuery->selectRaw('COALESCE(SUM(ABS(cantidad) * costo_unitario), 0) as total')->value('total');
 
         $ventasDiaCount = (int) (clone $ventasQuery)->whereDate('fecha_venta', $hoy)->count();
         $ventasMesTotal = (float) (clone $ventasQuery)
@@ -64,7 +67,7 @@ class DashboardController extends Controller
                             'ventas' => toMoney($ventasHoy, 4),
                             'compras' => toMoney($comprasHoy, 4),
                             'gastos' => toMoney($gastosHoy, 4),
-                            'ganancia_estimada' => toMoney($ventasHoy - $comprasHoy - $gastosHoy, 4),
+                            'ganancia_estimada' => toMoney($ventasHoy - $costoVentasHoy - $gastosHoy, 4),
                         ],
                         'productos' => [
                             'bajo_stock' => $bajoStock,
@@ -95,7 +98,7 @@ class DashboardController extends Controller
             })
             ->count();
 
-        $gananciaEstimadaHoy = toMoney($ventasHoy - $comprasHoy - $gastosHoy, 4);
+        $gananciaEstimadaHoy = toMoney($ventasHoy - $costoVentasHoy - $gastosHoy, 4);
 
         return response()->json([
             'data' => [

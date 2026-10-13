@@ -15,6 +15,7 @@ use App\Http\Controllers\Catalogos\ProductoUnidadMedidaController;
 use App\Http\Controllers\Catalogos\ProveedorController;
 use App\Http\Controllers\Catalogos\ProductoController;
 use App\Http\Controllers\Compras\CompraController;
+use App\Http\Controllers\Compras\ProveedorCuentaPorPagarController;
 use App\Http\Controllers\ConfiguracionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Gastos\GastoController;
@@ -122,6 +123,13 @@ Route::prefix('api')->group(function (): void {
             Route::get('/get/{compra}', [CompraController::class, 'show']);
             Route::post('/store', [CompraController::class, 'store']);
             Route::patch('/anular/{compra}', [CompraController::class, 'anular']);
+        });
+
+        Route::prefix('cuentas-por-pagar')->middleware('permission:proveedores_cuentas_por_pagar')->group(function (): void {
+            Route::get('/get', [ProveedorCuentaPorPagarController::class, 'index']);
+            Route::get('/get/catalogs', [ProveedorCuentaPorPagarController::class, 'catalogs']);
+            Route::get('/pagos', [ProveedorCuentaPorPagarController::class, 'pagos']);
+            Route::post('/pagos', [ProveedorCuentaPorPagarController::class, 'pagar']);
         });
 
         Route::prefix('caja')->group(function (): void {

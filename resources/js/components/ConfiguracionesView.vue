@@ -198,6 +198,7 @@ function inputMinPorCodigo(codigo) {
 
 function ayudaPorCodigo(codigo) {
     if (codigo === 'nombre_empresa') return 'Texto requerido.';
+    if (codigo === 'habilitar_consignacion') return 'Use 1 para habilitar consignación o 0 para ocultarla.';
     if (codigo === 'devolucion_limite_dias_cajero') return 'Solo entero. Minimo 2.';
     if (codigo === 'caja_aperturas_maximas_por_dia') return 'Solo entero. Minimo 1.';
     if (codigo === 'porcentaje_utilidad_compra') return 'Porcentaje entero usado en compras para sugerir el precio de venta. Minimo 0.';

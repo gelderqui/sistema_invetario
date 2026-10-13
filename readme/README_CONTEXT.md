@@ -69,6 +69,17 @@ Estado funcional actual:
 - En ventas nuevas, el precio unitario se toma siempre del producto en backend (no se acepta override por request). Para clientes mayoristas usa `productos.precio_mayorista` si está definido; de lo contrario usa `productos.precio_venta`.
 - El descuento en UI se habilita manualmente por checkbox.
 - En historial de ventas, `admin` puede ver todas las ventas y filtrar por usuario; los demas roles solo ven sus propios registros.
+- Cuando una venta consume un lote consignado, crea un cargo al proveedor por el costo de las unidades consumidas.
+- Una devolución o anulación reduce el cargo de consignación solamente si todavía no tiene pagos aplicados; si ya fue pagado, se bloquea para conservar trazabilidad.
+
+### Compras y consignación
+
+- Una compra normal descuenta Caja general o Banco según su método de pago.
+- La consignación es opcional y se habilita con `habilitar_consignacion = 1`.
+- Una compra consignada entra al inventario y crea lotes FIFO, pero no genera salida de capital al recibirla.
+- Inventario muestra el stock físico separado en propio y consignado.
+- La ruta de operación es `Cuentas por pagar`; allí se aplican pagos parciales o totales a cargos pendientes de un solo proveedor.
+- El pago de consignación crea un movimiento de capital `pago_proveedor_consignacion` desde Caja general o Banco.
 
 ### Clientes
 
@@ -121,7 +132,7 @@ Devoluciones financieras:
   - Caja POS abierta: suma de movimientos de cajas en estado abierta
   - Caja general y banco: saldos actuales de cuentas de capital
   - Inversion inicial: primer movimiento `ingreso_capital` (por fecha/id)
-  - Total negocio: `efectivo_total + cuentas_por_cobrar + inventario_valorizado`
+  - Total negocio: `efectivo_total + cuentas_por_cobrar + inventario_valorizado - cuentas_por_pagar_proveedores`
   - Resultado: `total_negocio - inversion_inicial`
 - Utilidad del periodo:
   - Ventas brutas: `ventas.total` activas en rango
@@ -175,6 +186,7 @@ Codigos base:
 - `devolucion_limite_dias_cajero`: entero
 - `porcentaje_utilidad_compra`: entero (%)
 - `caja_aperturas_maximas_por_dia`: entero (aperturas por usuario por dia)
+- `habilitar_consignacion`: entero booleano (`0` u `1`)
 
 Reglas:
 
@@ -193,6 +205,7 @@ Defaults actuales (seeder):
 - `devolucion_limite_dias_cajero = 15`
 - `porcentaje_utilidad_compra = 25`
 - `caja_aperturas_maximas_por_dia = 1`
+- `habilitar_consignacion = 0`
 
 ## 4) Roles y alcance
 
@@ -232,6 +245,12 @@ Seed puntual de configuraciones:
 
 ```bash
 ./vendor/bin/sail artisan db:seed --class=ConfiguracionSeeder --force
+```
+
+Seed de consignación y su permiso:
+
+```bash
+./vendor/bin/sail artisan db:seed --class=ConsignacionSeeder --force
 ```
 
 Build frontend:

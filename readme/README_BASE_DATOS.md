@@ -40,6 +40,9 @@ Este documento describe las tablas actuales y sus relaciones principales.
 - `inventario_movimientos`
 - `motivos_ajuste`
 - `ajustes_inventario`
+- `proveedor_cuentas_por_pagar`
+- `proveedor_pagos`
+- `proveedor_pago_aplicaciones`
 - `gastos`
 
 ### 1.5 Caja y ventas
@@ -91,6 +94,7 @@ Este documento describe las tablas actuales y sus relaciones principales.
 - `compra_detalles.producto_id -> productos.id` (M:1)
 - `inventario_lotes.producto_id -> productos.id` (M:1)
 - `inventario_lotes.compra_detalle_id -> compra_detalles.id` (M:1)
+- `compras.es_consignacion` y `inventario_lotes.es_consignacion` identifican la mercancía recibida bajo consignación.
 - `inventario_movimientos.producto_id -> productos.id` (M:1)
 - `inventario_movimientos.compra_id -> compras.id` (M:1)
 - `inventario_movimientos.compra_detalle_id -> compra_detalles.id` (M:1)
@@ -99,6 +103,13 @@ Este documento describe las tablas actuales y sus relaciones principales.
 - `ajustes_inventario.producto_id -> productos.id` (M:1)
 - `ajustes_inventario.motivo_id -> motivos_ajuste.id` (M:1)
 - `ajustes_inventario.lote_id -> inventario_lotes.id` (M:1)
+- `proveedor_cuentas_por_pagar.proveedor_id -> proveedores.id` (M:1)
+- `proveedor_cuentas_por_pagar.compra_id -> compras.id` (M:1)
+- `proveedor_cuentas_por_pagar.venta_id -> ventas.id` (M:1)
+- `proveedor_cuentas_por_pagar.inventario_movimiento_id -> inventario_movimientos.id` (1:1; salida de venta que originó el cargo)
+- `proveedor_pagos.proveedor_id -> proveedores.id` (M:1)
+- `proveedor_pago_aplicaciones.proveedor_pago_id -> proveedor_pagos.id` (M:1)
+- `proveedor_pago_aplicaciones.proveedor_cuenta_por_pagar_id -> proveedor_cuentas_por_pagar.id` (M:1)
 
 ## 2.4 Gastos
 
@@ -163,6 +174,8 @@ Este documento describe las tablas actuales y sus relaciones principales.
 - En caja, cierre puede depender del ultimo arqueo y umbral configurado.
 - `ventas_credito` conserva el saldo vigente de una venta a crédito; su historial inmutable se registra en `ventas_credito_movimientos`.
 - `devoluciones` guarda `tipo_reintegro`, monto reembolsado en efectivo y monto aplicado a crédito para que inventario, caja y cuentas por cobrar puedan revertirse de forma auditable.
+- Una cuenta por pagar de consignación nace únicamente al consumir un lote consignado en una venta; la recepción no crea deuda ni salida de capital.
+- Los pagos a proveedor conservan sus aplicaciones para saber qué cargos fueron saldados, incluso cuando el pago fue parcial.
 
 ## 4. Indices de rendimiento adicionales
 

@@ -31,4 +31,9 @@ class Proveedor extends Model
     {
         return $this->hasMany(Compra::class, 'proveedor_id');
     }
+
+    public function cuentasPorPagar(): HasMany
+    {
+        return $this->hasMany(ProveedorCuentaPorPagar::class);
+    }
 }

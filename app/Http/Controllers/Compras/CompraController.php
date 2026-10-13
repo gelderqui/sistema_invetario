@@ -34,6 +34,7 @@ class CompraController extends Controller
                 'fecha_compra',
                 'estado',
                 'metodo_pago',
+                'es_consignacion',
                 'total',
                 'tipo_documento',
                 'numero_documento',
@@ -84,6 +85,7 @@ class CompraController extends Controller
                 'proveedores'         => $proveedores,
                 'proveedor_general_id' => $proveedorGeneral,
                 'porcentaje_utilidad_compra' => (int) Configuracion::valor('porcentaje_utilidad_compra', 25),
+                'consignacion_habilitada' => (bool) Configuracion::valor('habilitar_consignacion', false),
                 'metodos_pago' => [
                     ['value' => 'caja_general', 'label' => 'Caja general'],
                     ['value' => 'banco', 'label' => 'Banco'],
@@ -120,6 +122,7 @@ class CompraController extends Controller
                 'proveedor_id' => ['required', Rule::exists('proveedores', 'id')],
                 'fecha_compra' => ['required', 'date'],
                 'metodo_pago' => ['required', Rule::in(['caja_general', 'banco'])],
+                'es_consignacion' => ['sometimes', 'boolean'],
                 'tipo_documento' => ['nullable', Rule::in(['sin_documento', 'recibo', 'factura'])],
                 'numero_documento' => ['nullable', 'string', 'max:100'],
                 'items' => ['required', 'array', 'min:1'],
@@ -156,10 +159,15 @@ class CompraController extends Controller
             ]);
         }
 
+        if ((bool) ($validated['es_consignacion'] ?? false) && ! (bool) Configuracion::valor('habilitar_consignacion', false)) {
+            throw ValidationException::withMessages(['es_consignacion' => ['La consignación está deshabilitada para esta tienda.']]);
+        }
+
         $porcentajeUtilidadCompra = max(0, (int) Configuracion::valor('porcentaje_utilidad_compra', 25));
         $userId = (int) $request->user()->id;
 
         $result = DB::transaction(function () use ($validated, $porcentajeUtilidadCompra, $userId) {
+            $esConsignacion = (bool) ($validated['es_consignacion'] ?? false);
             $numeroCompra = sprintf(
                 'CMP-%s-%03d',
                 now()->format('YmdHis'),
@@ -172,6 +180,7 @@ class CompraController extends Controller
                 'fecha_compra' => $validated['fecha_compra'],
                 'estado' => 'activo',
                 'metodo_pago' => $validated['metodo_pago'],
+                'es_consignacion' => $esConsignacion,
                 'total' => 0,
                 'tipo_documento' => $validated['tipo_documento'] ?? null,
                 'numero_documento' => $validated['numero_documento'] ?? null,
@@ -235,6 +244,7 @@ class CompraController extends Controller
                 InventarioLote::query()->create([
                     'producto_id'        => $producto->id,
                     'compra_detalle_id'  => $detalle->id,
+                    'es_consignacion'    => $esConsignacion,
                     'cantidad_inicial'   => $cantidad,
                     'cantidad_disponible' => $cantidad,
                     'costo_unitario'     => $costoUnitario,
@@ -272,6 +282,13 @@ class CompraController extends Controller
                 'total' => toMoney($total, 4),
                 'mod_user' => $userId,
             ]);
+
+            if ($esConsignacion) {
+                return [
+                    'compra' => $compra->load(['proveedor:id,nombre', 'detalles.producto:id,nombre'])->loadCount('detalles'),
+                    'alerts' => $alerts,
+                ];
+            }
 
             $cuentaCapital = capitalCuentaPorCodigo((string) $compra->metodo_pago);
             if (! $cuentaCapital) {
@@ -413,6 +430,10 @@ class CompraController extends Controller
                 'estado' => 'anulada',
                 'mod_user' => $userId,
             ]);
+
+            if ($compra->es_consignacion) {
+                return;
+            }
 
             $metodoPago = (string) ($compra->metodo_pago ?: 'caja_general');
             $cuentaCapital = capitalCuentaPorCodigo($metodoPago);

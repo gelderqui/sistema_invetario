@@ -48,6 +48,7 @@
                             <th>Producto</th>
                             <th>Categoria</th>
                             <th>Stock</th>
+                            <th>Propio / Consig.</th>
                             <th>Stock Min.</th>
                             <th>Costo Prom.</th>
                             <th>Venta Prom.</th>
@@ -58,7 +59,7 @@
                     </thead>
                     <tbody>
                         <tr v-if="!existencias.length">
-                            <td colspan="9" class="text-center text-body-secondary py-4">Sin datos de inventario.</td>
+                            <td colspan="10" class="text-center text-body-secondary py-4">Sin datos de inventario.</td>
                         </tr>
                         <tr v-for="item in existencias" :key="item.id">
                             <td>
@@ -69,6 +70,7 @@
                             <td :class="Number(item.stock_actual) <= Number(item.stock_minimo) ? 'stock-low' : 'stock-ok'">
                                 {{ Number(item.stock_actual || 0).toFixed(0) }} {{ item.unidad_medida_abreviatura || '' }}
                             </td>
+                            <td>{{ Number(item.stock_propio || 0).toFixed(0) }} / {{ Number(item.stock_consignado || 0).toFixed(0) }}</td>
                             <td>{{ Number(item.stock_minimo || 0).toFixed(0) }}</td>
                             <td>Q {{ Number(item.costo_promedio || 0).toFixed(2) }}</td>
                             <td>Q {{ Number(item.precio_venta_promedio || 0).toFixed(2) }}</td>

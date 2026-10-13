@@ -10,6 +10,7 @@ use App\Models\InventarioLote;
 use App\Models\InventarioMovimiento;
 use App\Models\MovimientoCaja;
 use App\Models\Producto;
+use App\Models\ProveedorCuentaPorPagar;
 use App\Models\Venta;
 use App\Models\VentaCredito;
 use App\Models\VentaCreditoMovimiento;
@@ -212,7 +213,7 @@ class DevolucionController extends Controller
                     ->where('venta_detalle_id', $detalleVenta->id)
                     ->whereNotNull('lote_id')
                     ->orderBy('id')
-                    ->get(['lote_id', 'cantidad', 'costo_unitario']);
+                    ->get(['id', 'lote_id', 'cantidad', 'costo_unitario']);
 
                 $devueltoPorLote = InventarioMovimiento::query()
                     ->whereIn('tipo', ['devolucion_venta', 'anulacion_devolucion'])
@@ -259,6 +260,21 @@ class DevolucionController extends Controller
                     $lote->update([
                         'cantidad_disponible' => toMoney($disponibleActual + $usar, 4),
                     ]);
+
+                    $cargoProveedor = ProveedorCuentaPorPagar::query()->where('inventario_movimiento_id', $movSalida->id)->lockForUpdate()->first();
+                    if ($cargoProveedor) {
+                        if (abs((float) $cargoProveedor->saldo_pendiente - (float) $cargoProveedor->monto_original) > 0.0001) {
+                            throw ValidationException::withMessages(['items' => ['No se puede devolver mercancía consignada que ya tiene un pago aplicado al proveedor.']]);
+                        }
+                        $reversion = toMoney($usar * (float) $movSalida->costo_unitario, 4);
+                        $nuevoMonto = toMoney((float) $cargoProveedor->monto_original - $reversion, 4);
+                        $cargoProveedor->update([
+                            'cantidad' => toMoney((float) $cargoProveedor->cantidad - $usar, 4),
+                            'monto_original' => $nuevoMonto,
+                            'saldo_pendiente' => $nuevoMonto,
+                            'estado' => $nuevoMonto <= 0.0001 ? 'anulada' : 'pendiente',
+                        ]);
+                    }
 
                     $stockDespues = toMoney($stockCursor + $usar, 4);
 

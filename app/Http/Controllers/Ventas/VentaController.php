@@ -9,6 +9,7 @@ use App\Models\Configuracion;
 use App\Models\InventarioLote;
 use App\Models\InventarioMovimiento;
 use App\Models\Producto;
+use App\Models\ProveedorCuentaPorPagar;
 use App\Models\User;
 use App\Models\Venta;
 use App\Models\VentaCredito;
@@ -279,6 +280,7 @@ class VentaController extends Controller
                 $remaining = $cantidad;
                 $consumosLote = [];
                 $lotes = InventarioLote::query()
+                    ->with('compraDetalle.compra')
                     ->where('producto_id', $producto->id)
                     ->where('cantidad_disponible', '>', 0)
                     ->orderBy('fecha_entrada')
@@ -337,7 +339,7 @@ class VentaController extends Controller
                     $cantidadConsumida = toMoney((float) $consumoLote['cantidad'], 4);
                     $stockDespues = toMoney($stockCursor - $cantidadConsumida, 4);
 
-                    InventarioMovimiento::query()->create([
+                    $movimiento = InventarioMovimiento::query()->create([
                         'producto_id' => $producto->id,
                         'venta_id' => $venta->id,
                         'venta_detalle_id' => $detalle->id,
@@ -351,6 +353,25 @@ class VentaController extends Controller
                         'nota' => 'Venta registrada',
                         'add_user' => getUserId(),
                     ]);
+
+                    $lote = $lotes->firstWhere('id', (int) $consumoLote['lote_id']);
+                    $compra = $lote?->compraDetalle?->compra;
+                    if ($lote?->es_consignacion && $compra?->es_consignacion) {
+                        ProveedorCuentaPorPagar::query()->create([
+                            'proveedor_id' => $compra->proveedor_id,
+                            'compra_id' => $compra->id,
+                            'compra_detalle_id' => $lote->compra_detalle_id,
+                            'venta_id' => $venta->id,
+                            'venta_detalle_id' => $detalle->id,
+                            'inventario_movimiento_id' => $movimiento->id,
+                            'cantidad' => $cantidadConsumida,
+                            'costo_unitario' => $consumoLote['costo_unitario'],
+                            'monto_original' => toMoney($cantidadConsumida * (float) $consumoLote['costo_unitario'], 4),
+                            'saldo_pendiente' => toMoney($cantidadConsumida * (float) $consumoLote['costo_unitario'], 4),
+                            'estado' => 'pendiente',
+                            'add_user' => getUserId(),
+                        ]);
+                    }
 
                     $stockCursor = (float) $stockDespues;
                 }
@@ -486,6 +507,11 @@ class VentaController extends Controller
                 ]);
             }
 
+            $cargosProveedor = ProveedorCuentaPorPagar::query()->where('venta_id', $venta->id)->lockForUpdate()->get();
+            if ($cargosProveedor->contains(fn ($cargo) => abs((float) $cargo->saldo_pendiente - (float) $cargo->monto_original) > 0.0001)) {
+                throw ValidationException::withMessages(['venta' => ['No se puede anular una venta consignada que ya tiene pagos aplicados al proveedor.']]);
+            }
+
             $devolucionesActivas = $venta->devoluciones()->where('estado', 'activo')->count();
             if ($devolucionesActivas > 0) {
                 throw ValidationException::withMessages([
@@ -593,6 +619,8 @@ class VentaController extends Controller
                 'estado' => 'anulada',
                 'mod_user' => $userId,
             ]);
+
+            $cargosProveedor->each(fn (ProveedorCuentaPorPagar $cargo) => $cargo->update(['saldo_pendiente' => 0, 'estado' => 'anulada']));
 
             if ($credito) {
                 $saldoAnterior = toMoney($credito->saldo_pendiente, 4);

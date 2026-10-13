@@ -137,6 +137,13 @@ class ConfiguracionController extends Controller
             return $valorTexto;
         }
 
+        if ($codigo === 'habilitar_consignacion') {
+            if (! in_array($valorTexto, ['0', '1'], true)) {
+                throw ValidationException::withMessages(['value' => ['Use 1 para habilitar o 0 para deshabilitar consignación.']]);
+            }
+            return $valorTexto;
+        }
+
         if (! preg_match('/^\d+$/', $valorTexto)) {
             throw ValidationException::withMessages([
                 'value' => ['Este campo debe ser un numero entero.'],
@@ -175,6 +182,11 @@ class ConfiguracionController extends Controller
                 'value' => Configuracion::query()->where('codigo', 'porcentaje_utilidad_compra')->value('value') ?? '25',
                 'activo' => true,
             ]
+        );
+
+        Configuracion::query()->updateOrCreate(
+            ['codigo' => 'habilitar_consignacion'],
+            ['descripcion' => 'Habilita compras en consignación y cuentas por pagar a proveedores.', 'value' => Configuracion::query()->where('codigo', 'habilitar_consignacion')->value('value') ?? '0', 'activo' => true]
         );
 
         Configuracion::query()->updateOrCreate(

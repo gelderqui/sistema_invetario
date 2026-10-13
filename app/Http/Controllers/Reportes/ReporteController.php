@@ -11,6 +11,7 @@ use App\Models\InventarioLote;
 use App\Models\InventarioMovimiento;
 use App\Models\MovimientoCaja;
 use App\Models\Producto;
+use App\Models\ProveedorCuentaPorPagar;
 use App\Models\Venta;
 use App\Models\VentaCredito;
 use App\Models\VentaCreditoMovimiento;
@@ -139,6 +140,7 @@ class ReporteController extends Controller
 
         $lotesPorProducto = InventarioLote::query()
             ->where('cantidad_disponible', '>', 0)
+            ->where('es_consignacion', false)
             ->selectRaw('producto_id, COALESCE(SUM(cantidad_disponible), 0) as stock_lotes')
             ->selectRaw('COALESCE(SUM(cantidad_disponible * costo_unitario), 0) as valor_lotes')
             ->groupBy('producto_id')
@@ -204,7 +206,10 @@ class ReporteController extends Controller
         $efectivoTotal = toMoney($cajaPosDisponible + $cajaGeneral + $banco, 4);
 
         $inventarioTotal = toMoney((float) $inventarioValorizado->sum('valor_total'), 4);
-        $totalNegocio = toMoney($efectivoTotal + $inventarioTotal + $saldoPorCobrar, 4);
+        $inventarioConsignado = (float) InventarioLote::query()->where('cantidad_disponible', '>', 0)->where('es_consignacion', true)
+            ->selectRaw('COALESCE(SUM(cantidad_disponible * costo_unitario), 0) as total')->value('total');
+        $saldoPorPagarProveedores = (float) ProveedorCuentaPorPagar::query()->whereIn('estado', ['pendiente','parcial'])->sum('saldo_pendiente');
+        $totalNegocio = toMoney($efectivoTotal + $inventarioTotal + $saldoPorCobrar - $saldoPorPagarProveedores, 4);
         $inversionInicialMovimiento = CapitalMovimiento::query()
             ->where('tipo', 'ingreso_capital')
             ->orderBy('fecha')
@@ -248,6 +253,7 @@ class ReporteController extends Controller
                 ],
                 'inventario_valorizado' => [
                     'total' => (float) $inventarioTotal,
+                    'consignacion_en_custodia' => (float) toMoney($inventarioConsignado, 4),
                     'productos' => $inventarioValorizado->count(),
                     'categorias' => $inventarioPorCategoria,
                     'top_productos' => $inventarioValorizado->take(10)->values(),
@@ -260,6 +266,7 @@ class ReporteController extends Controller
                         'total_efectivo' => (float) $efectivoTotal,
                     ],
                     'cuentas_por_cobrar' => (float) toMoney($saldoPorCobrar, 4),
+                    'cuentas_por_pagar_proveedores' => (float) toMoney($saldoPorPagarProveedores, 4),
                     'inventario' => (float) $inventarioTotal,
                     'total_negocio' => (float) $totalNegocio,
                     'inversion_inicial' => (float) $inversionInicial,

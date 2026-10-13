@@ -36,6 +36,7 @@ Frontend:
   - `app/Http/Controllers/Ventas/DevolucionController.php`
   - `app/Http/Controllers/Capital/CapitalController.php`
   - `app/Http/Controllers/Compras/CompraController.php`
+  - `app/Http/Controllers/Compras/ProveedorCuentaPorPagarController.php`
   - `app/Http/Controllers/Inventario/*`
 - Middleware de permisos:
   - `app/Http/Middleware/CheckPermission.php`
@@ -52,6 +53,7 @@ Frontend:
   - `resources/js/components/HistorialVentasView.vue`
   - `resources/js/components/DevolucionesView.vue`
   - `resources/js/components/ComprasView.vue`
+  - `resources/js/components/ProveedoresCuentasPorPagarView.vue`
   - `resources/js/components/InventarioAlertasView.vue`
   - `resources/js/components/InventarioInicialView.vue`
   - `resources/js/components/ReportesView.vue`
@@ -84,6 +86,7 @@ Frontend:
 - Ventas
 - Cuentas por cobrar
 - Compras
+- Cuentas por pagar a proveedores
 - Inventario
 - Catálogo
 - Configuración

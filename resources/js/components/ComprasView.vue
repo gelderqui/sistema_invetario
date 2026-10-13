@@ -36,7 +36,10 @@
                             <td>{{ compra.proveedor?.nombre ?? '-' }}</td>
                             <td>{{ formatDate(compra.fecha_compra) }}</td>
                             <td>{{ compra.detalles_count ?? 0 }}</td>
-                            <td class="fw-semibold">Q {{ formatMoney(compra.total) }}</td>
+                            <td class="fw-semibold">
+                                Q {{ formatMoney(compra.total) }}
+                                <span v-if="compra.es_consignacion" class="badge text-bg-info ms-1">Consignación</span>
+                            </td>
                             <td>
                                 <span :class="['badge text-uppercase', compra.estado === 'anulada' ? 'text-bg-danger' : 'text-bg-success']">
                                     {{ compra.estado }}
@@ -195,7 +198,14 @@
                                         deselect-label="Quitar"
                                     />
                                 </div>
-                                <div class="col-12 col-md-4">
+                                <div v-if="catalogs.consignacion_habilitada" class="col-12 col-md-4">
+                                    <div class="form-check form-switch pt-4">
+                                        <input id="compra-consignacion" v-model="form.es_consignacion" class="form-check-input" type="checkbox">
+                                        <label class="form-check-label fw-semibold" for="compra-consignacion">Mercancía en consignación</label>
+                                        <div class="form-text">Se paga al proveedor cuando se venda.</div>
+                                    </div>
+                                </div>
+                                <div v-if="!form.es_consignacion" class="col-12 col-md-4">
                                     <label class="form-label fw-semibold">Metodo de pago *</label>
                                     <select v-model="form.metodo_pago" class="form-select" required>
                                         <option
@@ -278,8 +288,6 @@
                                                     step="1"
                                                     min="1"
                                                     class="form-control form-control-sm"
-                                                    @input="normalizeQuantityInput(item)"
-                                                    @blur="normalizeQuantityInput(item)"
                                                 >
                                             </td>
                                             <td>
@@ -425,6 +433,7 @@ const emptyForm = () => ({
     proveedor: proveedorGeneral.value,
     fecha_compra: new Date().toISOString().slice(0, 10),
     metodo_pago: 'caja_general',
+    es_consignacion: false,
     tipo_documento: 'sin_documento',
     numero_documento: '',
     items: [emptyItem()],
@@ -659,17 +668,6 @@ function handleSalePriceBlur(item) {
     item.precio_venta_display = formatMoney(value);
 }
 
-function normalizeQuantityInput(item) {
-    const value = Number(item.cantidad || 0);
-
-    if (!Number.isFinite(value) || value <= 0) {
-        item.cantidad = 1;
-        return;
-    }
-
-    item.cantidad = Math.max(1, Math.trunc(value));
-}
-
 function removeItem(index) {
     form.value.items.splice(index, 1);
 }
@@ -685,7 +683,7 @@ async function save() {
         validationErrors.push('Seleccione un proveedor válido de la lista.');
     }
 
-    if (!['caja_general', 'banco'].includes(String(form.value.metodo_pago || ''))) {
+    if (!form.value.es_consignacion && !['caja_general', 'banco'].includes(String(form.value.metodo_pago || ''))) {
         validationErrors.push('Seleccione un metodo de pago valido.');
     }
 
@@ -720,6 +718,7 @@ async function save() {
             proveedor_id: form.value.proveedor.id,
             fecha_compra: form.value.fecha_compra,
             metodo_pago: form.value.metodo_pago,
+            es_consignacion: Boolean(form.value.es_consignacion),
             tipo_documento: form.value.tipo_documento,
             numero_documento: form.value.tipo_documento === 'sin_documento' ? null : (form.value.numero_documento || null),
             items: form.value.items.map((item) => ({

@@ -63,11 +63,20 @@ Reglas clave:
 - Si un lote de la compra ya fue consumido, la compra no puede anularse.
 - Cuando se anula una compra valida, se revierte inventario y se devuelve capital a la cuenta de pago.
 
+### 3.1 Consignación y pago a proveedor
+
+La consignación se habilita desde Configuraciones. Al registrar una compra consignada, marca **Mercancía en consignación**. Las unidades entran al inventario, pero no se descuenta dinero en ese momento.
+
+Cuando vendas esas unidades, se crea automáticamente una cuenta pendiente para el proveedor. Para pagarla entra a `Cuentas por pagar`, selecciona cargos de un solo proveedor y registra el pago desde Caja general o Banco. Puede ser parcial o total.
+
+No uses Gastos para pagar la consignación. Si la venta consignada se devuelve o se anula antes del pago, el sistema revierte el cargo; si ya hay pago aplicado, no permite la reversión.
+
 ## 4. Inventario
 
 Secciones principales:
 
 - Stock: consulta existencias.
+- Stock propio / consignado: muestra qué parte del stock físico pertenece al negocio y qué parte está en consignación.
 - Movimientos: trazabilidad de entradas/salidas.
 - Ajustes: correcciones de inventario.
 - Inventario inicial: carga de arranque sin registrarlo como compra.

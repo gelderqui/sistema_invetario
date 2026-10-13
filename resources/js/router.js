@@ -25,6 +25,7 @@ import LoginView from '@/components_public/LoginView.vue';
 import ManualUsuarioView from '@/components/ManualUsuarioView.vue';
 import MedidasView from '@/components/MedidasView.vue';
 import ProveedoresView from '@/components/ProveedoresView.vue';
+import ProveedoresCuentasPorPagarView from '@/components/ProveedoresCuentasPorPagarView.vue';
 import ProductosView from '@/components/ProductosView.vue';
 import ReportesView from '@/components/ReportesView.vue';
 import RolesView from '@/components/RolesView.vue';
@@ -117,6 +118,12 @@ const routes = [
         meta: {
             requiresAuth: true,
         },
+    },
+    {
+        path: '/cuentas-por-pagar',
+        name: 'proveedores-cuentas-por-pagar',
+        component: ProveedoresCuentasPorPagarView,
+        meta: { requiresAuth: true },
     },
     {
         path: '/compras',

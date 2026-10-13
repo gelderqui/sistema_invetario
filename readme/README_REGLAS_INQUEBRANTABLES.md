@@ -35,10 +35,13 @@ Este documento define reglas de negocio que no deben romperse. Cualquier cambio 
 - Movimientos de inventario deben reflejar compra, venta, devolucion y anulaciones.
 - Inventario inicial no debe registrarse como compra.
 - Inventario inicial debe registrar movimiento tipo `inventario_inicial` y lote sin `compra_detalle_id`.
+- Una compra consignada aumenta el stock, pero no descuenta `caja_general` ni `banco`.
+- Una venta que consume un lote consignado debe crear un cargo al proveedor por el costo de las unidades consumidas.
+- Un pago de consignación solo puede aplicarse a cargos pendientes del proveedor seleccionado y no puede superar su saldo.
 
 ## 3.1 Reportes financieros
 
-- El estado general del negocio se calcula como `efectivo_total + cuentas_por_cobrar + inventario_valorizado`.
+- El estado general del negocio se calcula como `efectivo_total + cuentas_por_cobrar + inventario_valorizado - cuentas_por_pagar_proveedores`.
 - El resultado se compara contra `inversion_inicial`.
 - `inversion_inicial` se toma del primer movimiento `ingreso_capital` en orden cronologico.
 - `inversion_inicial` no debe alterarse automaticamente por compras, ventas o ajustes.

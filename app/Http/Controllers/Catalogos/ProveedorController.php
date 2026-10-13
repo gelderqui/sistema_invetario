@@ -14,6 +14,7 @@ class ProveedorController extends Controller
     {
         $proveedores = Proveedor::query()
             ->withCount(['compras'])
+            ->withSum(['cuentasPorPagar as saldo_consignacion_pendiente' => fn ($q) => $q->whereIn('estado', ['pendiente','parcial'])], 'saldo_pendiente')
             ->orderBy('nombre')
             ->get([
                 'id',

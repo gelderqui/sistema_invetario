@@ -16,14 +16,17 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             //Fase inicial
-            ProductoUnidadMedidaSeeder::class,
-            TipoGastoSeeder::class,
-            MotivoAjusteSeeder::class,
-            ConfiguracionSeeder::class,
-            CapitalSeeder::class,
-            AuthorizationSeeder::class,
-            CatalogDefaultsSeeder::class,
+                ProductoUnidadMedidaSeeder::class,
+                TipoGastoSeeder::class,
+                MotivoAjusteSeeder::class,
+                ConfiguracionSeeder::class,
+                CapitalSeeder::class,
+                AuthorizationSeeder::class,
+                CatalogDefaultsSeeder::class,
             //Fin fase incial
+            //segunda fase
+                ConsignacionSeeder::class,
+            //fin seguda fase
         ]);
     }
 }

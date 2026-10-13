@@ -62,6 +62,10 @@
                                     <td class="text-end">Q {{ formatMoney(report.estado_general.cuentas_por_cobrar) }}</td>
                                 </tr>
                                 <tr>
+                                    <td>Cuentas por pagar a proveedores</td>
+                                    <td class="text-end text-danger">Q {{ formatMoney(report.estado_general.cuentas_por_pagar_proveedores) }}</td>
+                                </tr>
+                                <tr>
                                     <td>Total negocio</td>
                                     <td class="text-end fw-semibold">Q {{ formatMoney(report.estado_general.total_negocio) }}</td>
                                 </tr>
@@ -204,6 +208,12 @@
                             <div class="report-stat h-100">
                                 <div class="report-stat-label">Inventario total</div>
                                 <div class="report-stat-value">Q {{ formatMoney(report.inventario_valorizado.total) }}</div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="report-stat h-100">
+                                <div class="report-stat-label">Consignación en custodia</div>
+                                <div class="report-stat-value">Q {{ formatMoney(report.inventario_valorizado.consignacion_en_custodia) }}</div>
                             </div>
                         </div>
                         <div class="col-12 col-md-6">
@@ -378,6 +388,7 @@ function emptyReport() {
                 total_efectivo: 0,
             },
             cuentas_por_cobrar: 0,
+            cuentas_por_pagar_proveedores: 0,
             inventario: 0,
             total_negocio: 0,
             inversion_inicial: 0,
@@ -412,6 +423,7 @@ function emptyReport() {
         },
         inventario_valorizado: {
             total: 0,
+            consignacion_en_custodia: 0,
             productos: 0,
             categorias: [],
             top_productos: [],

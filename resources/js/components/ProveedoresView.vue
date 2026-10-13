@@ -42,6 +42,7 @@
               <th>Contacto</th>
               <th>Telefono</th>
               <th>Email</th>
+              <th>Saldo consignación</th>
               <th>Estado</th>
               <th>Creado</th>
               <th></th>
@@ -49,13 +50,14 @@
           </thead>
           <tbody>
             <tr v-if="!totalProveedores">
-              <td colspan="7" class="text-center text-body-secondary py-4">Sin registros</td>
+              <td colspan="8" class="text-center text-body-secondary py-4">Sin registros</td>
             </tr>
             <tr v-for="p in paginatedProveedores" :key="p.id">
               <td class="fw-semibold">{{ p.nombre }}</td>
               <td>{{ p.contacto || '-' }}</td>
               <td>{{ p.telefono || '-' }}</td>
               <td>{{ p.email || '-' }}</td>
+              <td>Q {{ Number(p.saldo_consignacion_pendiente || 0).toFixed(2) }}</td>
               <td>
                 <span class="badge" :class="p.activo ? 'text-bg-success' : 'text-bg-secondary'">
                   {{ p.activo ? 'Activo' : 'Inactivo' }}

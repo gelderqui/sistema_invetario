@@ -12,6 +12,7 @@ class InventarioLote extends Model
     protected $fillable = [
         'producto_id',
         'compra_detalle_id',
+        'es_consignacion',
         'cantidad_inicial',
         'cantidad_disponible',
         'costo_unitario',
@@ -23,6 +24,7 @@ class InventarioLote extends Model
     {
         return [
             'cantidad_inicial'    => 'decimal:4',
+            'es_consignacion'     => 'bool',
             'cantidad_disponible' => 'decimal:4',
             'costo_unitario'      => 'decimal:4',
             'fecha_vencimiento'   => 'date',

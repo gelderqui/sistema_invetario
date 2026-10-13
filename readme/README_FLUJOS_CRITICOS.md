@@ -36,6 +36,14 @@ Este documento describe flujos operativos punta a punta que impactan dinero, inv
 4. Se actualiza stock y costos del producto.
 5. No se crea compra ni se afecta historial de proveedores.
 
+## 2.2 Compra en consignación -> inventario (sin salida de efectivo)
+
+1. La tienda habilita `habilitar_consignacion` en Configuraciones.
+2. En Compras se marca `Mercancía en consignación` y se selecciona un proveedor activo.
+3. Se crean `compras`, `compra_detalles`, lotes y movimientos de entrada como en una compra normal.
+4. La compra y su lote quedan marcados como consignación.
+5. No se registra salida en `capital_movimientos`; la mercancía sigue siendo propiedad del proveedor hasta su venta.
+
 ## 3. Venta -> inventario -> caja o cuenta por cobrar
 
 1. Se valida que el usuario tenga caja abierta, cliente (si aplica) y productos activos con stock.
@@ -43,6 +51,15 @@ Este documento describe flujos operativos punta a punta que impactan dinero, inv
 3. Se crea `venta` y `venta_detalles`.
 4. Se descargan lotes FIFO en inventario.
 5. Se crean movimientos de inventario (`salida_venta`).
+6. Por cada lote consignado consumido, se crea un cargo en `proveedor_cuentas_por_pagar` por la cantidad vendida y el costo pactado.
+
+## 3.1 Pago de mercancía consignada -> capital
+
+1. En `Cuentas por pagar` se seleccionan cargos pendientes de un solo proveedor.
+2. Se registra un pago total o parcial desde `caja_general` o `banco`.
+3. Se guardan `proveedor_pagos` y sus aplicaciones a cada cargo.
+4. El saldo de cada cargo cambia a `parcial` o `pagada`.
+5. Se registra una salida de capital `pago_proveedor_consignacion`.
 6. Si es efectivo, se registra movimiento automatico en caja.
 7. Si es crédito, se crea una cuenta por cobrar y su movimiento inicial.
 
@@ -71,6 +88,7 @@ Este documento describe flujos operativos punta a punta que impactan dinero, inv
 5. Venta a crédito: se reduce primero la deuda; si el retorno excede el saldo, el excedente se reembolsa desde caja.
 6. La devolución conserva los vínculos a sus movimientos financieros.
 7. Al anularla, se retira de nuevo el inventario y se revierten deuda y/o caja. Si hubo efectivo, la caja original debe seguir abierta y pertenecer al usuario que hizo el reembolso.
+8. Si la venta contiene mercancía consignada sin pagos aplicados al proveedor, la devolución o anulación reduce o anula el cargo respectivo. Si ya se aplicó un pago, el sistema bloquea la operación para conservar la trazabilidad.
 
 ## 6. Flujo de hora del sistema
 

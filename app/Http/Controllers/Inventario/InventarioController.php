@@ -41,7 +41,7 @@ class InventarioController extends Controller
             $query->where('categoria_id', (int) $validated['categoria_id']);
         }
 
-        $productos = $query->get([
+        $productosBase = $query->get([
             'id',
             'categoria_id',
             'nombre',
@@ -55,7 +55,10 @@ class InventarioController extends Controller
             'unidad_medida_id',
             'activo',
             'updated_at',
-        ])->map(function (Producto $producto): array {
+        ]);
+        $stockConsignado = InventarioLote::query()->where('cantidad_disponible', '>', 0)->where('es_consignacion', true)
+            ->selectRaw('producto_id, SUM(cantidad_disponible) as cantidad')->groupBy('producto_id')->pluck('cantidad', 'producto_id');
+        $productos = $productosBase->map(function (Producto $producto) use ($stockConsignado): array {
             return [
                 'id' => $producto->id,
                 'categoria_id' => $producto->categoria_id,
@@ -63,6 +66,8 @@ class InventarioController extends Controller
                 'nombre' => $producto->nombre,
                 'codigo_barra' => $producto->codigo_barra,
                 'stock_actual' => $producto->stock_actual,
+                'stock_consignado' => (float) ($stockConsignado->get($producto->id) ?? 0),
+                'stock_propio' => toMoney((float) $producto->stock_actual - (float) ($stockConsignado->get($producto->id) ?? 0), 4),
                 'stock_minimo' => $producto->stock_minimo,
                 'costo_promedio' => $producto->costo_promedio,
                 'precio_venta_promedio' => $producto->precio_venta_promedio,

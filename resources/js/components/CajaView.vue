@@ -127,12 +127,12 @@
                 </div>
 
                 <div class="row g-2">
-                    <div class="col-6 col-md-3" v-for="b in billetes" :key="b.denominacion">
-                        <label class="form-label">Q{{ b.denominacion }}</label>
+                    <div class="col-6 col-md-3" v-for="b in denominaciones" :key="`${b.tipo}-${b.denominacion}`">
+                        <label class="form-label">{{ b.tipo === 'billete' ? 'Billete' : 'Moneda' }} Q{{ formatDenominacion(b.denominacion) }}</label>
                         <input v-model.number="b.cantidad" type="number" min="0" step="1" class="form-control" />
                     </div>
                 </div>
-                <small class="text-muted d-block mt-2">Total por billetes: Q {{ q(totalBilletes) }}</small>
+                <small class="text-muted d-block mt-2">Total contado: Q {{ q(totalDenominaciones) }}</small>
             </div>
         </div>
 
@@ -200,14 +200,18 @@ const formCierre = ref({
     monto_contado: null,
 });
 
-const billetes = ref([
-    { denominacion: 200, cantidad: 0 },
-    { denominacion: 100, cantidad: 0 },
-    { denominacion: 50, cantidad: 0 },
-    { denominacion: 20, cantidad: 0 },
-    { denominacion: 10, cantidad: 0 },
-    { denominacion: 5, cantidad: 0 },
-    { denominacion: 1, cantidad: 0 },
+const denominaciones = ref([
+    { tipo: 'billete', denominacion: 200, unidades_por_paquete: 1, cantidad: 0 },
+    { tipo: 'billete', denominacion: 100, unidades_por_paquete: 1, cantidad: 0 },
+    { tipo: 'billete', denominacion: 50, unidades_por_paquete: 1, cantidad: 0 },
+    { tipo: 'billete', denominacion: 20, unidades_por_paquete: 1, cantidad: 0 },
+    { tipo: 'billete', denominacion: 10, unidades_por_paquete: 1, cantidad: 0 },
+    { tipo: 'billete', denominacion: 5, unidades_por_paquete: 1, cantidad: 0 },
+    { tipo: 'moneda', denominacion: 1, unidades_por_paquete: 1, cantidad: 0 },
+    { tipo: 'moneda', denominacion: 0.50, unidades_por_paquete: 1, cantidad: 0 },
+    { tipo: 'moneda', denominacion: 0.25, unidades_por_paquete: 1, cantidad: 0 },
+    { tipo: 'moneda', denominacion: 0.10, unidades_por_paquete: 1, cantidad: 0 },
+    { tipo: 'moneda', denominacion: 0.05, unidades_por_paquete: 1, cantidad: 0 },
 ]);
 
 const section = computed(() => {
@@ -220,9 +224,9 @@ const section = computed(() => {
 
 const ultimoArqueoRegistrado = computed(() => cajaActiva.value?.arqueos?.[0] ?? null);
 
-const totalBilletes = computed(() => billetes.value.reduce((acc, row) => acc + Number(row.denominacion) * Number(row.cantidad || 0), 0));
+const totalDenominaciones = computed(() => denominaciones.value.reduce((acc, row) => acc + Number(row.denominacion) * Number(row.unidades_por_paquete || 1) * Number(row.cantidad || 0), 0));
 
-watch(totalBilletes, (v) => {
+watch(totalDenominaciones, (v) => {
     if (section.value === 'arqueo') {
         formArqueo.value.monto_contado = Number(v.toFixed(2));
     }
@@ -236,6 +240,10 @@ onMounted(async () => {
 
 function q(value) {
     return formatMoney(value);
+}
+
+function formatDenominacion(value) {
+    return Number(value || 0).toFixed(2);
 }
 
 function dateTime(value) {
@@ -345,7 +353,7 @@ async function registrarArqueo() {
     try {
         const { data } = await axios.post('/caja/arqueo', {
             monto_contado: Number(formArqueo.value.monto_contado || 0),
-            billetes: billetes.value,
+            billetes: denominaciones.value,
         });
         mensajeExitoCaja.value = data?.message || 'Arqueo registrado correctamente.';
         if (data?.data?.arqueo?.monto_contado != null) {

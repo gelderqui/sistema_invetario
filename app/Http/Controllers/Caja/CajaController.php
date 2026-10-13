@@ -13,6 +13,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class CajaController extends Controller
@@ -331,13 +332,23 @@ class CajaController extends Controller
 
     public function arqueo(Request $request): JsonResponse
     {
+        $this->normalizarDenominacionesArqueo($request);
+
         $validated = $request->validate([
             'monto_contado' => ['nullable', 'numeric', 'gte:0'],
             'billetes' => ['nullable', 'array'],
+            'billetes.*.tipo' => ['required_with:billetes', Rule::in(['billete', 'moneda', 'paquete'])],
             'billetes.*.denominacion' => ['required_with:billetes', 'numeric', 'gt:0'],
+            'billetes.*.unidades_por_paquete' => ['required_with:billetes', 'integer', 'min:1'],
             'billetes.*.cantidad' => ['required_with:billetes', 'integer', 'gte:0'],
             'fecha' => ['nullable', 'date'],
+        ], [
+            'billetes.*.cantidad.integer' => 'La cantidad de cada denominación debe ser un número entero.',
         ]);
+
+        if (! empty($validated['billetes'])) {
+            validarDenominacionesArqueo($validated['billetes']);
+        }
 
         $user = $request->user();
 
@@ -476,7 +487,12 @@ class CajaController extends Controller
     {
         if (! empty($validated['billetes'])) {
             $total = collect($validated['billetes'])
-                ->sum(fn (array $row): float => toMoney((float) $row['denominacion'] * (float) $row['cantidad'], 4));
+                ->sum(fn (array $row): float => toMoney(
+                    (float) $row['denominacion']
+                    * (int) $row['unidades_por_paquete']
+                    * (float) $row['cantidad'],
+                    4
+                ));
 
             if ($total > 0) {
                 return toMoney($total, 4);
@@ -484,6 +500,28 @@ class CajaController extends Controller
         }
 
         return toMoney($validated['monto_contado'] ?? 0, 4);
+    }
+
+    /** Mantiene compatibilidad con clientes que aún envían el formato anterior. */
+    private function normalizarDenominacionesArqueo(Request $request): void
+    {
+        $billetes = $request->input('billetes');
+
+        if (! is_array($billetes)) {
+            return;
+        }
+
+        foreach ($billetes as $index => $detalle) {
+            if (! is_array($detalle)) {
+                continue;
+            }
+
+            $denominacion = toMoney($detalle['denominacion'] ?? 0, 2);
+            $billetes[$index]['tipo'] = $detalle['tipo'] ?? ($denominacion >= 5 ? 'billete' : 'moneda');
+            $billetes[$index]['unidades_por_paquete'] = $detalle['unidades_por_paquete'] ?? 1;
+        }
+
+        $request->merge(['billetes' => $billetes]);
     }
 
     private function calcularMontoSistema(int $cajaId): float

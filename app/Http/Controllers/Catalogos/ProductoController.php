@@ -41,6 +41,7 @@ class ProductoController extends Controller
                 'codigo_barra',
                 'palabras_clave',
                 'precio_venta',
+                'precio_mayorista',
                 'costo_promedio',
                 'stock_actual',
                 'stock_minimo',
@@ -59,12 +60,15 @@ class ProductoController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $this->normalizarPrecios($request);
+
         $validated = $request->validate([
             'categoria_id'  => ['required', Rule::exists('categorias', 'id')],
             'nombre'        => ['required', 'string', 'max:255'],
             'codigo_barra'  => ['nullable', 'string', 'max:100', 'unique:productos,codigo_barra'],
             'palabras_clave'=> ['nullable', 'string', 'max:500'],
             'precio_venta'  => ['nullable', 'numeric', 'gte:0'],
+            'precio_mayorista' => ['nullable', 'numeric', 'gt:0'],
             'costo_promedio'=> ['nullable', 'numeric', 'gte:0'],
             'stock_actual'  => ['nullable', 'integer', 'min:0'],
             'stock_minimo'  => ['required', 'integer', 'min:1'],
@@ -98,6 +102,7 @@ class ProductoController extends Controller
         $producto = Producto::query()->create([
             ...$validated,
             'precio_venta'    => $validated['precio_venta'] ?? 0,
+            'precio_mayorista' => $validated['precio_mayorista'] ?? null,
             'costo_promedio'  => $validated['costo_promedio'] ?? 0,
             'stock_actual'    => isset($validated['stock_actual']) ? (int) $validated['stock_actual'] : 0,
             'stock_minimo'    => $validated['stock_minimo'] ?? 0,
@@ -117,12 +122,15 @@ class ProductoController extends Controller
 
     public function update(Request $request, Producto $producto): JsonResponse
     {
+        $this->normalizarPrecios($request);
+
         $validated = $request->validate([
             'categoria_id'  => ['required', Rule::exists('categorias', 'id')],
             'nombre'        => ['required', 'string', 'max:255'],
             'codigo_barra'  => ['nullable', 'string', 'max:100', Rule::unique('productos', 'codigo_barra')->ignore($producto->id)],
             'palabras_clave'=> ['nullable', 'string', 'max:500'],
             'precio_venta'  => ['nullable', 'numeric', 'gte:0'],
+            'precio_mayorista' => ['nullable', 'numeric', 'gt:0'],
             'costo_promedio'=> ['nullable', 'numeric', 'gte:0'],
             'stock_actual'  => ['nullable', 'integer', 'min:0'],
             'stock_minimo'  => ['required', 'integer', 'min:1'],
@@ -158,6 +166,9 @@ class ProductoController extends Controller
         $producto->update([
             ...$validated,
             'precio_venta'    => $validated['precio_venta'] ?? $producto->precio_venta,
+            'precio_mayorista' => array_key_exists('precio_mayorista', $validated)
+                ? $validated['precio_mayorista']
+                : $producto->precio_mayorista,
             'costo_promedio'  => $validated['costo_promedio'] ?? $producto->costo_promedio,
             'stock_actual'    => isset($validated['stock_actual']) ? (int) $validated['stock_actual'] : (int) $producto->stock_actual,
             'stock_minimo'    => $validated['stock_minimo'] ?? $producto->stock_minimo,
@@ -201,5 +212,14 @@ class ProductoController extends Controller
         return response()->json([
             'message' => 'Producto eliminado correctamente.',
         ]);
+    }
+
+    private function normalizarPrecios(Request $request): void
+    {
+        foreach (['precio_venta', 'precio_mayorista', 'costo_promedio'] as $campo) {
+            if ($request->has($campo) && $request->input($campo) !== '') {
+                $request->merge([$campo => parseMoney($request->input($campo))]);
+            }
+        }
     }
 }

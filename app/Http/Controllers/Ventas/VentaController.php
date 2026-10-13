@@ -141,7 +141,7 @@ class VentaController extends Controller
         $clientes = Cliente::query()
             ->where('activo', true)
             ->orderBy('nombre')
-            ->get(['id', 'nombre', 'nit']);
+            ->get(['id', 'nombre', 'nit', 'tipo_cliente']);
 
         $consumidorFinalId = Cliente::query()
             ->where('activo', true)
@@ -157,6 +157,7 @@ class VentaController extends Controller
                 'codigo_barra',
                 'palabras_clave',
                 'precio_venta',
+                'precio_mayorista',
                 'stock_actual',
                 'unidad_medida_id',
             ]);
@@ -193,6 +194,7 @@ class VentaController extends Controller
             'items.*.cantidad' => ['required', 'integer', 'min:1'],
         ]);
 
+        $cliente = null;
         if (! empty($validated['cliente_id'])) {
             $cliente = Cliente::query()->find($validated['cliente_id']);
             if ($cliente && ! $cliente->activo) {
@@ -225,7 +227,9 @@ class VentaController extends Controller
             }
         }
 
-        $result = DB::transaction(function () use ($validated) {
+        $tipoCliente = $cliente?->tipo_cliente === 'mayorista' ? 'mayorista' : 'minorista';
+
+        $result = DB::transaction(function () use ($validated, $tipoCliente) {
             $numeroVenta = sprintf(
                 'VTA-%s-%03d',
                 now()->format('YmdHis'),
@@ -259,7 +263,10 @@ class VentaController extends Controller
                 }
 
                 $cantidad = toMoney((int) $item['cantidad'], 4);
-                $precio = toMoney($producto->precio_venta, 4);
+                $precioBase = $tipoCliente === 'mayorista' && (float) $producto->precio_mayorista > 0
+                    ? $producto->precio_mayorista
+                    : $producto->precio_venta;
+                $precio = toMoney($precioBase, 4);
                 $lineSubtotal = toMoney($cantidad * $precio, 4);
                 $stockAnterior = (float) $producto->stock_actual;
 

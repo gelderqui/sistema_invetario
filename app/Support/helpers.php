@@ -36,10 +36,56 @@ if (! function_exists('getFechaHora')) {
     }
 }
 
+if (! function_exists('parseMoney')) {
+    /**
+     * Normaliza importes escritos con punto o coma decimal y separadores de miles.
+     * Ejemplos válidos: 18.75, 18,75, 190,234.34 y 190.234,34.
+     */
+    function parseMoney(float|int|string|null $value): float
+    {
+        if (is_int($value) || is_float($value)) {
+            return (float) $value;
+        }
+
+        $raw = trim(str_replace([' ', "\u{00A0}"], '', (string) ($value ?? '')));
+        if ($raw === '') {
+            return 0.0;
+        }
+
+        $lastComma = strrpos($raw, ',');
+        $lastDot = strrpos($raw, '.');
+        $normalized = $raw;
+
+        if ($lastComma !== false && $lastDot !== false) {
+            $decimalSeparator = $lastComma > $lastDot ? ',' : '.';
+            $thousandsSeparator = $decimalSeparator === ',' ? '.' : ',';
+
+            $normalized = str_replace($thousandsSeparator, '', $raw);
+            if ($decimalSeparator === ',') {
+                $normalized = str_replace(',', '.', $normalized);
+            }
+        } elseif ($lastComma !== false) {
+            $commaCount = substr_count($raw, ',');
+            $decimalLength = strlen($raw) - $lastComma - 1;
+            $normalized = $commaCount > 1 || $decimalLength === 3
+                ? str_replace(',', '', $raw)
+                : str_replace(',', '.', $raw);
+        } elseif ($lastDot !== false) {
+            $dotCount = substr_count($raw, '.');
+            $decimalLength = strlen($raw) - $lastDot - 1;
+            if ($dotCount > 1 || $decimalLength === 3) {
+                $normalized = str_replace('.', '', $raw);
+            }
+        }
+
+        return is_numeric($normalized) ? (float) $normalized : 0.0;
+    }
+}
+
 if (! function_exists('toMoney')) {
     function toMoney(float|int|string|null $value, int $precision = 2): float
     {
-        return round((float) ($value ?? 0), $precision);
+        return round(parseMoney($value), $precision);
     }
 }
 

@@ -10,7 +10,7 @@ Este es el orden recomendado cuando empiezas a usar el sistema:
 
 1. Ingresa tu capital inicial en `Capital` (`ingreso_capital`).
 2. Crea categorias de producto.
-3. Crea productos y define su unidad, costo y precio.
+3. Crea productos y define su unidad, costo, precio normal y, cuando aplique, precio mayorista.
 4. Carga inventario inicial (no como compra) en `Inventario -> Inventario inicial`.
 5. Crea proveedores.
 6. Si aplica, registra clientes.
@@ -40,7 +40,7 @@ Este es el orden recomendado cuando empiezas a usar el sistema:
 
 - Para vender, el usuario debe tener caja abierta.
 - Metodo de pago en venta nueva: `efectivo` o `credito`.
-- El precio unitario de venta lo toma backend desde el producto.
+- El precio unitario de venta lo toma backend desde el producto: usa el precio normal para clientes minoristas y el precio mayorista cuando el cliente está clasificado como mayorista. Si el producto no tiene precio mayorista, usa su precio normal.
 - El arqueo no bloquea; el cierre si bloquea cuando hay faltante sobre umbral.
 - Si existe arqueo, el cierre usa el monto contado del ultimo arqueo.
 
@@ -88,6 +88,14 @@ Al guardar una venta a crédito debes seleccionar un cliente. El sistema crea la
 - Proveedor inactivo no se usa en compras.
 - Producto inactivo no se puede comprar.
 - Cantidad en compra debe ser mayor a 0.
+- La columna **Precio sugerido** se calcula desde el costo y el porcentaje configurado. Debajo se muestra el precio actual del producto para compararlo antes de guardar.
+- Una compra actualiza el precio normal aplicado; el precio mayorista se administra desde el catálogo de Productos.
+
+---
+
+## 3.4 Clientes mayoristas
+
+En `Catálogo -> Clientes`, seleccione el tipo **Minorista** o **Mayorista**. Todos los clientes existentes y nuevos inician como minoristas por defecto. El tipo define el precio aplicado automáticamente en el POS; no depende del NIT ni del nombre del cliente.
 
 ---
 

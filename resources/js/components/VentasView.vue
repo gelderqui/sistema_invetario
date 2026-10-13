@@ -90,6 +90,8 @@
                                         :allow-empty="true"
                                         :close-on-select="true"
                                         :show-labels="false"
+                                        @select="syncPricesForSelectedCustomer"
+                                        @remove="syncPricesForSelectedCustomer"
                                     />
                                 </div>
                             </div>
@@ -323,6 +325,11 @@ watch(
     }
 );
 
+watch(
+    () => form.value.cliente?.id ?? null,
+    () => syncPricesForSelectedCustomer()
+);
+
 onMounted(async () => {
     formModal = new Modal(formModalRef.value);
     await Promise.all([loadVentas(), loadCatalogs()]);
@@ -378,7 +385,25 @@ function resolveFinderProduct() {
         return;
     }
 
-    finder.value.precio_unitario = Number(producto.precio_venta || 0);
+    finder.value.precio_unitario = productPriceForSelectedCustomer(producto);
+}
+
+function productPriceForSelectedCustomer(producto) {
+    const isMayorista = form.value.cliente?.tipo_cliente === 'mayorista';
+    const precioMayorista = Number(producto?.precio_mayorista || 0);
+
+    return isMayorista && precioMayorista > 0
+        ? precioMayorista
+        : Number(producto?.precio_venta || 0);
+}
+
+function syncPricesForSelectedCustomer() {
+    for (const item of form.value.items) {
+        const producto = catalogs.value.productos.find((product) => Number(product.id) === Number(item.producto_id));
+        if (producto) item.precio_unitario = productPriceForSelectedCustomer(producto);
+    }
+
+    resolveFinderProduct();
 }
 
 function onFinderSearchChange(search) {
@@ -445,7 +470,7 @@ function quickAddFinder() {
             producto_nombre: producto.nombre,
             stock_actual: stockActual,
             cantidad,
-            precio_unitario: Number(finder.value.precio_unitario || producto.precio_venta || 0),
+            precio_unitario: Number(finder.value.precio_unitario || productPriceForSelectedCustomer(producto)),
         });
     }
 

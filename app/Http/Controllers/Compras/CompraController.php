@@ -113,6 +113,8 @@ class CompraController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $this->normalizarMontos($request);
+
         $validated = $request->validate(
             [
                 'proveedor_id' => ['required', Rule::exists('proveedores', 'id')],
@@ -311,6 +313,28 @@ class CompraController extends Controller
         $factor = 1 + ($porcentajeUtilidadCompra / 100);
 
         return toMoney($costoUnitario * $factor, 4);
+    }
+
+    private function normalizarMontos(Request $request): void
+    {
+        $items = $request->input('items', []);
+        if (! is_array($items)) {
+            return;
+        }
+
+        foreach ($items as $index => $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            foreach (['costo_unitario', 'precio_venta'] as $campo) {
+                if (array_key_exists($campo, $item) && $item[$campo] !== '') {
+                    $items[$index][$campo] = parseMoney($item[$campo]);
+                }
+            }
+        }
+
+        $request->merge(['items' => $items]);
     }
 
     public function anular(Request $request, Compra $compra): JsonResponse

@@ -66,7 +66,7 @@ Estado funcional actual:
 - Los abonos requieren una caja abierta y generan un ingreso `abono_venta_credito` en esa caja.
 - Un abono solo se puede anular si es el último abono vigente y la misma caja del abono sigue abierta para el usuario que lo recibió; la anulación restituye la deuda y crea la salida de caja compensatoria.
 - Una cuenta activa con saldo puede marcarse como `incobrable`; se cierra el saldo y su pérdida se descuenta de la utilidad del período.
-- En ventas nuevas, el precio unitario se toma siempre del producto en backend (no se acepta override por request).
+- En ventas nuevas, el precio unitario se toma siempre del producto en backend (no se acepta override por request). Para clientes mayoristas usa `productos.precio_mayorista` si está definido; de lo contrario usa `productos.precio_venta`.
 - El descuento en UI se habilita manualmente por checkbox.
 - En historial de ventas, `admin` puede ver todas las ventas y filtrar por usuario; los demas roles solo ven sus propios registros.
 
@@ -74,6 +74,7 @@ Estado funcional actual:
 
 - Cliente inactivo no puede usarse en nuevas ventas.
 - Cliente con ventas registradas no puede eliminarse; solo puede desactivarse.
+- `clientes.tipo_cliente` es `minorista` por defecto y puede ser `mayorista`; la clasificación define el precio aplicado en POS, no el NIT ni el nombre.
 
 Regla de fecha:
 

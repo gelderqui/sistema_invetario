@@ -29,3 +29,30 @@
 .compra-product-hint {
     min-height: 18px;
 }
+
+.compra-price-current {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    max-width: 48%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0.28rem 0.38rem;
+    border-radius: 0.25rem;
+    background: #f1f4f8;
+    color: #627084;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.1;
+    white-space: nowrap;
+}
+
+.compra-price-field {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.compra-price-field .form-control {
+    min-width: 0;
+}

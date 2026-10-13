@@ -239,7 +239,7 @@
                                             <th style="min-width: 110px;">Cantidad</th>
                                             <th style="min-width: 140px;">Medida</th>
                                             <th style="min-width: 140px;">Costo unitario</th>
-                                            <th style="min-width: 140px;">Precio venta</th>
+                                            <th style="min-width: 200px;">Precio sugerido - actual</th>
                                             <th style="min-width: 140px;">Caducidad</th>
                                             <th style="min-width: 130px;">Subtotal</th>
                                             <th></th>
@@ -298,15 +298,19 @@
                                                 >
                                             </td>
                                             <td>
-                                                <input
-                                                    v-model.number="item.precio_venta"
-                                                    type="number"
-                                                    step="0.0001"
-                                                    min="0"
-                                                    class="form-control form-control-sm"
-                                                    @input="handleSalePriceInput(item, $event)"
-                                                    @blur="handleSalePriceBlur(item)"
-                                                >
+                                                <div class="compra-price-field">
+                                                    <input
+                                                        v-model="item.precio_venta_display"
+                                                        type="text"
+                                                        inputmode="decimal"
+                                                        class="form-control form-control-sm"
+                                                        @input="handleSalePriceInput(item, $event)"
+                                                        @blur="handleSalePriceBlur(item)"
+                                                    >
+                                                    <span v-if="itemCurrentSalePrice(item) > 0" class="compra-price-current">
+                                                        Q {{ formatMoney(itemCurrentSalePrice(item)) }}
+                                                    </span>
+                                                </div>
                                             </td>
                                             <td>
                                                 <input
@@ -380,7 +384,7 @@ import axios from '@/bootstrap';
 import FormErrors from '@/components/FormErrors.vue';
 import ModalConfirm from '@/components/components_ui/ModalConfirm.vue';
 import TablePagination from '@/components/components_ui/TablePagination.vue';
-import { formatMoney } from '@/utils/formatters';
+import { formatMoney, parseMoneyInput } from '@/utils/formatters';
 
 const compras = ref([]);
 const catalogs = ref({ categorias: [], proveedores: [], productos: [], metodos_pago: [] });
@@ -412,6 +416,7 @@ const emptyItem = () => ({
     unidad_medida: '',
     costo_unitario: 0,
     precio_venta: 0,
+    precio_venta_display: '0.00',
     precio_venta_manual: false,
     fecha_caducidad: '',
 });
@@ -536,6 +541,7 @@ function onProductClear(item) {
     item.unidad_medida = '';
     item.precio_venta_manual = false;
     item.precio_venta = 0;
+    item.precio_venta_display = '0.00';
     item.fecha_caducidad = '';
 }
 
@@ -552,6 +558,10 @@ function getItemProduct(item) {
     return item.producto
         ?? catalogs.value.productos.find((prod) => Number(prod.id) === Number(item.producto_id))
         ?? null;
+}
+
+function itemCurrentSalePrice(item) {
+    return Number(getItemProduct(item)?.precio_venta || 0);
 }
 
 function itemRequiresCaducidad(item) {
@@ -613,6 +623,7 @@ function calculateSuggestedSalePrice(cost) {
 function syncSuggestedSalePrice(item, force = false) {
     if (item.precio_venta_manual && !force) return;
     item.precio_venta = calculateSuggestedSalePrice(item.costo_unitario);
+    item.precio_venta_display = formatMoney(item.precio_venta);
 }
 
 function handleCostInput(item) {
@@ -629,15 +640,23 @@ function handleSalePriceInput(item, event) {
     }
 
     item.precio_venta_manual = true;
+    const value = parseMoneyInput(rawValue);
+    if (Number.isFinite(value)) {
+        item.precio_venta = value;
+    }
 }
 
 function handleSalePriceBlur(item) {
-    const value = Number(item.precio_venta);
+    const value = parseMoneyInput(item.precio_venta_display);
 
     if (!Number.isFinite(value) || value <= 0) {
         item.precio_venta_manual = false;
         syncSuggestedSalePrice(item, true);
+        return;
     }
+
+    item.precio_venta = value;
+    item.precio_venta_display = formatMoney(value);
 }
 
 function normalizeQuantityInput(item) {

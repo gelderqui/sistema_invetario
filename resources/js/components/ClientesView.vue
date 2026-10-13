@@ -19,6 +19,7 @@
             <tr>
               <th>Nombre</th>
               <th>NIT</th>
+              <th>Tipo</th>
               <th>Telefono</th>
               <th>Email</th>
               <th>Estado</th>
@@ -28,11 +29,12 @@
           </thead>
           <tbody>
             <tr v-if="!totalClientes">
-              <td colspan="7" class="text-center text-body-secondary py-4">Sin registros</td>
+              <td colspan="8" class="text-center text-body-secondary py-4">Sin registros</td>
             </tr>
             <tr v-for="c in paginatedClientes" :key="c.id">
               <td class="fw-semibold">{{ c.nombre }}</td>
               <td>{{ c.nit || '-' }}</td>
+              <td>{{ c.tipo_cliente === 'mayorista' ? 'Mayorista' : 'Minorista' }}</td>
               <td>{{ c.telefono || '-' }}</td>
               <td>{{ c.email || '-' }}</td>
               <td>
@@ -94,6 +96,14 @@
               <div>
                 <label class="form-label fw-semibold">NIT</label>
                 <input v-model="form.nit" type="text" class="form-control" placeholder="CF, 1234567-8, etc.">
+              </div>
+
+              <div>
+                <label class="form-label fw-semibold">Tipo de cliente *</label>
+                <select v-model="form.tipo_cliente" class="form-select" required>
+                  <option value="minorista">Minorista</option>
+                  <option value="mayorista">Mayorista</option>
+                </select>
               </div>
 
               <div class="row g-3">
@@ -169,6 +179,7 @@ let formModal = null;
 const emptyForm = () => ({
   nombre: '',
   nit: 'CF',
+  tipo_cliente: 'minorista',
   email: '',
   telefono: '',
   direccion: '',
@@ -220,6 +231,7 @@ function openEdit(item) {
   form.value = {
     nombre: item.nombre,
     nit: item.nit ?? '',
+    tipo_cliente: item.tipo_cliente ?? 'minorista',
     email: item.email ?? '',
     telefono: item.telefono ?? '',
     direccion: item.direccion ?? '',

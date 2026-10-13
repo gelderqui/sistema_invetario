@@ -33,14 +33,14 @@
                         </option>
                     </select>
 
-                    <label class="form-label fw-semibold mb-0 ms-sm-2" for="filtro-nombre-producto">Nombre:</label>
+                    <label class="form-label fw-semibold mb-0 ms-sm-2" for="filtro-nombre-producto">Buscar:</label>
                     <input
                         id="filtro-nombre-producto"
                         v-model.trim="nameFilter"
                         type="text"
                         class="form-control form-control-sm"
                         style="max-width: 260px;"
-                        placeholder="Buscar por nombre"
+                        placeholder="Nombre o código de barra"
                     >
                 </div>
             </div>
@@ -230,6 +230,33 @@
                                 </div>
 
                                 <div class="col-12 col-sm-6">
+                                    <label class="form-label fw-semibold" for="p-precio-venta">Precio</label>
+                                    <input
+                                        id="p-precio-venta"
+                                        v-model.number="form.precio_venta"
+                                        type="number"
+                                        step="0.0001"
+                                        min="0"
+                                        class="form-control"
+                                    >
+                                    <div class="form-text">Precio normal aplicado a clientes minoristas.</div>
+                                </div>
+
+                                <div class="col-12 col-sm-6">
+                                    <label class="form-label fw-semibold" for="p-precio-mayorista">Precio mayorista</label>
+                                    <input
+                                        id="p-precio-mayorista"
+                                        v-model.number="form.precio_mayorista"
+                                        type="number"
+                                        step="0.0001"
+                                        min="0.0001"
+                                        class="form-control"
+                                        placeholder="Opcional"
+                                    >
+                                    <div class="form-text">Se aplica a clientes mayoristas. Si queda vacío, se usa el precio normal.</div>
+                                </div>
+
+                                <div class="col-12 col-sm-6">
                                     <div class="form-check form-switch mt-sm-2 pt-sm-1">
                                         <input
                                             id="p-control-vencimiento"
@@ -335,6 +362,8 @@ const emptyForm = () => ({
     nombre: '',
     codigo_barra: '',
     palabras_clave: '',
+    precio_venta: 0,
+    precio_mayorista: null,
     unidad_medida_id: medidasActivas.value.find(m => m.nombre.toLowerCase() === 'unidad')?.id ?? medidasActivas.value[0]?.id ?? null,
     stock_minimo: null,
     control_vencimiento: false,
@@ -420,7 +449,10 @@ const displayedProductos = computed(() => {
         .filter((item) => {
             if (!query) return true;
 
-            return String(item.nombre ?? '').toLowerCase().includes(query);
+            const nombre = String(item.nombre ?? '').toLowerCase();
+            const codigoBarra = String(item.codigo_barra ?? '').toLowerCase();
+
+            return nombre.includes(query) || codigoBarra.includes(query);
         })
         .sort((a, b) => String(a.nombre ?? '').localeCompare(String(b.nombre ?? ''), 'es', { sensitivity: 'base' }));
 });
@@ -463,6 +495,8 @@ function openEdit(prod) {
         nombre:               prod.nombre,
         codigo_barra:         prod.codigo_barra ?? '',
         palabras_clave:       prod.palabras_clave ?? '',
+        precio_venta:         Number(prod.precio_venta ?? 0),
+        precio_mayorista:     prod.precio_mayorista === null ? null : Number(prod.precio_mayorista),
         unidad_medida_id:     prod.unidad_medida_id ?? null,
         stock_minimo:             Math.max(1, Math.trunc(Number(prod.stock_minimo ?? 1))),
         control_vencimiento:      prod.control_vencimiento ?? false,
@@ -528,6 +562,9 @@ async function save() {
         const payload = {
             ...form.value,
             codigo_barra: form.value.codigo_barra || null,
+            precio_mayorista: form.value.precio_mayorista === '' || form.value.precio_mayorista === null
+                ? null
+                : Number(form.value.precio_mayorista),
         };
 
         if (editingId.value) {

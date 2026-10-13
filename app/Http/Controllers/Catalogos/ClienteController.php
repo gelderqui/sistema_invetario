@@ -17,6 +17,7 @@ class ClienteController extends Controller
             ->get([
                 'id',
                 'nombre',
+                'tipo_cliente',
                 'nit',
                 'email',
                 'telefono',
@@ -36,6 +37,7 @@ class ClienteController extends Controller
 
         $validated = $request->validate([
             'nombre' => ['required', 'string', 'max:255', 'unique:clientes,nombre'],
+            'tipo_cliente' => ['sometimes', Rule::in(['minorista', 'mayorista'])],
             'nit' => $this->nitRules(),
             'email' => ['nullable', 'email', 'max:255'],
             'telefono' => ['nullable', 'string', 'max:100'],
@@ -46,6 +48,7 @@ class ClienteController extends Controller
         $cliente = Cliente::query()->create([
             ...$validated,
             'nit' => $validated['nit'] ?? null,
+            'tipo_cliente' => $validated['tipo_cliente'] ?? 'minorista',
             'activo' => (bool) ($validated['activo'] ?? true),
             'add_user' => $request->user()->id,
         ]);
@@ -62,6 +65,7 @@ class ClienteController extends Controller
 
         $validated = $request->validate([
             'nombre' => ['required', 'string', 'max:255', Rule::unique('clientes', 'nombre')->ignore($cliente->id)],
+            'tipo_cliente' => ['required', Rule::in(['minorista', 'mayorista'])],
             'nit' => $this->nitRules($cliente),
             'email' => ['nullable', 'email', 'max:255'],
             'telefono' => ['nullable', 'string', 'max:100'],

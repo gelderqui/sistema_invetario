@@ -214,6 +214,8 @@ Route::prefix('api')->group(function (): void {
 
         Route::prefix('inventario')->group(function (): void {
             Route::get('/get', [InventarioController::class, 'index'])->middleware('permission:inventario');
+            Route::get('/export/excel', [InventarioController::class, 'exportarExcel'])->middleware('permission:inventario');
+            Route::get('/export/pdf', [InventarioController::class, 'exportarPdf'])->middleware('permission:inventario');
             Route::get('/movimientos/get', [InventarioController::class, 'movimientos'])->middleware('permission:inventario_movimientos|inventario');
             Route::get('/alertas/get', [InventarioController::class, 'alertas'])->middleware('permission:inventario_alertas|inventario');
 

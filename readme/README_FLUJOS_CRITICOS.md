@@ -43,6 +43,7 @@ Este documento describe flujos operativos punta a punta que impactan dinero, inv
 3. Los lotes son propios (`es_consignacion = false`), por lo que la mercancía pertenece al negocio desde la recepción.
 4. No se registra salida de Caja general ni Banco.
 5. Se crea una cuenta por pagar al proveedor por el total de la compra.
+6. Si el proveedor entrega factura a nombre del NIT de la empresa, el lote queda clasificado como inventario con factura.
 
 ## 2.3 Compra en consignación -> inventario (sin salida de efectivo)
 
@@ -51,6 +52,7 @@ Este documento describe flujos operativos punta a punta que impactan dinero, inv
 3. Se crean `compras`, `compra_detalles`, lotes y movimientos de entrada como en una compra normal.
 4. La compra y su lote quedan marcados como consignación.
 5. No se registra salida en `capital_movimientos`; la mercancía sigue siendo propiedad del proveedor hasta su venta.
+6. La factura recibida al ingreso puede registrarse como CF o a nombre del NIT de la empresa; en este último caso el lote queda clasificado como inventario con factura.
 
 ## 3. Venta -> inventario -> caja o cuenta por cobrar
 

@@ -3,8 +3,8 @@
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
             <h2 class="h4 mb-0">Compras</h2>
             <div class="d-flex flex-wrap gap-2">
-                <button class="btn btn-outline-brand" :disabled="actionLocked" @click="exportFiscal('pdf')">PDF facturas</button>
-                <button class="btn btn-outline-brand" :disabled="actionLocked" @click="exportFiscal('excel')">Excel facturas</button>
+                <button class="btn btn-outline-brand" :disabled="actionLocked" @click="exportCompras('pdf')">Exportar PDF</button>
+                <button class="btn btn-outline-brand" :disabled="actionLocked" @click="exportCompras('excel')">Exportar Excel</button>
                 <button class="btn btn-brand" :disabled="actionLocked" @click="openCreate">
                     <FontAwesomeIcon icon="fa-solid fa-cart-plus" class="me-2" />
                     Nueva compra
@@ -17,6 +17,36 @@
         </div>
 
         <div v-else class="card border-0 shadow-sm mb-4">
+            <div class="card-body border-bottom">
+                <div class="row g-3 align-items-end">
+                    <div class="col-12 col-md-4">
+                        <label class="form-label fw-semibold">Proveedor</label>
+                        <select v-model="filtros.proveedorId" class="form-select" @change="resetComprasPage">
+                            <option value="">Todos los proveedores</option>
+                            <option v-for="proveedor in catalogs.proveedores" :key="proveedor.id" :value="String(proveedor.id)">
+                                {{ proveedor.nombre }}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label fw-semibold">Documento</label>
+                        <select v-model="filtros.tipoDocumento" class="form-select" @change="onDocumentFilterChange">
+                            <option value="">Todos los documentos</option>
+                            <option value="sin_documento">Sin documento</option>
+                            <option value="recibo">Recibo</option>
+                            <option value="factura">Factura</option>
+                        </select>
+                    </div>
+                    <div v-if="filtros.tipoDocumento === 'factura'" class="col-12 col-md-4">
+                        <label class="form-label fw-semibold">Factura emitida a</label>
+                        <select v-model="filtros.facturaReceptor" class="form-select" @change="resetComprasPage">
+                            <option value="">CF y Mi NIT</option>
+                            <option value="cf">CF / Consumidor final</option>
+                            <option value="nit_empresa">Mi NIT</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="thead-brand">
@@ -24,6 +54,7 @@
                             <th>Numero</th>
                             <th>Proveedor</th>
                             <th>Fecha</th>
+                            <th>Documento</th>
                             <th>Productos</th>
                             <th>Total</th>
                             <th>Estado</th>
@@ -33,12 +64,13 @@
                     </thead>
                     <tbody>
                         <tr v-if="!totalCompras">
-                            <td colspan="8" class="text-center text-body-secondary py-4">Sin compras registradas</td>
+                            <td colspan="9" class="text-center text-body-secondary py-4">No hay compras que coincidan con los filtros</td>
                         </tr>
                         <tr v-for="compra in paginatedCompras" :key="compra.id">
                             <td><code>{{ compra.numero }}</code></td>
                             <td>{{ compra.proveedor?.nombre ?? '-' }}</td>
                             <td>{{ formatDate(compra.fecha_compra) }}</td>
+                            <td>{{ purchaseDocumentLabel(compra) }}</td>
                             <td>{{ compra.detalles_count ?? 0 }}</td>
                             <td class="fw-semibold">
                                 Q {{ formatMoney(compra.total) }}
@@ -435,6 +467,11 @@ const detalleError = ref('');
 const detalleCompra = ref(null);
 const pageCompras = ref(1);
 const perPageCompras = ref(10);
+const filtros = ref({
+    proveedorId: '',
+    tipoDocumento: '',
+    facturaReceptor: '',
+});
 
 const formModalRef = ref(null);
 const anularModalRef = ref(null);
@@ -473,12 +510,26 @@ const form = ref(emptyForm());
 const totalCompra = computed(() => form.value.items.reduce((sum, item) => sum + itemSubtotal(item), 0));
 const actionLocked = computed(() => loading.value || saving.value);
 const anularMessage = computed(() => `¿Deseas anular la compra <strong>${selectedCompra.value?.numero ?? ''}</strong>?`);
-const totalCompras = computed(() => compras.value.length);
+const comprasFiltradas = computed(() => compras.value.filter((compra) => {
+    if (filtros.value.proveedorId && Number(compra.proveedor_id) !== Number(filtros.value.proveedorId)) {
+        return false;
+    }
+
+    if (filtros.value.tipoDocumento
+        && (compra.tipo_documento ?? 'sin_documento') !== filtros.value.tipoDocumento) {
+        return false;
+    }
+
+    return !(filtros.value.tipoDocumento === 'factura'
+        && filtros.value.facturaReceptor
+        && compra.factura_receptor !== filtros.value.facturaReceptor);
+}));
+const totalCompras = computed(() => comprasFiltradas.value.length);
 const totalPagesCompras = computed(() => Math.max(1, Math.ceil(totalCompras.value / perPageCompras.value)));
 const safePageCompras = computed(() => Math.min(Math.max(pageCompras.value, 1), totalPagesCompras.value));
 const paginatedCompras = computed(() => {
     const start = (safePageCompras.value - 1) * perPageCompras.value;
-    return compras.value.slice(start, start + perPageCompras.value);
+    return comprasFiltradas.value.slice(start, start + perPageCompras.value);
 });
 
 onMounted(async () => {
@@ -518,19 +569,40 @@ async function loadCatalogs() {
     }
 }
 
-async function exportFiscal(format) {
+async function exportCompras(format) {
     try {
-        const { data } = await axios.get(`/compras/fiscales/export/${format}`, { responseType: 'blob' });
+        const { data } = await axios.get(`/compras/fiscales/export/${format}`, {
+            params: {
+                proveedor_id: filtros.value.proveedorId || undefined,
+                tipo_documento: filtros.value.tipoDocumento || undefined,
+                factura_receptor: filtros.value.tipoDocumento === 'factura'
+                    ? (filtros.value.facturaReceptor || undefined)
+                    : undefined,
+            },
+            responseType: 'blob',
+        });
         const url = URL.createObjectURL(data);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `compras-fiscales.${format === 'excel' ? 'xlsx' : 'pdf'}`;
+        link.download = `compras.${format === 'excel' ? 'xlsx' : 'pdf'}`;
         link.target = format === 'pdf' ? '_blank' : '_self';
         link.click();
         URL.revokeObjectURL(url);
     } catch (error) {
-        formErrors.value = [error.response?.data?.message ?? 'No se pudo generar el reporte fiscal.'];
+        formErrors.value = [error.response?.data?.message ?? 'No se pudo generar el reporte de compras.'];
     }
+}
+
+function resetComprasPage() {
+    pageCompras.value = 1;
+}
+
+function onDocumentFilterChange() {
+    if (filtros.value.tipoDocumento !== 'factura') {
+        filtros.value.facturaReceptor = '';
+    }
+
+    resetComprasPage();
 }
 
 function openCreate() {
@@ -806,6 +878,16 @@ function documentTypeLabel(value) {
     return 'Sin documento';
 }
 
+function purchaseDocumentLabel(compra) {
+    const type = documentTypeLabel(compra?.tipo_documento);
+
+    if (compra?.tipo_documento !== 'factura') return type;
+
+    return compra.factura_receptor === 'nit_empresa'
+        ? 'Factura · Mi NIT'
+        : 'Factura · CF';
+}
+
 function purchaseTypeLabel(compra) {
     const type = compra?.tipo_compra ?? (compra?.es_consignacion ? 'consignacion' : 'contado');
     if (type === 'credito_proveedor') return 'Crédito proveedor';
@@ -822,7 +904,7 @@ function purchaseTypeBadge(compra) {
 
 function purchaseTypeHelp(type) {
     if (type === 'credito_proveedor') return 'La deuda se registra al recibir la mercancía.';
-    if (type === 'consignacion') return 'Se paga al proveedor únicamente cuando se venda.';
+    if (type === 'consignacion') return 'Se liquida con el proveedor según las unidades vendidas; puede registrar la factura recibida.';
     return 'El importe se descuenta de Caja general o Banco al guardar.';
 }
 

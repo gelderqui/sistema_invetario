@@ -1,8 +1,14 @@
 <template>
     <div>
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
             <h2 class="h4 mb-0">{{ pageTitle }}</h2>
-            <button class="btn btn-outline-brand" :disabled="loading" @click="loadCurrentSection">Actualizar</button>
+            <div class="d-flex flex-wrap gap-2">
+                <template v-if="showStock">
+                    <button class="btn btn-outline-brand" :disabled="loading" @click="exportInventario('pdf')">Exportar PDF</button>
+                    <button class="btn btn-outline-brand" :disabled="loading" @click="exportInventario('excel')">Exportar Excel</button>
+                </template>
+                <button class="btn btn-outline-brand" :disabled="loading" @click="loadCurrentSection">Actualizar</button>
+            </div>
         </div>
 
         <div v-if="showStock" class="card border-0 shadow-sm mb-3">
@@ -32,12 +38,21 @@
                         <label class="form-check-label" for="only-low">Solo bajo stock</label>
                     </div>
                 </div>
-                <div class="col-12 col-md-2">
-                    <label class="form-label fw-semibold">Respaldo fiscal</label>
-                    <select v-model="respaldoFiscal" class="form-select" @change="loadExistencias">
-                        <option value="">Todos</option>
-                        <option value="con_factura">Con factura a mi NIT</option>
-                        <option value="sin_factura">Sin factura fiscal</option>
+                <div class="col-12 col-md-3">
+                    <label class="form-label fw-semibold">Documento</label>
+                    <select v-model="tipoDocumento" class="form-select" @change="onDocumentFilterChange">
+                        <option value="">Todos los documentos</option>
+                        <option value="sin_documento">Sin documento</option>
+                        <option value="recibo">Recibo</option>
+                        <option value="factura">Factura</option>
+                    </select>
+                </div>
+                <div v-if="tipoDocumento === 'factura'" class="col-12 col-md-3">
+                    <label class="form-label fw-semibold">Factura emitida a</label>
+                    <select v-model="facturaReceptor" class="form-select" @change="loadExistencias">
+                        <option value="">CF y Mi NIT</option>
+                        <option value="cf">CF / Consumidor final</option>
+                        <option value="nit_empresa">Mi NIT</option>
                     </select>
                 </div>
                 <div class="col-12 col-md-2 d-grid">
@@ -181,13 +196,13 @@ import { useRoute } from 'vue-router';
 
 import axios from '@/bootstrap';
 import TablePagination from '@/components/components_ui/TablePagination.vue';
-import { formatMoney } from '@/utils/formatters';
 
 const loading = ref(true);
 const search = ref('');
 const categoriaId = ref(null);
 const soloBajoStock = ref(false);
-const respaldoFiscal = ref('');
+const tipoDocumento = ref('');
+const facturaReceptor = ref('');
 const existencias = ref([]);
 const categorias = ref([]);
 const movimientos = ref([]);
@@ -237,7 +252,8 @@ async function loadExistencias() {
             params: {
                 search: search.value || null,
                 categoria_id: categoriaId.value || null,
-                respaldo_fiscal: respaldoFiscal.value || null,
+                tipo_documento: tipoDocumento.value || null,
+                factura_receptor: tipoDocumento.value === 'factura' ? (facturaReceptor.value || null) : null,
                 solo_bajo_stock: soloBajoStock.value ? 1 : 0,
             },
         });
@@ -245,6 +261,38 @@ async function loadExistencias() {
         categorias.value = data.categorias ?? [];
     } finally {
         loading.value = false;
+    }
+}
+
+function onDocumentFilterChange() {
+    if (tipoDocumento.value !== 'factura') {
+        facturaReceptor.value = '';
+    }
+
+    loadExistencias();
+}
+
+async function exportInventario(format) {
+    try {
+        const { data } = await axios.get(`/inventario/export/${format}`, {
+            params: {
+                search: search.value || null,
+                categoria_id: categoriaId.value || null,
+                solo_bajo_stock: soloBajoStock.value ? 1 : null,
+                tipo_documento: tipoDocumento.value || null,
+                factura_receptor: tipoDocumento.value === 'factura' ? (facturaReceptor.value || null) : null,
+            },
+            responseType: 'blob',
+        });
+        const url = URL.createObjectURL(data);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `inventario.${format === 'excel' ? 'xlsx' : 'pdf'}`;
+        link.target = format === 'pdf' ? '_blank' : '_self';
+        link.click();
+        URL.revokeObjectURL(url);
+    } catch (_) {
+        // El interceptor global muestra el toast con el mensaje del servidor.
     }
 }
 

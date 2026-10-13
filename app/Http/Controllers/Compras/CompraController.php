@@ -126,33 +126,37 @@ class CompraController extends Controller
         ]);
     }
 
-    public function exportarComprasFiscalesExcel()
+    public function exportarComprasFiscalesExcel(Request $request)
     {
-        $compras = $this->comprasFiscales();
+        $compras = $this->comprasParaExportar($request);
 
         return Excel::download(new class($compras) implements FromCollection, WithHeadings, WithMapping {
             public function __construct(private readonly Collection $compras) {}
             public function collection(): Collection { return $this->compras; }
-            public function headings(): array { return ['Fecha', 'Compra', 'Proveedor', 'NIT proveedor', 'Serie/DTE', 'Factura', 'NIT receptor', 'Subtotal', 'Total', 'Estado']; }
+            public function headings(): array { return ['Fecha', 'Compra', 'Proveedor', 'Tipo documento', 'Receptor factura', 'NIT proveedor', 'Serie/DTE', 'Numero documento', 'NIT receptor', 'Total', 'Estado']; }
             public function map($compra): array {
                 return [
                     optional($compra->fecha_compra)->format('d/m/Y'), $compra->numero, $compra->proveedor?->nombre,
+                    $this->tipoDocumentoEtiqueta($compra->tipo_documento), $this->receptorFacturaEtiqueta($compra->factura_receptor),
                     $compra->nit_proveedor, $compra->serie_documento, $compra->numero_documento, $compra->nit_receptor,
-                    round((float) $compra->total / 1.12, 2), (float) $compra->total, $compra->estado,
+                    (float) $compra->total, $compra->estado,
                 ];
             }
-        }, 'compras-fiscales-'.now()->format('Ymd').'.xlsx');
+            private function tipoDocumentoEtiqueta(?string $tipo): string { return match ($tipo) { 'recibo' => 'Recibo', 'factura' => 'Factura', default => 'Sin documento' }; }
+            private function receptorFacturaEtiqueta(?string $receptor): string { return match ($receptor) { 'nit_empresa' => 'Mi NIT', 'cf' => 'CF', default => '-' }; }
+        }, 'compras-'.now()->format('Ymd').'.xlsx');
     }
 
-    public function exportarComprasFiscalesPdf()
+    public function exportarComprasFiscalesPdf(Request $request)
     {
-        $compras = $this->comprasFiscales();
+        $compras = $this->comprasParaExportar($request);
 
         return Pdf::loadView('reportes.compras-fiscales', [
             'compras' => $compras,
             'empresa' => Configuracion::valor('nombre_empresa', config('app.name')),
             'nitEmpresa' => Configuracion::valor('nit_empresa', ''),
-        ])->setPaper('letter', 'landscape')->stream('compras-fiscales-'.now()->format('Ymd').'.pdf');
+            'filtros' => $this->etiquetasFiltrosExportacion($request),
+        ])->setPaper('letter', 'landscape')->stream('compras-'.now()->format('Ymd').'.pdf');
     }
 
     public function store(Request $request): JsonResponse
@@ -237,12 +241,6 @@ class CompraController extends Controller
 
         if ($tipoCompra === 'consignacion' && ! (bool) Configuracion::valor('habilitar_consignacion', false)) {
             throw ValidationException::withMessages(['es_consignacion' => ['La consignación está deshabilitada para esta tienda.']]);
-        }
-
-        if ($tipoCompra === 'consignacion' && $esFacturaFiscal) {
-            throw ValidationException::withMessages([
-                'factura_receptor' => ['La mercancía en consignación no puede registrarse como factura a su NIT mientras siga siendo propiedad del proveedor.'],
-            ]);
         }
 
         $porcentajeUtilidadCompra = max(0, (int) Configuracion::valor('porcentaje_utilidad_compra', 25));
@@ -437,15 +435,50 @@ class CompraController extends Controller
         return toMoney($costoUnitario * $factor, 4);
     }
 
-    private function comprasFiscales(): Collection
+    private function comprasParaExportar(Request $request): Collection
     {
+        $validated = $request->validate([
+            'proveedor_id' => ['nullable', Rule::exists('proveedores', 'id')],
+            'tipo_documento' => ['nullable', Rule::in(['sin_documento', 'recibo', 'factura'])],
+            'factura_receptor' => ['nullable', Rule::in(['cf', 'nit_empresa'])],
+        ]);
+
         return Compra::query()
             ->with('proveedor:id,nombre')
-            ->where('tipo_documento', 'factura')
-            ->where('factura_receptor', 'nit_empresa')
+            ->when($validated['proveedor_id'] ?? null, fn ($query, $proveedorId) => $query->where('proveedor_id', $proveedorId))
+            ->when($validated['tipo_documento'] ?? null, function ($query, $tipoDocumento) {
+                if ($tipoDocumento === 'sin_documento') {
+                    $query->where(function ($documentos): void {
+                        $documentos->where('tipo_documento', 'sin_documento')->orWhereNull('tipo_documento');
+                    });
+
+                    return;
+                }
+
+                $query->where('tipo_documento', $tipoDocumento);
+            })
+            ->when(
+                ($validated['tipo_documento'] ?? null) === 'factura' && ! empty($validated['factura_receptor']),
+                fn ($query) => $query->where('factura_receptor', $validated['factura_receptor'])
+            )
             ->orderByDesc('fecha_compra')
             ->orderByDesc('id')
-            ->get(['id', 'numero', 'proveedor_id', 'fecha_compra', 'estado', 'total', 'numero_documento', 'serie_documento', 'nit_proveedor', 'nit_receptor']);
+            ->get(['id', 'numero', 'proveedor_id', 'fecha_compra', 'estado', 'total', 'tipo_documento', 'factura_receptor', 'numero_documento', 'serie_documento', 'nit_proveedor', 'nit_receptor']);
+    }
+
+    private function etiquetasFiltrosExportacion(Request $request): array
+    {
+        $proveedorId = $request->integer('proveedor_id');
+        $tipoDocumento = $request->string('tipo_documento')->toString();
+        $facturaReceptor = $request->string('factura_receptor')->toString();
+
+        return [
+            'proveedor' => $proveedorId > 0 ? (Proveedor::query()->find($proveedorId)?->nombre ?? 'Proveedor seleccionado') : 'Todos',
+            'documento' => match ($tipoDocumento) { 'sin_documento' => 'Sin documento', 'recibo' => 'Recibo', 'factura' => 'Factura', default => 'Todos' },
+            'receptor' => $tipoDocumento === 'factura'
+                ? match ($facturaReceptor) { 'cf' => 'CF', 'nit_empresa' => 'Mi NIT', default => 'CF y Mi NIT' }
+                : null,
+        ];
     }
 
     private function normalizarMontos(Request $request): void

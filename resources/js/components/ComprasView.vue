@@ -254,6 +254,9 @@
                                             {{ option.label }}
                                         </option>
                                     </select>
+                                    <div v-if="form.metodo_pago === 'caja_pos'" class="form-text">
+                                        Se registrará un egreso automático en tu caja POS abierta.
+                                    </div>
                                 </div>
                                 <div class="col-12 col-lg-6 col-xl-4">
                                     <label class="form-label fw-semibold">Tipo documento</label>
@@ -453,7 +456,7 @@ import TablePagination from '@/components/components_ui/TablePagination.vue';
 import { formatMoney, parseMoneyInput } from '@/utils/formatters';
 
 const compras = ref([]);
-const catalogs = ref({ categorias: [], proveedores: [], productos: [], metodos_pago: [] });
+const catalogs = ref({ categorias: [], proveedores: [], productos: [], metodos_pago: [], caja_pos_abierta: null });
 const proveedorGeneral = ref(null);
 const loading = ref(true);
 const saving = ref(false);

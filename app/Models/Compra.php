@@ -16,6 +16,7 @@ class Compra extends Model
         'fecha_compra',
         'estado',
         'metodo_pago',
+        'caja_id',
         'tipo_compra',
         'es_consignacion',
         'total',
@@ -49,6 +50,11 @@ class Compra extends Model
     public function proveedor(): BelongsTo
     {
         return $this->belongsTo(Proveedor::class, 'proveedor_id');
+    }
+
+    public function caja(): BelongsTo
+    {
+        return $this->belongsTo(Caja::class, 'caja_id');
     }
 
     public function detalles(): HasMany

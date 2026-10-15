@@ -465,7 +465,7 @@ class CajaController extends Controller
                 'fecha_cierre' => $fechaCierre,
                 'total_ventas' => $resumen['total_ventas'],
                 'total_gastos' => $resumen['total_gastos'],
-                'total_compras' => $resumen['total_egresos'],
+                'total_compras' => $resumen['total_compras'],
                 'total_ajustes' => $resumen['total_ingresos'],
                 'monto_sistema_final' => $resumen['monto_sistema'],
                 'monto_contado_final' => $montoContadoFinal,
@@ -538,12 +538,16 @@ class CajaController extends Controller
         $totalGastos = toMoney((float) abs((float) (clone $base)->where('tipo', 'gasto')->sum('monto')), 4);
         $totalIngresos = toMoney((float) (clone $base)->where('tipo', 'ingreso')->sum('monto'), 4);
         $totalEgresos = toMoney((float) abs((float) (clone $base)->where('tipo', 'egreso')->sum('monto')), 4);
+        $totalCompras = toMoney((float) abs((float) (clone $base)
+            ->whereIn('tipo', ['compra', 'anulacion_compra'])
+            ->sum('monto')), 4);
         $montoSistema = $this->calcularMontoSistema($cajaId);
 
         return [
             'total_apertura' => $totalApertura,
             'total_ventas' => $totalVentas,
             'total_gastos' => $totalGastos,
+            'total_compras' => $totalCompras,
             'total_ingresos' => $totalIngresos,
             'total_egresos' => $totalEgresos,
             'monto_sistema' => $montoSistema,

@@ -14,12 +14,13 @@
         </div>
 
         <div class="row g-3 mb-3" v-if="resumen">
-            <div class="col-6 col-lg-2"><div class="metric"><small>Apertura</small><strong>Q {{ q(resumen.total_apertura) }}</strong></div></div>
-            <div class="col-6 col-lg-2"><div class="metric"><small>Ventas</small><strong>Q {{ q(resumen.total_ventas) }}</strong></div></div>
-            <div class="col-6 col-lg-2"><div class="metric"><small>Ingresos</small><strong>Q {{ q(resumen.total_ingresos) }}</strong></div></div>
-            <div class="col-6 col-lg-2"><div class="metric"><small>Gastos</small><strong>Q {{ q(resumen.total_gastos) }}</strong></div></div>
-            <div class="col-6 col-lg-2"><div class="metric"><small>Egresos</small><strong>Q {{ q(resumen.total_egresos) }}</strong></div></div>
-            <div class="col-6 col-lg-2"><div class="metric"><small>Sistema</small><strong>Q {{ q(resumen.monto_sistema) }}</strong></div></div>
+            <div class="col-6 col-lg"><div class="metric"><small>Apertura</small><strong>Q {{ q(resumen.total_apertura) }}</strong></div></div>
+            <div class="col-6 col-lg"><div class="metric"><small>Ventas</small><strong>Q {{ q(resumen.total_ventas) }}</strong></div></div>
+            <div class="col-6 col-lg"><div class="metric"><small>Ingresos</small><strong>Q {{ q(resumen.total_ingresos) }}</strong></div></div>
+            <div class="col-6 col-lg"><div class="metric"><small>Gastos</small><strong>Q {{ q(resumen.total_gastos) }}</strong></div></div>
+            <div class="col-6 col-lg"><div class="metric"><small>Compras</small><strong>Q {{ q(resumen.total_compras) }}</strong></div></div>
+            <div class="col-6 col-lg"><div class="metric"><small>Egresos</small><strong>Q {{ q(resumen.total_egresos) }}</strong></div></div>
+            <div class="col-6 col-lg"><div class="metric"><small>Sistema</small><strong>Q {{ q(resumen.monto_sistema) }}</strong></div></div>
         </div>
 
         <div class="alert alert-warning" v-if="!cajaActiva">No hay caja abierta para este usuario.</div>
@@ -100,7 +101,7 @@
                         </tr>
                         <tr v-for="row in movimientos" :key="row.id">
                             <td class="px-3">{{ dateTime(row.fecha) }}</td>
-                            <td>{{ row.tipo }}</td>
+                            <td>{{ movementLabel(row.tipo) }}</td>
                             <td>{{ row.descripcion || '-' }}</td>
                             <td class="text-end pe-3" :class="Number(row.monto) < 0 ? 'text-danger' : 'text-success'">Q {{ q(row.monto) }}</td>
                         </tr>
@@ -240,6 +241,13 @@ onMounted(async () => {
 
 function q(value) {
     return formatMoney(value);
+}
+
+function movementLabel(type) {
+    return ({
+        compra: 'Compra',
+        anulacion_compra: 'Anulación de compra',
+    })[type] ?? type;
 }
 
 function formatDenominacion(value) {

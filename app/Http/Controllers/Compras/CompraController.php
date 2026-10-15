@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Compras;
 
 use App\Http\Controllers\Controller;
 use App\Models\Categoria;
+use App\Models\Caja;
 use App\Models\CapitalCuenta;
 use App\Models\Compra;
 use App\Models\CompraDetalle;
 use App\Models\Configuracion;
 use App\Models\InventarioLote;
 use App\Models\InventarioMovimiento;
+use App\Models\MovimientoCaja;
 use App\Models\Producto;
 use App\Models\Proveedor;
 use App\Models\ProveedorCuentaPorPagar;
@@ -41,6 +43,7 @@ class CompraController extends Controller
                 'fecha_compra',
                 'estado',
                 'metodo_pago',
+                'caja_id',
                 'tipo_compra',
                 'es_consignacion',
                 'total',
@@ -58,8 +61,9 @@ class CompraController extends Controller
         ]);
     }
 
-    public function catalogs(): JsonResponse
+    public function catalogs(Request $request): JsonResponse
     {
+        $user = $request->user();
         $categorias = Categoria::query()
             ->orderBy('nombre')
             ->get(['id', 'nombre']);
@@ -91,6 +95,24 @@ class CompraController extends Controller
                 'control_vencimiento',
             ]);
 
+        $puedeUsarCajaPos = $user?->role?->code === 'admin'
+            || $user?->hasPermission('ventas');
+        $cajaPosAbierta = $puedeUsarCajaPos
+            ? Caja::query()
+                ->where('usuario_id', (int) $user?->id)
+                ->where('estado', 'abierta')
+                ->latest('id')
+                ->first(['id', 'fecha_apertura'])
+            : null;
+        $metodosPago = [
+            ['value' => 'caja_general', 'label' => 'Caja general'],
+            ['value' => 'banco', 'label' => 'Banco'],
+        ];
+
+        if ($cajaPosAbierta) {
+            $metodosPago[] = ['value' => 'caja_pos', 'label' => 'Efectivo de mi caja POS abierta'];
+        }
+
         return response()->json([
             'data' => [
                 'categorias'          => $categorias,
@@ -98,10 +120,8 @@ class CompraController extends Controller
                 'proveedor_general_id' => $proveedorGeneral,
                 'porcentaje_utilidad_compra' => (int) Configuracion::valor('porcentaje_utilidad_compra', 25),
                 'consignacion_habilitada' => (bool) Configuracion::valor('habilitar_consignacion', false),
-                'metodos_pago' => [
-                    ['value' => 'caja_general', 'label' => 'Caja general'],
-                    ['value' => 'banco', 'label' => 'Banco'],
-                ],
+                'metodos_pago' => $metodosPago,
+                'caja_pos_abierta' => $cajaPosAbierta,
                 'capital_cuentas' => CapitalCuenta::query()
                     ->whereIn('codigo', ['caja_general', 'banco'])
                     ->where('activo', true)
@@ -168,7 +188,7 @@ class CompraController extends Controller
             [
                 'proveedor_id' => ['required', Rule::exists('proveedores', 'id')],
                 'fecha_compra' => ['required', 'date'],
-                'metodo_pago' => ['nullable', Rule::in(['caja_general', 'banco'])],
+                'metodo_pago' => ['nullable', Rule::in(['caja_general', 'banco', 'caja_pos'])],
                 'tipo_compra' => ['nullable', Rule::in(['contado', 'credito_proveedor', 'consignacion'])],
                 'es_consignacion' => ['sometimes', 'boolean'],
                 'tipo_documento' => ['nullable', Rule::in(['sin_documento', 'recibo', 'factura'])],
@@ -234,9 +254,19 @@ class CompraController extends Controller
 
         $tipoCompra = $validated['tipo_compra'] ?? ((bool) ($validated['es_consignacion'] ?? false) ? 'consignacion' : 'contado');
 
-        if ($tipoCompra === 'contado' && ! in_array($validated['metodo_pago'] ?? null, ['caja_general', 'banco'], true)) {
+        if ($tipoCompra === 'contado' && ! in_array($validated['metodo_pago'] ?? null, ['caja_general', 'banco', 'caja_pos'], true)) {
             throw ValidationException::withMessages([
-                'metodo_pago' => 'Debe seleccionar Caja general o Banco para una compra con pago inmediato.',
+                'metodo_pago' => 'Debe seleccionar Caja general, Banco o una caja POS abierta para una compra con pago inmediato.',
+            ]);
+        }
+
+        $pagaConCajaPos = $tipoCompra === 'contado' && ($validated['metodo_pago'] ?? null) === 'caja_pos';
+        $puedeUsarCajaPos = $request->user()?->role?->code === 'admin'
+            || $request->user()?->hasPermission('ventas');
+
+        if ($pagaConCajaPos && ! $puedeUsarCajaPos) {
+            throw ValidationException::withMessages([
+                'metodo_pago' => ['Debe tener acceso a Ventas para pagar una compra desde su caja POS.'],
             ]);
         }
 
@@ -247,8 +277,25 @@ class CompraController extends Controller
         $porcentajeUtilidadCompra = max(0, (int) Configuracion::valor('porcentaje_utilidad_compra', 25));
         $userId = (int) $request->user()->id;
 
-        $result = DB::transaction(function () use ($validated, $porcentajeUtilidadCompra, $userId, $tipoCompra, $esFacturaFiscal, $nitEmpresa) {
+        $result = DB::transaction(function () use ($validated, $porcentajeUtilidadCompra, $userId, $tipoCompra, $esFacturaFiscal, $nitEmpresa, $pagaConCajaPos) {
             $esConsignacion = $tipoCompra === 'consignacion';
+            $cajaPos = null;
+
+            if ($pagaConCajaPos) {
+                $cajaPos = Caja::query()
+                    ->where('usuario_id', $userId)
+                    ->where('estado', 'abierta')
+                    ->latest('id')
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $cajaPos) {
+                    throw ValidationException::withMessages([
+                        'metodo_pago' => ['Debe tener una caja POS abierta para pagar esta compra con efectivo de caja.'],
+                    ]);
+                }
+            }
+
             $numeroCompra = sprintf(
                 'CMP-%s-%03d',
                 now()->format('YmdHis'),
@@ -261,6 +308,7 @@ class CompraController extends Controller
                 'fecha_compra' => $validated['fecha_compra'],
                 'estado' => 'activo',
                 'metodo_pago' => $tipoCompra === 'contado' ? $validated['metodo_pago'] : null,
+                'caja_id' => $cajaPos?->id,
                 'tipo_compra' => $tipoCompra,
                 'es_consignacion' => $esConsignacion,
                 'total' => 0,
@@ -386,6 +434,24 @@ class CompraController extends Controller
                     'saldo_pendiente' => $compra->total,
                     'estado' => 'pendiente',
                     'add_user' => $userId,
+                ]);
+
+                return [
+                    'compra' => $compra->load(['proveedor:id,nombre', 'detalles.producto:id,nombre'])->loadCount('detalles'),
+                    'alerts' => $alerts,
+                ];
+            }
+
+            if ($pagaConCajaPos && $cajaPos) {
+                MovimientoCaja::query()->create([
+                    'caja_id' => $cajaPos->id,
+                    'tipo' => 'compra',
+                    'monto' => -1 * toMoney($compra->total),
+                    'descripcion' => 'Compra '.$compra->numero,
+                    'referencia_tipo' => 'compra',
+                    'referencia_id' => $compra->id,
+                    'fecha' => $compra->fecha_compra?->toDateTimeString() ?? now()->toDateTimeString(),
+                    'usuario_id' => $userId,
                 ]);
 
                 return [
@@ -612,6 +678,73 @@ class CompraController extends Controller
                 $cuentaPorPagar?->update([
                     'saldo_pendiente' => 0,
                     'estado' => 'anulada',
+                ]);
+
+                return;
+            }
+
+            if ($compra->metodo_pago === 'caja_pos') {
+                $cajaPos = Caja::query()
+                    ->whereKey($compra->caja_id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $cajaPos) {
+                    throw ValidationException::withMessages([
+                        'compra' => ['No se encontro la caja POS desde la que se pagó esta compra.'],
+                    ]);
+                }
+
+                $movimientoOriginal = MovimientoCaja::query()
+                    ->where('caja_id', $cajaPos->id)
+                    ->where('tipo', 'compra')
+                    ->where('referencia_tipo', 'compra')
+                    ->where('referencia_id', $compra->id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $movimientoOriginal) {
+                    throw ValidationException::withMessages([
+                        'compra' => ['No se encontro el movimiento de caja original de esta compra.'],
+                    ]);
+                }
+
+                if ($cajaPos->estado !== 'abierta') {
+                    $cajaGeneral = capitalCuentaPorCodigo('caja_general');
+                    if (! $cajaGeneral) {
+                        throw ValidationException::withMessages([
+                            'metodo_pago' => ['No existe una Caja general activa para registrar la devolución de esta compra.'],
+                        ]);
+                    }
+
+                    registrarMovimientoCapital(
+                        tipo: 'anulacion_compra',
+                        monto: (float) $compra->total,
+                        usuarioId: $userId,
+                        cuentaOrigenId: null,
+                        cuentaDestinoId: (int) $cajaGeneral->id,
+                        descripcion: 'Ingreso por anulacion de compra '.$compra->numero.' pagada desde caja POS #'.$cajaPos->id,
+                        fecha: now()->toDateTimeString(),
+                        referenciaTipo: 'compra',
+                        referenciaId: (int) $compra->id,
+                        meta: [
+                            'metodo_pago_original' => 'caja_pos',
+                            'caja_pos_id' => $cajaPos->id,
+                        ]
+                    );
+
+                    return;
+                }
+
+                MovimientoCaja::query()->create([
+                    'caja_id' => $cajaPos->id,
+                    'tipo' => 'anulacion_compra',
+                    'monto' => toMoney($compra->total),
+                    'descripcion' => 'Reversion por anulacion de compra '.$compra->numero,
+                    'referencia_tipo' => 'compra',
+                    'referencia_id' => $compra->id,
+                    'fecha' => now()->toDateTimeString(),
+                    'usuario_id' => $userId,
                 ]);
 
                 return;

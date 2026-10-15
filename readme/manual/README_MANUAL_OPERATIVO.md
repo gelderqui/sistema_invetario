@@ -50,7 +50,7 @@ Anulaciones y devoluciones:
 ## 3. Compras
 
 1. Seleccionar proveedor activo.
-2. Seleccionar metodo de pago (`caja_general` o `banco`).
+2. Seleccionar método de pago (`caja_general`, `banco` o **Efectivo de mi caja POS abierta** cuando tengas caja abierta y acceso autorizado).
 3. Agregar productos con cantidad, costo y precio de venta por item.
 4. Confirmar compra.
 
@@ -62,6 +62,7 @@ Reglas clave:
 - Solo compras activas pueden anularse.
 - Si un lote de la compra ya fue consumido, la compra no puede anularse.
 - Cuando se anula una compra valida, se revierte inventario y se devuelve capital a la cuenta de pago.
+- Si pagaste desde caja POS y sigue abierta, la anulación devuelve el efectivo a esa misma caja. Si ya cerró, el reintegro se registra en Caja general y no se altera el cierre ya realizado.
 
 ### 3.1 Consignación y pago a proveedor
 
@@ -112,3 +113,4 @@ Reglas de eliminacion y desactivacion:
 - Proveedores:
 - Inactivo: no se puede seleccionar en compras.
 - Eliminar: solo si no tiene compras.
+- NIT: es opcional y el buscador encuentra proveedores por nombre o NIT.

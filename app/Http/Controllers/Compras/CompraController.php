@@ -71,7 +71,7 @@ class CompraController extends Controller
         $proveedores = Proveedor::query()
             ->where('activo', true)
             ->orderBy('nombre')
-            ->get(['id', 'nombre']);
+            ->get(['id', 'nombre', 'nit']);
 
         $proveedorGeneral = Proveedor::query()
             ->where('activo', true)

@@ -90,6 +90,8 @@ Este documento describe las tablas actuales y sus relaciones principales.
 ## 2.3 Compras e inventario
 
 - `compras.proveedor_id -> proveedores.id` (M:1)
+- `proveedores.nit` es opcional, no único y almacena el NIT normalizado del proveedor para su catálogo y búsqueda. El NIT que respalda una factura concreta permanece en `compras.nit_proveedor`.
+- `compras.caja_id -> cajas.id` (M:1, nullable) identifica la caja POS que pagó una compra de contado. Solo se usa cuando `compras.metodo_pago = caja_pos`.
 - `compra_detalles.compra_id -> compras.id` (1:N)
 - `compra_detalles.producto_id -> productos.id` (M:1)
 - `inventario_lotes.producto_id -> productos.id` (M:1)

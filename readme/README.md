@@ -18,6 +18,8 @@ Documentacion general del sistema de inventario, su estado funcional y las guias
 - Inventario inicial: carga de existencias de arranque sin registrarlo como compra.
 - Consignación opcional: al habilitar `habilitar_consignacion = 1`, Compras permite recibir mercancía sin descontar capital; al venderla se genera una cuenta por pagar al proveedor.
 - Compras incluye `Cuentas por pagar`: permite registrar pagos parciales o completos de consignación desde Caja general o Banco.
+- Las compras de pago inmediato pueden descontarse de Caja general, Banco o de la caja POS abierta del mismo usuario autorizado; el cierre conserva el detalle de esas compras.
+- Proveedores cuenta con NIT opcional, consultable desde el mismo buscador por nombre o NIT.
 - Inventario y Reportes separan mercancía propia de la consignada en custodia; el estado general resta las cuentas pendientes a proveedores.
 - Formato monetario frontend estandar: 2 decimales, separador de miles con coma y decimal con punto.
 - Reloj de header sincronizado desde backend al login y resincronizado cada 30 minutos.

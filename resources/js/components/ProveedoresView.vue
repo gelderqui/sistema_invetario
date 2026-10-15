@@ -22,14 +22,14 @@
             <option value="inactivo">Inactivo</option>
           </select>
 
-          <label class="form-label fw-semibold mb-0 ms-sm-2" for="filtro-nombre-proveedor">Nombre:</label>
+          <label class="form-label fw-semibold mb-0 ms-sm-2" for="filtro-nombre-proveedor">Nombre o NIT:</label>
           <input
             id="filtro-nombre-proveedor"
             v-model.trim="nameFilter"
             type="text"
             class="form-control form-control-sm"
             style="max-width: 260px;"
-            placeholder="Buscar por nombre"
+            placeholder="Buscar por nombre o NIT"
           >
         </div>
       </div>
@@ -39,6 +39,7 @@
           <thead class="thead-brand">
             <tr>
               <th>Nombre</th>
+              <th>NIT</th>
               <th>Contacto</th>
               <th>Telefono</th>
               <th>Email</th>
@@ -50,10 +51,11 @@
           </thead>
           <tbody>
             <tr v-if="!totalProveedores">
-              <td colspan="8" class="text-center text-body-secondary py-4">Sin registros</td>
+              <td colspan="9" class="text-center text-body-secondary py-4">Sin registros</td>
             </tr>
             <tr v-for="p in paginatedProveedores" :key="p.id">
               <td class="fw-semibold">{{ p.nombre }}</td>
+              <td>{{ p.nit || '-' }}</td>
               <td>{{ p.contacto || '-' }}</td>
               <td>{{ p.telefono || '-' }}</td>
               <td>{{ p.email || '-' }}</td>
@@ -114,9 +116,15 @@
                 <input v-model="form.nombre" type="text" class="form-control" required>
               </div>
 
-              <div>
-                <label class="form-label fw-semibold">Contacto</label>
-                <input v-model="form.contacto" type="text" class="form-control">
+              <div class="row g-3">
+                <div class="col-12 col-sm-6">
+                  <label class="form-label fw-semibold">NIT</label>
+                  <input v-model="form.nit" type="text" class="form-control" inputmode="numeric" placeholder="1234567-8">
+                </div>
+                <div class="col-12 col-sm-6">
+                  <label class="form-label fw-semibold">Contacto</label>
+                  <input v-model="form.contacto" type="text" class="form-control">
+                </div>
               </div>
 
               <div class="row g-3">
@@ -196,6 +204,7 @@ let formModal = null;
 
 const emptyForm = () => ({
   nombre: '',
+  nit: '',
   contacto: '',
   email: '',
   telefono: '',
@@ -231,7 +240,8 @@ const displayedProveedores = computed(() => {
     .filter((item) => {
       if (!query) return true;
 
-      return String(item.nombre ?? '').toLowerCase().includes(query);
+      return String(item.nombre ?? '').toLowerCase().includes(query)
+        || String(item.nit ?? '').toLowerCase().includes(query);
     })
     .sort((a, b) => String(a.nombre ?? '').localeCompare(String(b.nombre ?? ''), 'es', { sensitivity: 'base' }));
 });
@@ -264,6 +274,7 @@ function openEdit(item) {
   editingId.value = item.id;
   form.value = {
     nombre: item.nombre,
+    nit: item.nit ?? '',
     contacto: item.contacto ?? '',
     email: item.email ?? '',
     telefono: item.telefono ?? '',
@@ -303,6 +314,7 @@ async function save() {
   try {
     const payload = {
       ...form.value,
+      nit: form.value.nit || null,
       contacto: form.value.contacto || null,
       email: form.value.email || null,
       telefono: form.value.telefono || null,

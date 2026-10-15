@@ -76,6 +76,8 @@ Estado funcional actual:
 
 - En Compras, `tipo_compra` define `contado`, `credito_proveedor` o `consignacion`; por defecto es contado.
 - Una compra normal descuenta Caja general o Banco según su método de pago.
+- Una compra de contado también puede pagarse con la caja POS abierta del mismo usuario. Para usarla, el usuario debe tener acceso a Compras y Ventas, y una caja propia abierta. La compra conserva `caja_id` y crea un movimiento negativo `compra` en esa caja, sin descontar Caja general directamente.
+- Al anular una compra pagada desde caja POS abierta, el inventario se revierte y se crea el movimiento positivo `anulacion_compra` en la misma caja. Si esa caja ya fue cerrada, no se altera su histórico: el reintegro entra a Caja general mediante un movimiento de capital `anulacion_compra`.
 - Una compra a crédito entra como inventario propio, no descuenta capital al recibirla y crea una cuenta por pagar por el total de la compra.
 - La consignación es opcional y se habilita con `habilitar_consignacion = 1`.
 - Una compra consignada entra al inventario y crea lotes FIFO, pero no genera salida de capital al recibirla.
@@ -85,6 +87,7 @@ Estado funcional actual:
 - Una factura puede emitirse como `CF` o al `nit_empresa` configurado en compras de contado, crédito de proveedor y consignación. Solo la segunda clasifica sus lotes como `con_factura`; CF se clasifica como `sin_factura`.
 - En ventas, los lotes `sin_factura` tienen prioridad antes de los lotes `con_factura`, conservando FIFO dentro de cada grupo.
 - Compras filtra por proveedor, tipo de documento y receptor de factura; Inventario filtra existencias por el documento de la compra que originó el lote. Ambos módulos exportan a PDF o Excel exactamente los resultados de los filtros aplicados.
+- `proveedores.nit` es opcional e identifica al proveedor en su catálogo; se normaliza a números y se puede buscar junto con el nombre. No reemplaza el `nit_proveedor` almacenado como evidencia de una factura de compra específica.
 
 ### Clientes
 

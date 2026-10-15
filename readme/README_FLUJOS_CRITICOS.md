@@ -44,6 +44,16 @@ Este documento describe flujos operativos punta a punta que impactan dinero, inv
 4. CF, recibo o ausencia de documento clasifican el lote como `sin_factura`.
 5. Esta clasificación se usa para filtros y exportaciones de Compras e Inventario; no crea ni cancela pagos por sí misma.
 
+## 2.1.2 Compra pagada desde caja POS -> inventario y caja del turno
+
+1. El usuario debe tener acceso a Compras y Ventas, además de una caja POS propia en estado abierta.
+2. En una compra de contado selecciona **Efectivo de mi caja POS abierta** como método de pago.
+3. Se crean compra, detalles, lotes y movimientos de inventario como en cualquier compra de contado.
+4. La compra conserva el identificador de la caja origen en `compras.caja_id`.
+5. Se crea un movimiento `compra` negativo en `movimientos_caja`; no se descuenta Caja general ni Banco directamente.
+6. Si se anula antes del cierre, se revierte inventario y se registra `anulacion_compra` positivo en la misma caja POS.
+7. Si se anula después del cierre, la caja cerrada no se modifica; se revierte inventario y se registra un ingreso de capital `anulacion_compra` en Caja general.
+
 ## 2.2 Compra a crédito -> inventario propio + cuenta por pagar
 
 1. En Compras se selecciona **Compra a crédito**.

@@ -19,6 +19,7 @@ class ProveedorController extends Controller
             ->get([
                 'id',
                 'nombre',
+                'nit',
                 'contacto',
                 'email',
                 'telefono',
@@ -34,8 +35,11 @@ class ProveedorController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $this->normalizarNit($request);
+
         $validated = $request->validate([
             'nombre' => ['required', 'string', 'max:255', 'unique:proveedores,nombre'],
+            'nit' => ['nullable', 'string', 'max:30'],
             'contacto' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
             'telefono' => ['nullable', 'string', 'max:100'],
@@ -57,8 +61,11 @@ class ProveedorController extends Controller
 
     public function update(Request $request, Proveedor $proveedor): JsonResponse
     {
+        $this->normalizarNit($request);
+
         $validated = $request->validate([
             'nombre' => ['required', 'string', 'max:255', Rule::unique('proveedores', 'nombre')->ignore($proveedor->id)],
+            'nit' => ['nullable', 'string', 'max:30'],
             'contacto' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
             'telefono' => ['nullable', 'string', 'max:100'],
@@ -104,5 +111,16 @@ class ProveedorController extends Controller
         return response()->json([
             'message' => 'Proveedor eliminado correctamente.',
         ]);
+    }
+
+    private function normalizarNit(Request $request): void
+    {
+        if (! $request->has('nit')) {
+            return;
+        }
+
+        $nit = preg_replace('/\D+/', '', (string) $request->input('nit')) ?? '';
+
+        $request->merge(['nit' => $nit !== '' ? $nit : null]);
     }
 }

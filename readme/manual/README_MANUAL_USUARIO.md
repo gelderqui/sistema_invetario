@@ -12,7 +12,7 @@ Este es el orden recomendado cuando empiezas a usar el sistema:
 2. Crea categorias de producto.
 3. Crea productos y define su unidad, costo, precio normal y, cuando aplique, precio mayorista.
 4. Carga inventario inicial (no como compra) en `Inventario -> Inventario inicial`.
-5. Crea proveedores.
+5. Crea proveedores; registra su NIT cuando lo conozcas para poder ubicarlo por nombre o NIT después.
 6. Si aplica, registra clientes.
 
 ### 1.1 Regla clave de arranque
@@ -90,6 +90,19 @@ Al guardar una venta a crédito debes seleccionar un cliente. El sistema crea la
 - Cantidad en compra debe ser mayor a 0.
 - La columna **Precio sugerido** se calcula desde el costo y el porcentaje configurado. Debajo se muestra el precio actual del producto para compararlo antes de guardar.
 - Una compra actualiza el precio normal aplicado; el precio mayorista se administra desde el catálogo de Productos.
+- En `Catálogo -> Proveedores`, el NIT es opcional. El buscador de proveedores encuentra registros por nombre o por NIT.
+
+### 3.3.1 Pago inmediato desde caja POS
+
+Si recibes mercancía durante tu turno y la pagas con el efectivo de tu caja POS:
+
+1. Debes tener acceso a Compras y Ventas, además de tu caja POS abierta.
+2. En **Método de pago** selecciona **Efectivo de mi caja POS abierta**.
+3. Guarda la compra normalmente.
+
+El sistema registra la compra e inventario, y descuenta su total de tu caja POS automáticamente. No registres un movimiento manual adicional de caja.
+
+Si anulas la compra mientras la caja sigue abierta, el dinero vuelve a esa misma caja. Si la caja ya fue cerrada, la anulación sigue permitida: el dinero se reintegra a **Caja general** y no cambia el arqueo ni los movimientos históricos de la caja cerrada.
 
 ### 3.4 Documento de compra y factura a Mi NIT
 

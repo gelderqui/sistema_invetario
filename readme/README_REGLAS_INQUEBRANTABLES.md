@@ -36,6 +36,8 @@ Este documento define reglas de negocio que no deben romperse. Cualquier cambio 
 - Inventario inicial no debe registrarse como compra.
 - Inventario inicial debe registrar movimiento tipo `inventario_inicial` y lote sin `compra_detalle_id`.
 - Una compra consignada aumenta el stock, pero no descuenta `caja_general` ni `banco`.
+- Una compra de contado pagada con caja POS requiere acceso a Compras y Ventas, más una caja propia abierta. Debe crear un movimiento negativo `compra` en esa caja y no una salida directa de capital.
+- La anulación de una compra pagada con caja POS abierta debe crear el movimiento positivo compensatorio en la misma caja. Si la caja está cerrada, no debe cambiar su histórico: el reintegro debe entrar a Caja general mediante capital.
 - Una venta que consume un lote consignado debe crear un cargo al proveedor por el costo de las unidades consumidas.
 - Un pago de consignación solo puede aplicarse a cargos pendientes del proveedor seleccionado y no puede superar su saldo.
 
@@ -61,6 +63,7 @@ Este documento define reglas de negocio que no deben romperse. Cualquier cambio 
 
 - Cliente con ventas registradas no se elimina; solo se desactiva.
 - Proveedor con compras registradas no se elimina; solo se desactiva.
+- El NIT del proveedor es opcional, se normaliza a números y no sustituye el NIT guardado en cada documento fiscal de compra.
 
 ## 6. Historicos y anulaciones
 

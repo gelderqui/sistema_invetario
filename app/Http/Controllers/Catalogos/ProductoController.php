@@ -68,7 +68,7 @@ class ProductoController extends Controller
             'codigo_barra'  => ['nullable', 'string', 'max:100', 'unique:productos,codigo_barra'],
             'palabras_clave'=> ['nullable', 'string', 'max:500'],
             'precio_venta'  => ['nullable', 'numeric', 'gte:0'],
-            'precio_mayorista' => ['nullable', 'numeric', 'gt:0'],
+            'precio_mayorista' => ['nullable', 'numeric', 'gte:0'],
             'costo_promedio'=> ['nullable', 'numeric', 'gte:0'],
             'stock_actual'  => ['nullable', 'integer', 'min:0'],
             'stock_minimo'  => ['required', 'integer', 'min:1'],
@@ -129,7 +129,7 @@ class ProductoController extends Controller
             'codigo_barra'  => ['nullable', 'string', 'max:100', Rule::unique('productos', 'codigo_barra')->ignore($producto->id)],
             'palabras_clave'=> ['nullable', 'string', 'max:500'],
             'precio_venta'  => ['nullable', 'numeric', 'gte:0'],
-            'precio_mayorista' => ['nullable', 'numeric', 'gt:0'],
+            'precio_mayorista' => ['nullable', 'numeric', 'gte:0'],
             'costo_promedio'=> ['nullable', 'numeric', 'gte:0'],
             'stock_actual'  => ['nullable', 'integer', 'min:0'],
             'stock_minimo'  => ['required', 'integer', 'min:1'],
@@ -216,8 +216,20 @@ class ProductoController extends Controller
     private function normalizarPrecios(Request $request): void
     {
         foreach (['precio_venta', 'precio_mayorista', 'costo_promedio'] as $campo) {
-            if ($request->has($campo) && $request->input($campo) !== '') {
-                $request->merge([$campo => toMoney($request->input($campo))]);
+            if (! $request->has($campo)) {
+                continue;
+            }
+
+            $valor = $request->input($campo);
+
+            if ($campo === 'precio_mayorista' && ($valor === null || trim((string) $valor) === '')) {
+                $request->merge([$campo => null]);
+                continue;
+            }
+
+            if ($valor !== '') {
+                $precio = toMoney($valor);
+                $request->merge([$campo => $campo === 'precio_mayorista' && $precio == 0 ? null : $precio]);
             }
         }
     }

@@ -173,8 +173,8 @@ Este documento describe las tablas actuales y sus relaciones principales.
 - Se prioriza no eliminar historicos criticos (ventas, compras, devoluciones).
 - Para anulaciones se usa `estado` y movimientos de compensacion.
 - `clientes.tipo_cliente` clasifica al cliente como `minorista` o `mayorista`; el valor por defecto es `minorista`.
-- `productos.precio_venta` conserva el precio normal y `productos.precio_mayorista` es opcional.
-- El precio en venta se toma en backend: usa `precio_mayorista` solo para clientes mayoristas cuando está definido; en cualquier otro caso usa `precio_venta`.
+- `productos.precio_venta` conserva el precio normal y `productos.precio_mayorista` es opcional. Al crear o editar un producto, vacío, `null` y `0` en el precio mayorista se guardan como `null`.
+- El precio en venta se toma en backend: usa `precio_mayorista` solo para clientes mayoristas cuando es mayor que cero; en cualquier otro caso usa `precio_venta`.
 - En caja, cierre puede depender del ultimo arqueo y umbral configurado.
 - `ventas_credito` conserva el saldo vigente de una venta a crédito; su historial inmutable se registra en `ventas_credito_movimientos`.
 - `devoluciones` guarda `tipo_reintegro`, monto reembolsado en efectivo y monto aplicado a crédito para que inventario, caja y cuentas por cobrar puedan revertirse de forma auditable.

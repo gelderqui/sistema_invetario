@@ -40,7 +40,7 @@ Este es el orden recomendado cuando empiezas a usar el sistema:
 
 - Para vender, el usuario debe tener caja abierta.
 - Metodo de pago en venta nueva: `efectivo` o `credito`.
-- El precio unitario de venta lo toma backend desde el producto: usa el precio normal para clientes minoristas y el precio mayorista cuando el cliente está clasificado como mayorista. Si el producto no tiene precio mayorista, usa su precio normal.
+- El precio unitario de venta lo toma backend desde el producto: usa el precio normal para clientes minoristas y el precio mayorista cuando el cliente está clasificado como mayorista. El precio mayorista es opcional: si queda vacío, en `0` o sin definir, usa su precio minorista. Los precios negativos no se permiten.
 - El arqueo no bloquea; el cierre si bloquea cuando hay faltante sobre umbral.
 - Si existe arqueo, el cierre usa el monto contado del ultimo arqueo.
 

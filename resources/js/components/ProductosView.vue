@@ -248,12 +248,12 @@
                                         id="p-precio-mayorista"
                                         v-model.number="form.precio_mayorista"
                                         type="number"
-                                        step="0.0001"
-                                        min="0.0001"
+                                        step="0.01"
+                                        min="0"
                                         class="form-control"
                                         placeholder="Opcional"
                                     >
-                                    <div class="form-text">Se aplica a clientes mayoristas. Si queda vacío, se usa el precio normal.</div>
+                                    <div class="form-text">Se aplica a clientes mayoristas. Si queda vacío o en 0, se usa el precio minorista.</div>
                                 </div>
 
                                 <div class="col-12 col-sm-6">

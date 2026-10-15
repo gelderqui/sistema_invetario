@@ -119,7 +119,7 @@
               <div class="row g-3">
                 <div class="col-12 col-sm-6">
                   <label class="form-label fw-semibold">NIT</label>
-                  <input v-model="form.nit" type="text" class="form-control" inputmode="numeric" placeholder="1234567-8">
+                  <input v-model="form.nit" type="text" class="form-control" inputmode="numeric">
                 </div>
                 <div class="col-12 col-sm-6">
                   <label class="form-label fw-semibold">Contacto</label>

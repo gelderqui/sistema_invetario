@@ -140,10 +140,8 @@
                                     <div class="col-6 col-md-2">
                                         <label class="form-label fw-semibold mb-1">Precio</label>
                                         <input
-                                            v-model.number="finder.precio_unitario"
-                                            type="number"
-                                            step="0.0001"
-                                            min="0"
+                                            :value="formatMoney(finder.precio_unitario)"
+                                            type="text"
                                             class="form-control"
                                             disabled
                                         >
@@ -179,7 +177,7 @@
                                                 <input v-model.number="item.cantidad" type="number" step="1" min="1" class="form-control form-control-sm">
                                             </td>
                                             <td>
-                                                <input v-model.number="item.precio_unitario" type="number" step="0.0001" min="0" class="form-control form-control-sm" disabled>
+                                                <input :value="formatMoney(item.precio_unitario)" type="text" class="form-control form-control-sm" disabled>
                                             </td>
                                             <td class="fw-semibold">Q {{ formatMoney(itemSubtotal(item)) }}</td>
                                             <td>

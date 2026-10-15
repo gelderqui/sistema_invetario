@@ -83,9 +83,14 @@ if (! function_exists('parseMoney')) {
 }
 
 if (! function_exists('toMoney')) {
+    /**
+     * Normaliza cualquier importe monetario al formato contable del sistema:
+     * dos decimales. La precisión adicional se conserva únicamente para
+     * cantidades o medidas, que no deben pasar por este helper.
+     */
     function toMoney(float|int|string|null $value, int $precision = 2): float
     {
-        return round(parseMoney($value), $precision);
+        return round(parseMoney($value), min(2, max(0, $precision)));
     }
 }
 

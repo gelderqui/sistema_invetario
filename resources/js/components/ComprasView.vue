@@ -201,7 +201,7 @@
         </div>
 
         <div ref="formModalRef" class="modal fade" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-xl">
+            <div class="modal-dialog modal-xl compra-form-modal">
                 <div class="modal-content">
                     <div class="modal-header modal-header-brand">
                         <h5 class="modal-title">Nueva compra</h5>
@@ -213,11 +213,11 @@
                             <FormErrors :errors="formErrors" />
 
                             <div class="row g-3">
-                                <div class="col-12 col-md-4">
+                                <div class="col-12 col-lg-6 col-xl-4">
                                     <label class="form-label fw-semibold">Fecha compra *</label>
                                     <input v-model="form.fecha_compra" type="date" class="form-control" required>
                                 </div>
-                                <div class="col-12 col-md-4">
+                                <div class="col-12 col-lg-6 col-xl-4">
                                     <label class="form-label fw-semibold">Proveedor *</label>
                                     <Multiselect
                                         v-model="form.proveedor"
@@ -234,7 +234,7 @@
                                         deselect-label="Quitar"
                                     />
                                 </div>
-                                <div class="col-12 col-md-4">
+                                <div class="col-12 col-lg-6 col-xl-4">
                                     <label class="form-label fw-semibold">Tipo de compra *</label>
                                     <select v-model="form.tipo_compra" class="form-select">
                                         <option value="contado">Pago inmediato</option>
@@ -243,7 +243,7 @@
                                     </select>
                                     <div class="form-text">{{ purchaseTypeHelp(form.tipo_compra) }}</div>
                                 </div>
-                                <div v-if="form.tipo_compra === 'contado'" class="col-12 col-md-4">
+                                <div v-if="form.tipo_compra === 'contado'" class="col-12 col-lg-6 col-xl-4">
                                     <label class="form-label fw-semibold">Metodo de pago *</label>
                                     <select v-model="form.metodo_pago" class="form-select" required>
                                         <option
@@ -255,7 +255,7 @@
                                         </option>
                                     </select>
                                 </div>
-                                <div class="col-12 col-md-4">
+                                <div class="col-12 col-lg-6 col-xl-4">
                                     <label class="form-label fw-semibold">Tipo documento</label>
                                     <select v-model="form.tipo_documento" class="form-select">
                                         <option value="sin_documento">Sin documento</option>
@@ -263,7 +263,7 @@
                                         <option value="factura">Factura</option>
                                     </select>
                                 </div>
-                                <div class="col-12 col-md-8">
+                                <div class="col-12 col-lg-6 col-xl-8">
                                     <label class="form-label fw-semibold">Numero documento</label>
                                     <input
                                         v-model.trim="form.numero_documento"
@@ -273,18 +273,18 @@
                                     >
                                 </div>
                                 <template v-if="form.tipo_documento === 'factura'">
-                                    <div class="col-12 col-md-4">
+                                    <div class="col-12 col-lg-6 col-xl-4">
                                         <label class="form-label fw-semibold">Factura emitida a *</label>
                                         <select v-model="form.factura_receptor" class="form-select">
                                             <option value="cf">CF / Consumidor final</option>
                                             <option value="nit_empresa">Mi NIT</option>
                                         </select>
                                     </div>
-                                    <div class="col-12 col-md-4">
+                                    <div class="col-12 col-lg-6 col-xl-4">
                                         <label class="form-label fw-semibold">NIT del proveedor <span v-if="form.factura_receptor === 'nit_empresa'">*</span></label>
                                         <input v-model.trim="form.nit_proveedor" type="text" class="form-control" placeholder="NIT emisor">
                                     </div>
-                                    <div class="col-12 col-md-4">
+                                    <div class="col-12 col-lg-6 col-xl-4">
                                         <label class="form-label fw-semibold">Serie de factura</label>
                                         <input v-model.trim="form.serie_documento" type="text" class="form-control" placeholder="Serie o DTE">
                                     </div>
@@ -357,7 +357,7 @@
                                                 <input
                                                     v-model.number="item.costo_unitario"
                                                     type="number"
-                                                    step="0.0001"
+                                                    step="0.01"
                                                     min="0.0001"
                                                     class="form-control form-control-sm"
                                                     @input="handleCostInput(item)"
@@ -742,7 +742,7 @@ function calculateSuggestedSalePrice(cost) {
 
     const factor = 1 + (Number(porcentajeUtilidadCompra.value || 0) / 100);
 
-    return Number((numericCost * factor).toFixed(4));
+    return Number((numericCost * factor).toFixed(2));
 }
 
 function syncSuggestedSalePrice(item, force = false) {

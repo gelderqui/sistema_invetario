@@ -32,11 +32,11 @@ class Venta extends Model
         return [
             'fecha_venta' => 'date',
             'estado' => 'string',
-            'subtotal' => 'decimal:4',
-            'descuento' => 'decimal:4',
-            'total' => 'decimal:4',
-            'monto_recibido' => 'decimal:4',
-            'cambio' => 'decimal:4',
+            'subtotal' => 'decimal:2',
+            'descuento' => 'decimal:2',
+            'total' => 'decimal:2',
+            'monto_recibido' => 'decimal:2',
+            'cambio' => 'decimal:2',
         ];
     }
 

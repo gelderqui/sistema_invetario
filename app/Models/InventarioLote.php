@@ -28,7 +28,7 @@ class InventarioLote extends Model
             'es_consignacion'     => 'bool',
             'respaldo_fiscal'     => 'string',
             'cantidad_disponible' => 'decimal:4',
-            'costo_unitario'      => 'decimal:4',
+            'costo_unitario'      => 'decimal:2',
             'fecha_vencimiento'   => 'date',
             'fecha_entrada'       => 'date',
         ];

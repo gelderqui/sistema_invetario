@@ -36,7 +36,7 @@ class Compra extends Model
             'metodo_pago' => 'string',
             'tipo_compra' => 'string',
             'es_consignacion' => 'bool',
-            'total' => 'decimal:4',
+            'total' => 'decimal:2',
             'tipo_documento' => 'string',
             'numero_documento' => 'string',
             'factura_receptor' => 'string',

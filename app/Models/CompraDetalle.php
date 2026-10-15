@@ -27,10 +27,10 @@ class CompraDetalle extends Model
         return [
             'cantidad'              => 'decimal:4',
             'unidad_medida'         => 'string',
-            'costo_unitario'        => 'decimal:4',
-            'subtotal'              => 'decimal:4',
-            'precio_venta_sugerido' => 'decimal:4',
-            'precio_venta_aplicado' => 'decimal:4',
+            'costo_unitario'        => 'decimal:2',
+            'subtotal'              => 'decimal:2',
+            'precio_venta_sugerido' => 'decimal:2',
+            'precio_venta_aplicado' => 'decimal:2',
             'fecha_caducidad'       => 'date',
         ];
     }

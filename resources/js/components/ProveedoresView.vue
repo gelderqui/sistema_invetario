@@ -57,7 +57,7 @@
               <td>{{ p.contacto || '-' }}</td>
               <td>{{ p.telefono || '-' }}</td>
               <td>{{ p.email || '-' }}</td>
-              <td>Q {{ Number(p.saldo_consignacion_pendiente || 0).toFixed(2) }}</td>
+              <td>Q {{ formatMoney(p.saldo_consignacion_pendiente) }}</td>
               <td>
                 <span class="badge" :class="p.activo ? 'text-bg-success' : 'text-bg-secondary'">
                   {{ p.activo ? 'Activo' : 'Inactivo' }}
@@ -172,6 +172,7 @@ import axios from '@/bootstrap';
 import ModalConfirm from '@/components/components_ui/ModalConfirm.vue';
 import FormErrors from '@/components/FormErrors.vue';
 import TablePagination from '@/components/components_ui/TablePagination.vue';
+import { formatMoney } from '@/utils/formatters';
 
 const proveedores = ref([]);
 const loading = ref(true);

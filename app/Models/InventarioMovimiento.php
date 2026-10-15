@@ -33,8 +33,8 @@ class InventarioMovimiento extends Model
             'cantidad' => 'decimal:4',
             'stock_anterior' => 'decimal:4',
             'stock_nuevo' => 'decimal:4',
-            'costo_unitario' => 'decimal:4',
-            'precio_venta' => 'decimal:4',
+            'costo_unitario' => 'decimal:2',
+            'precio_venta' => 'decimal:2',
         ];
     }
 

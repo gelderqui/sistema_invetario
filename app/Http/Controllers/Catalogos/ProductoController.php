@@ -217,7 +217,7 @@ class ProductoController extends Controller
     {
         foreach (['precio_venta', 'precio_mayorista', 'costo_promedio'] as $campo) {
             if ($request->has($campo) && $request->input($campo) !== '') {
-                $request->merge([$campo => parseMoney($request->input($campo))]);
+                $request->merge([$campo => toMoney($request->input($campo))]);
             }
         }
     }

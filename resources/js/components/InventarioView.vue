@@ -97,10 +97,10 @@
                             <td>{{ Number(item.stock_propio || 0).toFixed(0) }} / {{ Number(item.stock_consignado || 0).toFixed(0) }}</td>
                             <td>{{ Number(item.stock_con_factura || 0).toFixed(0) }} / {{ Number(item.stock_sin_factura || 0).toFixed(0) }}</td>
                             <td>{{ Number(item.stock_minimo || 0).toFixed(0) }}</td>
-                            <td>Q {{ Number(item.costo_promedio || 0).toFixed(2) }}</td>
-                            <td>Q {{ Number(item.precio_venta_promedio || 0).toFixed(2) }}</td>
-                            <td>Q {{ Number(item.costo_ultimo || 0).toFixed(2) }}</td>
-                            <td>Q {{ Number(item.precio_venta || 0).toFixed(2) }}</td>
+                            <td>Q {{ formatMoney(item.costo_promedio) }}</td>
+                            <td>Q {{ formatMoney(item.precio_venta_promedio) }}</td>
+                            <td>Q {{ formatMoney(item.costo_ultimo) }}</td>
+                            <td>Q {{ formatMoney(item.precio_venta) }}</td>
                             <td>
                                 <span class="badge" :class="item.activo ? 'text-bg-success' : 'text-bg-secondary'">
                                     {{ item.activo ? 'Activo' : 'Inactivo' }}
@@ -174,7 +174,7 @@
                             <td>{{ Number(mov.cantidad || 0).toFixed(0) }}</td>
                             <td>{{ Number(mov.stock_anterior || 0).toFixed(0) }}</td>
                             <td>{{ Number(mov.stock_nuevo || 0).toFixed(0) }}</td>
-                            <td>Q {{ Number(mov.costo_unitario || 0).toFixed(2) }}</td>
+                            <td>Q {{ formatMoney(mov.costo_unitario) }}</td>
                             <td>{{ mov.referencia || '-' }}</td>
                         </tr>
                     </tbody>
@@ -196,6 +196,7 @@ import { useRoute } from 'vue-router';
 
 import axios from '@/bootstrap';
 import TablePagination from '@/components/components_ui/TablePagination.vue';
+import { formatMoney } from '@/utils/formatters';
 
 const loading = ref(true);
 const search = ref('');

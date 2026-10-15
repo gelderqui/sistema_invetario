@@ -74,8 +74,8 @@
                             <td>{{ fmtDateTime(m.created_at) }}</td>
                             <td>{{ m.producto?.nombre || '-' }}</td>
                             <td class="text-success">{{ Number(m.cantidad || 0).toFixed(0) }}</td>
-                            <td>Q {{ Number(m.costo_unitario || 0).toFixed(2) }}</td>
-                            <td>Q {{ Number(m.precio_venta || 0).toFixed(2) }}</td>
+                            <td>Q {{ formatMoney(m.costo_unitario) }}</td>
+                            <td>Q {{ formatMoney(m.precio_venta) }}</td>
                             <td>{{ Number(m.stock_anterior || 0).toFixed(0) }}</td>
                             <td>{{ Number(m.stock_nuevo || 0).toFixed(0) }}</td>
                             <td>{{ m.referencia || '-' }}</td>
@@ -98,6 +98,7 @@
 import { computed, onMounted, ref } from 'vue';
 import axios from '@/bootstrap';
 import TablePagination from '@/components/components_ui/TablePagination.vue';
+import { formatMoney } from '@/utils/formatters';
 
 const loading = ref(false);
 const saving = ref(false);

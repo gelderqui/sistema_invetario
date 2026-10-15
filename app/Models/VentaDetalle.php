@@ -24,8 +24,8 @@ class VentaDetalle extends Model
         return [
             'cantidad' => 'decimal:4',
             'unidad_medida' => 'string',
-            'precio_unitario' => 'decimal:4',
-            'subtotal' => 'decimal:4',
+            'precio_unitario' => 'decimal:2',
+            'subtotal' => 'decimal:2',
         ];
     }
 

@@ -20,6 +20,17 @@
     border-color: #d6e2ff;
 }
 
+/* En anchos intermedios el detalle puede ser más ancho que el modal.
+   El desplazamiento debe quedarse en la tabla, nunca ensanchar el formulario. */
+.compra-form-modal .modal-body,
+.compra-form-modal .compra-items-wrap {
+    min-width: 0;
+}
+
+.compra-form-modal .compra-items-wrap {
+    max-width: 100%;
+}
+
 .compra-items-table .form-control:focus,
 .compra-items-table .form-select:focus {
     border-color: #93b4ff;
@@ -55,4 +66,53 @@
 
 .compra-price-field .form-control {
     min-width: 0;
+}
+
+/* El modal XL mide 800 px entre 992 y 1199 px de viewport. En ese rango
+   el detalle cabe en una sola fila compacta, sin salirse del modal. */
+@media (min-width: 992px) and (max-width: 1199.98px) {
+    .compra-form-modal .compra-items-table {
+        width: 100%;
+        min-width: 0;
+        table-layout: fixed;
+    }
+
+    .compra-form-modal .compra-items-table th,
+    .compra-form-modal .compra-items-table td {
+        padding-right: 0.25rem;
+        padding-left: 0.25rem;
+        overflow-wrap: anywhere;
+    }
+
+    .compra-form-modal .compra-items-table th:nth-child(1) { width: 20%; }
+    .compra-form-modal .compra-items-table th:nth-child(2) { width: 9%; }
+    .compra-form-modal .compra-items-table th:nth-child(3) { width: 10%; }
+    .compra-form-modal .compra-items-table th:nth-child(4) { width: 14%; }
+    .compra-form-modal .compra-items-table th:nth-child(5) { width: 19%; }
+    .compra-form-modal .compra-items-table th:nth-child(6) { width: 12%; }
+    .compra-form-modal .compra-items-table th:nth-child(7) { width: 11%; }
+    .compra-form-modal .compra-items-table th:nth-child(8) { width: 5%; }
+
+    .compra-form-modal .compra-price-field {
+        gap: 0.15rem;
+    }
+
+    .compra-form-modal .compra-price-current {
+        max-width: 42%;
+        padding: 0.25rem;
+        font-size: 0.68rem;
+    }
+}
+
+/* En teléfono se conserva el ancho mínimo para que cada control siga siendo
+   utilizable; el desplazamiento horizontal queda contenido en la tabla. */
+@media (max-width: 991.98px) {
+    .compra-form-modal .compra-items-table {
+        min-width: 860px;
+    }
+
+    .compra-total-box {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
 }

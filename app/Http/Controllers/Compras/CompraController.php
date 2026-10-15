@@ -293,8 +293,8 @@ class CompraController extends Controller
 
                 $cantidad = toMoney((int) $item['cantidad'], 4);
                 $unidadMedidaSnap = $producto->unidadMedida?->abreviatura ?? 'und';
-                $costoUnitario = toMoney($item['costo_unitario'], 4);
-                $subtotal = toMoney($cantidad * $costoUnitario, 4);
+                $costoUnitario = toMoney($item['costo_unitario']);
+                $subtotal = toMoney($cantidad * $costoUnitario);
 
                 $stockAnterior = (float) $producto->stock_actual;
                 $stockNuevo = toMoney($stockAnterior + $cantidad, 4);
@@ -302,7 +302,7 @@ class CompraController extends Controller
                 $costoPromedioNuevo = weightedAverageCost($stockAnterior, $costoAnterior, $cantidad, $costoUnitario);
 
                 $precioVentaSugerido = $this->calcularPrecioVentaSugerido($costoUnitario, $porcentajeUtilidadCompra);
-                $precioVentaAplicado = toMoney($item['precio_venta'], 4);
+                $precioVentaAplicado = toMoney($item['precio_venta']);
                 $precioVentaPromedioAnterior = (float) $producto->precio_venta_promedio;
                 $precioVentaPromedioNuevo = weightedAverageCost($stockAnterior, $precioVentaPromedioAnterior, $cantidad, $precioVentaAplicado);
 
@@ -366,7 +366,7 @@ class CompraController extends Controller
             }
 
             $compra->update([
-                'total' => toMoney($total, 4),
+                'total' => toMoney($total),
                 'mod_user' => $userId,
             ]);
 
@@ -433,7 +433,7 @@ class CompraController extends Controller
     {
         $factor = 1 + ($porcentajeUtilidadCompra / 100);
 
-        return toMoney($costoUnitario * $factor, 4);
+        return toMoney($costoUnitario * $factor);
     }
 
     private function comprasParaExportar(Request $request): Collection

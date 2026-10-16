@@ -3,17 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Models\Compra;
+use App\Models\Devolucion;
 use App\Models\Gasto;
 use App\Models\InventarioMovimiento;
 use App\Models\Producto;
 use App\Models\Venta;
+use App\Services\Reportes\CostoVentasService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, CostoVentasService $costos): JsonResponse
     {
         $user = $request->user()?->loadMissing('role');
         $isAdmin = $user?->role?->code === 'admin';
@@ -35,9 +37,18 @@ class DashboardController extends Controller
         $ventasHoy = (float) (clone $ventasQuery)->whereDate('fecha_venta', $hoy)->sum('total');
         $comprasHoy = (float) (clone $comprasQuery)->whereDate('fecha_compra', $hoy)->sum('total');
         $gastosHoy = (float) (clone $gastosQuery)->whereDate('fecha', $hoy)->sum('monto');
-        $costoVentasHoyQuery = InventarioMovimiento::query()->where('tipo', 'salida_venta')->whereDate('created_at', $hoy);
-        if (! $isAdmin && $user) $costoVentasHoyQuery->where('add_user', $user->id);
-        $costoVentasHoy = (float) $costoVentasHoyQuery->selectRaw('COALESCE(SUM(ABS(cantidad) * costo_unitario), 0) as total')->value('total');
+        $usuarioId = ! $isAdmin && $user ? (int) $user->id : null;
+        $resumenCostosHoy = $costos->resumen($hoy, $hoy, $usuarioId);
+        $costoVentasNetoHoy = $resumenCostosHoy['neto'];
+
+        $devolucionesHoy = (float) Devolucion::query()
+            ->from('devoluciones as devolucion')
+            ->join('ventas as venta', 'venta.id', '=', 'devolucion.venta_id')
+            ->where('devolucion.estado', 'activo')
+            ->whereDate('devolucion.fecha', $hoy)
+            ->when($usuarioId !== null, fn ($query) => $query->where('venta.add_user', $usuarioId))
+            ->sum('devolucion.total');
+        $ventasNetasHoy = toMoney($ventasHoy - $devolucionesHoy, 4);
 
         $ventasDiaCount = (int) (clone $ventasQuery)->whereDate('fecha_venta', $hoy)->count();
         $ventasMesTotal = (float) (clone $ventasQuery)
@@ -67,7 +78,7 @@ class DashboardController extends Controller
                             'ventas' => toMoney($ventasHoy, 4),
                             'compras' => toMoney($comprasHoy, 4),
                             'gastos' => toMoney($gastosHoy, 4),
-                            'ganancia_estimada' => toMoney($ventasHoy - $costoVentasHoy - $gastosHoy, 4),
+                            'ganancia_estimada' => toMoney($ventasNetasHoy - $costoVentasNetoHoy - $gastosHoy, 4),
                         ],
                         'productos' => [
                             'bajo_stock' => $bajoStock,
@@ -98,7 +109,7 @@ class DashboardController extends Controller
             })
             ->count();
 
-        $gananciaEstimadaHoy = toMoney($ventasHoy - $costoVentasHoy - $gastosHoy, 4);
+        $gananciaEstimadaHoy = toMoney($ventasNetasHoy - $costoVentasNetoHoy - $gastosHoy, 4);
 
         return response()->json([
             'data' => [

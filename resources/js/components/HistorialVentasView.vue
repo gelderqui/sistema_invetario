@@ -241,7 +241,7 @@ async function imprimirDevolucion(id) {
 async function anularVenta(id, numero) {
     if (!id) return;
 
-    const ok = window.confirm(`Se anulara la venta ${numero}. Esta accion revierte inventario y caja. Deseas continuar?`);
+    const ok = window.confirm(`Se anulará la venta ${numero}. Se repondrá inventario y el reembolso saldrá de la caja original si sigue abierta; si ya cerró, saldrá de Caja general. ¿Deseas continuar?`);
     if (!ok) return;
 
     loading.value = true;
@@ -256,7 +256,7 @@ async function anularVenta(id, numero) {
 async function anularDevolucion(id) {
     if (!id) return;
 
-    const ok = window.confirm(`Se anulara la devolucion #${id}. Esta accion revierte inventario. Deseas continuar?`);
+    const ok = window.confirm(`Se anulará la devolución #${id}. Se revertirán inventario, deuda y reembolso; si la caja del reembolso ya cerró, el reintegro entrará a Caja general. ¿Deseas continuar?`);
     if (!ok) return;
 
     loading.value = true;

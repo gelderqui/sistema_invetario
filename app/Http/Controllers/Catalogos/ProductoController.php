@@ -70,7 +70,7 @@ class ProductoController extends Controller
             'precio_venta'  => ['nullable', 'numeric', 'gte:0'],
             'precio_mayorista' => ['nullable', 'numeric', 'gte:0'],
             'costo_promedio'=> ['nullable', 'numeric', 'gte:0'],
-            'stock_actual'  => ['nullable', 'integer', 'min:0'],
+            'stock_actual'  => ['prohibited'],
             'stock_minimo'  => ['required', 'integer', 'min:1'],
             'unidad_medida_id'  => ['required', Rule::exists('productos_unidad_medida', 'id')->where(fn ($q) => $q->where('activo', true))],
             'control_vencimiento' => ['sometimes', 'boolean'],
@@ -83,6 +83,7 @@ class ProductoController extends Controller
             'stock_minimo.required' => 'El stock minimo es obligatorio.',
             'stock_minimo.integer' => 'El stock minimo debe ser un numero entero.',
             'stock_minimo.min' => 'El stock minimo debe ser mayor a 0.',
+            'stock_actual.prohibited' => 'Las existencias no se modifican desde Productos. Use Inventario inicial, Compras o Ajustes de inventario.',
         ]);
 
         if (! empty($validated['categoria_id'])) {
@@ -103,7 +104,7 @@ class ProductoController extends Controller
             'precio_venta'    => $validated['precio_venta'] ?? 0,
             'precio_mayorista' => $validated['precio_mayorista'] ?? null,
             'costo_promedio'  => $validated['costo_promedio'] ?? 0,
-            'stock_actual'    => isset($validated['stock_actual']) ? (int) $validated['stock_actual'] : 0,
+            'stock_actual'    => 0,
             'stock_minimo'    => $validated['stock_minimo'] ?? 0,
             'control_vencimiento' => (bool) ($validated['control_vencimiento'] ?? false),
             'dias_alerta_vencimiento' => $validated['dias_alerta_vencimiento'] ?? 15,
@@ -131,7 +132,7 @@ class ProductoController extends Controller
             'precio_venta'  => ['nullable', 'numeric', 'gte:0'],
             'precio_mayorista' => ['nullable', 'numeric', 'gte:0'],
             'costo_promedio'=> ['nullable', 'numeric', 'gte:0'],
-            'stock_actual'  => ['nullable', 'integer', 'min:0'],
+            'stock_actual'  => ['prohibited'],
             'stock_minimo'  => ['required', 'integer', 'min:1'],
             'unidad_medida_id'  => ['required', Rule::exists('productos_unidad_medida', 'id')->where(fn ($q) => $q->where('activo', true))],
             'control_vencimiento' => ['sometimes', 'boolean'],
@@ -143,6 +144,7 @@ class ProductoController extends Controller
             'stock_minimo.required' => 'El stock minimo es obligatorio.',
             'stock_minimo.integer' => 'El stock minimo debe ser un numero entero.',
             'stock_minimo.min' => 'El stock minimo debe ser mayor a 0.',
+            'stock_actual.prohibited' => 'Las existencias no se modifican desde Productos. Use Inventario inicial, Compras o Ajustes de inventario.',
         ]);
 
         $incomingCategoriaId = $validated['categoria_id'] ?? null;
@@ -169,7 +171,7 @@ class ProductoController extends Controller
                 ? $validated['precio_mayorista']
                 : $producto->precio_mayorista,
             'costo_promedio'  => $validated['costo_promedio'] ?? $producto->costo_promedio,
-            'stock_actual'    => isset($validated['stock_actual']) ? (int) $validated['stock_actual'] : (int) $producto->stock_actual,
+            'stock_actual'    => (int) $producto->stock_actual,
             'stock_minimo'    => $validated['stock_minimo'] ?? $producto->stock_minimo,
             'control_vencimiento' => (bool) ($validated['control_vencimiento'] ?? $producto->control_vencimiento),
             'dias_alerta_vencimiento' => $validated['dias_alerta_vencimiento'] ?? $producto->dias_alerta_vencimiento,
@@ -222,13 +224,29 @@ class ProductoController extends Controller
 
             $valor = $request->input($campo);
 
-            if ($campo === 'precio_mayorista' && ($valor === null || trim((string) $valor) === '')) {
+            if ($valor === null || (is_string($valor) && trim($valor) === '')) {
                 $request->merge([$campo => null]);
                 continue;
             }
 
             if ($valor !== '') {
-                $precio = toMoney($valor);
+                $precioInterpretado = is_bool($valor) || (! is_int($valor) && ! is_float($valor) && ! is_string($valor))
+                    ? null
+                    : parseMoneyOrNull($valor);
+
+                if ($precioInterpretado === null) {
+                    $etiqueta = match ($campo) {
+                        'precio_venta' => 'precio de venta',
+                        'precio_mayorista' => 'precio mayorista',
+                        default => 'costo promedio',
+                    };
+
+                    throw ValidationException::withMessages([
+                        $campo => ["El {$etiqueta} debe ser un importe válido. Use coma para miles y punto para decimales."],
+                    ]);
+                }
+
+                $precio = toMoney($precioInterpretado);
                 $request->merge([$campo => $campo === 'precio_mayorista' && $precio == 0 ? null : $precio]);
             }
         }

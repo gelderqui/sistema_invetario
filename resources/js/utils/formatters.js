@@ -17,27 +17,25 @@ export function parseMoneyInput(value) {
     const raw = String(value ?? '').trim().replace(/\s/g, '');
     if (!raw) return 0;
 
-    const lastComma = raw.lastIndexOf(',');
-    const lastDot = raw.lastIndexOf('.');
-    let normalized = raw;
+    let normalized = null;
 
-    if (lastComma !== -1 && lastDot !== -1) {
-        const decimalSeparator = lastComma > lastDot ? ',' : '.';
-        const thousandsSeparator = decimalSeparator === ',' ? '.' : ',';
-
-        normalized = raw.replaceAll(thousandsSeparator, '');
-        if (decimalSeparator === ',') normalized = normalized.replace(',', '.');
-    } else if (lastComma !== -1) {
-        const commas = raw.match(/,/g)?.length ?? 0;
-        const decimalLength = raw.length - lastComma - 1;
-        normalized = commas > 1 || decimalLength === 3 ? raw.replaceAll(',', '') : raw.replace(',', '.');
-    } else if (lastDot !== -1) {
-        const dots = raw.match(/\./g)?.length ?? 0;
-        const decimalLength = raw.length - lastDot - 1;
-        if (dots > 1 || decimalLength === 3) normalized = raw.replaceAll('.', '');
+    if (/^[+-]?\d+$/.test(raw)) {
+        normalized = raw;
+    } else if (/^[+-]?(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?$/.test(raw)) {
+        normalized = raw.replaceAll(',', '');
+    } else if (raw.includes('.') && raw.includes(',') && /^[+-]?(?:\d+|\d{1,3}(?:\.\d{3})+),\d+$/.test(raw)) {
+        normalized = raw.replaceAll('.', '').replace(',', '.');
+    } else if (!raw.includes('.') && (raw.match(/,/g)?.length ?? 0) === 1) {
+        normalized = /^[+-]?\d{1,3},\d{3}$/.test(raw)
+            ? raw.replace(',', '')
+            : (/^[+-]?\d+,\d+$/.test(raw) ? raw.replace(',', '.') : null);
+    } else if (/^[+-]?\d{1,3}(?:,\d{3}){2,}$/.test(raw)) {
+        normalized = raw.replaceAll(',', '');
+    } else if (/^[+-]?\d{1,3}(?:\.\d{3}){2,}$/.test(raw)) {
+        normalized = raw.replaceAll('.', '');
     }
 
-    const amount = Number(normalized);
+    const amount = normalized === null ? NaN : Number(normalized);
 
     return Number.isFinite(amount) ? amount : NaN;
 }

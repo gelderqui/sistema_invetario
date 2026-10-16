@@ -41,6 +41,7 @@ Este es el orden recomendado cuando empiezas a usar el sistema:
 - Para vender, el usuario debe tener caja abierta.
 - Metodo de pago en venta nueva: `efectivo` o `credito`.
 - El precio unitario de venta lo toma backend desde el producto: usa el precio normal para clientes minoristas y el precio mayorista cuando el cliente está clasificado como mayorista. El precio mayorista es opcional: si queda vacío, en `0` o sin definir, usa su precio minorista. Los precios negativos no se permiten.
+- En **Nueva venta**, la etiqueta **Cliente** cambia a **Cliente mayorista** al seleccionar un cliente de ese tipo. Al seleccionar un minorista o quitar la selección, vuelve a **Cliente**.
 - El arqueo no bloquea; el cierre si bloquea cuando hay faltante sobre umbral.
 - Si existe arqueo, el cierre usa el monto contado del ultimo arqueo.
 
@@ -50,9 +51,12 @@ Este es el orden recomendado cuando empiezas a usar el sistema:
 - Venta de dias anteriores: devolucion.
 - Cualquier usuario con permiso de Devoluciones puede procesar una devolución.
 - La fecha se asigna automáticamente al día actual.
-- Una venta al contado se reembolsa desde la caja abierta del usuario.
-- En una venta a crédito, el sistema baja primero la deuda. Si lo devuelto supera el saldo, reembolsa el excedente desde caja.
-- Al anular una devolución, el sistema revierte inventario y el efecto en caja o crédito. Si hubo reembolso, la caja original debe seguir abierta y pertenecer al usuario que lo realizó.
+- Una venta en efectivo se reembolsa desde caja POS si la caja original aún está abierta; cuando esa caja ya cerró, el dinero sale de Caja general. Una caja nueva no cambia el cierre anterior.
+- Si la venta tuvo descuento, la devolución usa el precio neto correspondiente a los productos devueltos. Por ejemplo, si tres productos sumaban Q60 y pagó Q45 después del descuento, devolver los tres reintegra Q45, no Q60.
+- Puede devolver por partes: el sistema conserva el importe pendiente y ajusta los centavos al completar las unidades. Una devolución anulada vuelve a dejar disponibles sus unidades e importe. El precio actual del catálogo no cambia lo que corresponde devolver de una venta anterior.
+- En una venta a crédito, el sistema baja primero la deuda. Si lo devuelto supera el saldo, reembolsa el excedente desde caja; si sus abonos ya pasaron por una caja cerrada, usa Caja general.
+- Al anular una devolución, el sistema revierte inventario y el efecto en caja o crédito. Si la caja del reembolso ya cerró, reintegra el dinero a Caja general sin cambiar el cierre histórico.
+- Una venta del mismo día se puede anular aunque su caja ya haya cerrado: el reembolso sale de Caja general. Si no hay saldo suficiente o la cuenta no está activa, se muestra un error y la venta sigue vigente, sin reponer inventario.
 - No se elimina histórico físico; se compensa con movimientos trazables.
 
 ### 2.4 Ventas a crédito y cuentas por cobrar
@@ -63,6 +67,7 @@ Al guardar una venta a crédito debes seleccionar un cliente. El sistema crea la
 - El abono disminuye el saldo de la cuenta y aumenta la caja.
 - En el detalle de la cuenta, el último abono vigente puede anularse si la misma caja sigue abierta y pertenece al usuario que lo recibió.
 - La anulación del abono vuelve a aumentar la deuda y saca el mismo monto de caja.
+- Reportes muestra por separado los abonos recibidos, sus anulaciones y el cobro neto dentro del período seleccionado. Si abono y anulación están en fechas distintas, cada uno aparece en el período que le corresponde.
 - Si una deuda ya no se recuperará, se puede marcar como **incobrable** indicando el motivo. Esto cierra su saldo y se refleja como pérdida en Reportes.
 
 ---
@@ -101,6 +106,8 @@ Si recibes mercancía durante tu turno y la pagas con el efectivo de tu caja POS
 3. Guarda la compra normalmente.
 
 El sistema registra la compra e inventario, y descuenta su total de tu caja POS automáticamente. No registres un movimiento manual adicional de caja.
+
+La caja debe tener efectivo suficiente para cubrir toda la compra. Si el saldo no alcanza, el sistema muestra el disponible y no registra parcialmente la compra ni el inventario.
 
 Si anulas la compra mientras la caja sigue abierta, el dinero vuelve a esa misma caja. Si la caja ya fue cerrada, la anulación sigue permitida: el dinero se reintegra a **Caja general** y no cambia el arqueo ni los movimientos históricos de la caja cerrada.
 
@@ -153,7 +160,7 @@ Ruta: `Cuentas por pagar`.
 
 Puedes pagar un cargo de forma parcial. El sistema muestra el saldo restante y al completarlo lo marca como pagado. No registres este pago como gasto, porque el costo ya se usa para calcular la utilidad de la venta.
 
-Si una venta consignada se anula o se devuelve antes de pagar al proveedor, el sistema reduce el cargo automáticamente. Cuando ya existe un pago aplicado, esa operación se bloquea para no perder la trazabilidad.
+Si una venta consignada se anula o se devuelve antes de pagar al proveedor, el sistema reduce el cargo automáticamente. Si anulas la devolución, el cargo vuelve a su cantidad y saldo anteriores. Cuando se aplicó un pago al cargo después de devolver, la anulación se bloquea completa para no descoordinar inventario, efectivo y deuda.
 
 ---
 
@@ -237,6 +244,7 @@ Muestra:
 - Ventas netas.
 - Costo de ventas.
 - Costo revertido por devoluciones.
+- Los costos corresponden únicamente a ventas y devoluciones activas. Una operación anulada conserva su historial, pero su ingreso y costo dejan de modificar la utilidad tanto en Reportes como en Dashboard.
 - Ganancia bruta.
 - Gastos.
 - Perdidas de inventario.
@@ -280,8 +288,9 @@ Codigos relevantes:
 
 Reglas de valor:
 
-- `nombre_empresa` acepta texto.
-- Las demas aceptan enteros, excepto `nit_empresa`, que acepta texto.
+- `nombre_empresa` acepta texto y es obligatorio.
+- `nit_empresa` es opcional, acepta únicamente números y puede dejarse vacío. Al vaciarlo, las compras anteriores conservan el NIT con el que fueron registradas, pero no podrás usar **Factura a Mi NIT** en compras nuevas hasta configurarlo otra vez.
+- Las demas aceptan enteros.
 - Minimo general: `0`.
 - `devolucion_limite_dias_cajero` minimo `2`.
 - `caja_aperturas_maximas_por_dia` minimo `1`.
@@ -301,4 +310,5 @@ Reglas de valor:
 ## 9. Notas finales
 
 - Este manual es de solo lectura en pantalla.
+- Si un administrador desactiva tu usuario o tu rol mientras tienes una sesión abierta, la siguiente operación se bloquea, la sesión se cierra y debes contactar al administrador. Ningún cambio solicitado en esa petición llega a guardarse.
 - Si cambia una regla de negocio, actualizar este archivo en la misma entrega.

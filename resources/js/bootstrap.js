@@ -73,7 +73,9 @@ function redirectExpiredSession(error, currentRelativeUrl) {
 	}
 
 	sessionRedirectPending = true;
-	const loginPath = `/login?session_expired=1&redirect=${encodeURIComponent(currentRelativeUrl)}`;
+	const accountInactive = error?.response?.data?.code === 'ACCOUNT_OR_ROLE_INACTIVE';
+	const reason = accountInactive ? 'account_inactive=1' : 'session_expired=1';
+	const loginPath = `/login?${reason}&redirect=${encodeURIComponent(currentRelativeUrl)}`;
 
 	Promise.resolve(navigateTo(loginPath)).finally(() => {
 		sessionRedirectPending = false;

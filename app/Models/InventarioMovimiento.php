@@ -15,6 +15,7 @@ class InventarioMovimiento extends Model
         'compra_detalle_id',
         'venta_id',
         'venta_detalle_id',
+        'devolucion_id',
         'lote_id',
         'tipo',
         'cantidad',

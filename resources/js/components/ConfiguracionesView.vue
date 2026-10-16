@@ -71,7 +71,7 @@
                             </div>
 
                             <div>
-                                <label class="form-label fw-semibold">Valor *</label>
+                                <label class="form-label fw-semibold">Valor{{ form.codigo === 'nit_empresa' ? '' : ' *' }}</label>
                                 <input
                                     v-model="form.value"
                                     :type="inputTypePorCodigo(form.codigo)"
@@ -80,7 +80,7 @@
                                     :min="inputMinPorCodigo(form.codigo)"
                                     step="1"
                                     maxlength="255"
-                                    required
+                                    :required="form.codigo !== 'nit_empresa'"
                                     @input="normalizarEntradaPorCodigo"
                                 >
                                 <div class="form-text">{{ ayudaPorCodigo(form.codigo) }}</div>
@@ -200,7 +200,7 @@ function inputMinPorCodigo(codigo) {
 
 function ayudaPorCodigo(codigo) {
     if (codigo === 'nombre_empresa') return 'Texto requerido.';
-    if (codigo === 'nit_empresa') return 'Solo números, sin guiones ni espacios.';
+    if (codigo === 'nit_empresa') return 'Opcional. Solo números, sin guiones ni espacios.';
     if (codigo === 'habilitar_consignacion') return 'Use 1 para habilitar consignación o 0 para ocultarla.';
     if (codigo === 'devolucion_limite_dias_cajero') return 'Solo entero. Minimo 2.';
     if (codigo === 'caja_aperturas_maximas_por_dia') return 'Solo entero. Minimo 1.';

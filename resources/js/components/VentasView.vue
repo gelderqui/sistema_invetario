@@ -79,7 +79,7 @@
                                 </div>
 
                                 <div class="col-12 col-md-8">
-                                    <label class="form-label fw-semibold">Cliente</label>
+                                    <label class="form-label fw-semibold">{{ form.cliente?.tipo_cliente === 'mayorista' ? 'Cliente mayorista' : 'Cliente' }}</label>
                                     <Multiselect
                                         v-model="form.cliente"
                                         :options="catalogs.clientes"

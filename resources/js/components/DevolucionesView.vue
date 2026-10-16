@@ -14,6 +14,7 @@
             <div class="card-body">
                 <div class="alert alert-light border small mb-3">
                     Las ventas al contado se reembolsan desde la caja abierta. En ventas a crédito, primero se reduce la deuda y solo se reembolsa efectivo si el valor devuelto supera el saldo pendiente.
+                    El importe considera el descuento original y los centavos pendientes de devoluciones anteriores.
                 </div>
                 <div class="row g-3 align-items-end">
                     <div class="col-12 col-md-6">
@@ -30,7 +31,7 @@
                         <input :value="today" type="date" class="form-control" readonly>
                     </div>
                     <div class="col-12 col-md-3 d-grid">
-                        <button class="btn btn-brand" :disabled="saving || !form.items.length" @click="guardar">Guardar devolucion</button>
+                        <button class="btn btn-brand" :disabled="saving || !hasItemsToReturn" @click="guardar">Guardar devolucion</button>
                     </div>
                 </div>
 
@@ -153,12 +154,11 @@ const pageDevoluciones = ref(1);
 const perPageDevoluciones = ref(10);
 const today = new Date().toISOString().slice(0, 10);
 
-const form = ref({ items: [] });
-
 const detallesVenta = computed(() => {
     const venta = ventasCatalogo.value.find((v) => v.id === Number(selectedVentaId.value));
     return venta?.detalles ?? [];
 });
+const hasItemsToReturn = computed(() => detallesVenta.value.some((row) => Number(row.devolver || 0) > 0));
 const totalDevoluciones = computed(() => devoluciones.value.length);
 const totalPagesDevoluciones = computed(() => Math.max(1, Math.ceil(totalDevoluciones.value / perPageDevoluciones.value)));
 const safePageDevoluciones = computed(() => Math.min(Math.max(pageDevoluciones.value, 1), totalPagesDevoluciones.value));
@@ -213,7 +213,6 @@ async function guardar() {
         });
 
         selectedVentaId.value = null;
-        form.value.items = [];
         await reloadAll();
 
         const { data: ticketData } = await axios.get(`/ventas/devoluciones/${data.data.id}/ticket/signed-url`);
@@ -244,7 +243,7 @@ async function openTicket(id) {
 async function anularDevolucion(item) {
     if (!item?.id || item.estado !== 'activo') return;
 
-    const ok = window.confirm(`Se anulara la devolucion #${item.id}. Esta accion revierte inventario. Deseas continuar?`);
+    const ok = window.confirm(`Se anulará la devolución #${item.id}. Se revertirán inventario, deuda y reembolso; si la caja del reembolso ya cerró, el reintegro entrará a Caja general. ¿Deseas continuar?`);
     if (!ok) return;
 
     saving.value = true;

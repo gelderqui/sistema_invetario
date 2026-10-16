@@ -34,7 +34,7 @@ Route::prefix('api')->group(function (): void {
     Route::prefix('auth')->group(function (): void {
         Route::middleware('guest')->post('/login', [AuthController::class, 'store']);
 
-        Route::middleware('auth:sanctum')->group(function (): void {
+        Route::middleware(['auth:sanctum', 'active.account'])->group(function (): void {
             Route::get('/me', [AuthController::class, 'show']);
             Route::post('/logout', [AuthController::class, 'destroy']);
             Route::put('/password', [AuthController::class, 'updatePassword'])->middleware('ajax');
@@ -43,11 +43,11 @@ Route::prefix('api')->group(function (): void {
 
     Route::middleware('guest')->get('/configuraciones/get/login', [ConfiguracionController::class, 'login']);
 
-    Route::middleware(['auth:sanctum', 'ajax'])->group(function (): void {
+    Route::middleware(['auth:sanctum', 'active.account', 'ajax'])->group(function (): void {
         Route::get('/configuraciones/get/publicas', [ConfiguracionController::class, 'publicas']);
     });
 
-    Route::middleware(['auth:sanctum', 'permission', 'ajax'])->group(function (): void {
+    Route::middleware(['auth:sanctum', 'active.account', 'permission', 'ajax'])->group(function (): void {
         Route::get('/dashboard/get', [DashboardController::class, 'index']);
 
         Route::prefix('usuarios')->group(function (): void {
@@ -242,7 +242,7 @@ Route::prefix('api')->group(function (): void {
     });
 
     // Endpoints AJAX autenticados para generar URLs firmadas de tickets (seguras para iframe).
-    Route::middleware(['auth:sanctum', 'ajax'])->group(function (): void {
+    Route::middleware(['auth:sanctum', 'active.account', 'ajax'])->group(function (): void {
         Route::prefix('ventas')->group(function (): void {
             Route::get('/{venta}/ticket/signed-url', [VentaController::class, 'ticketSignedUrl']);
 

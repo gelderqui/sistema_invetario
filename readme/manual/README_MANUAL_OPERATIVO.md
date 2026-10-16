@@ -36,9 +36,12 @@ Anulaciones y devoluciones:
 - Venta del mismo dia: se anula venta.
 - Venta de dias anteriores: se registra devolucion.
 - Una venta con devoluciones activas no puede anularse.
-- En una devolución de venta al contado debes tener caja abierta, porque el sistema registra el reembolso.
+- En una devolución de venta al contado, el reembolso sale de tu caja POS si la caja original sigue abierta. Si ya cerró, sale de Caja general aunque tengas una caja nueva abierta.
 - En una devolución de venta a crédito, el sistema reduce primero la deuda; solo devuelve efectivo si queda un excedente después de cubrirla.
-- Al anular venta/devolución, el sistema ajusta inventario y sus efectos financieros automáticamente.
+- El importe de devolución ya descuenta la rebaja original de la venta: Q60 menos Q15 de descuento permiten devolver Q45 en total. Las devoluciones parciales comparten ese límite y el sistema ajusta los centavos pendientes.
+- Al anular una venta del mismo día con su caja ya cerrada, el reembolso sale de Caja general. Al anular una devolución pagada desde una caja cerrada, el dinero regresa a Caja general. Los cierres anteriores no cambian. Si Caja general no puede cubrir el reembolso, la operación se rechaza completa.
+- Si la devolución redujo una deuda de mercancía consignada, anularla también restituye lo pendiente al proveedor. Si ese cargo recibió un pago después, la anulación se rechaza completa.
+- Reportes y Dashboard excluyen conjuntamente ingreso y costo de ventas o devoluciones anuladas; los movimientos permanecen visibles como historial.
 
 ## 2.1 Cuentas por cobrar
 
@@ -62,6 +65,7 @@ Reglas clave:
 - Solo compras activas pueden anularse.
 - Si un lote de la compra ya fue consumido, la compra no puede anularse.
 - Cuando se anula una compra valida, se revierte inventario y se devuelve capital a la cuenta de pago.
+- La anulación recalcula el costo promedio y el último costo con la mercancía que continúa vigente. Conserva los precios de venta normal y mayorista; no deshace cambios de precio realizados manualmente después de comprar.
 - Si pagaste desde caja POS y sigue abierta, la anulación devuelve el efectivo a esa misma caja. Si ya cerró, el reintegro se registra en Caja general y no se altera el cierre ya realizado.
 
 ### 3.1 Consignación y pago a proveedor
@@ -105,6 +109,7 @@ Reglas de eliminacion y desactivacion:
 - Productos:
 - Inactivo: no se usa en compras/ventas nuevas.
 - Eliminar: solo si no tiene historial de compras ni ventas.
+- El catálogo no permite establecer ni editar existencias. Los productos nuevos comienzan en cero y el stock se registra mediante Inventario inicial, Compras o Ajustes para mantener lotes y kardex.
 
 - Categorias:
 - Inactiva: no se asigna a productos nuevos (ni al cambiar categoria en edicion).

@@ -15,6 +15,7 @@ use App\Models\Venta;
 use App\Models\VentaCredito;
 use App\Models\VentaCreditoMovimiento;
 use App\Models\VentaDetalle;
+use App\Services\Ventas\ReembolsoVentaService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -465,7 +466,7 @@ class VentaController extends Controller
         ], 201);
     }
 
-    public function anular(Request $request, Venta $venta): JsonResponse
+    public function anular(Request $request, Venta $venta, ReembolsoVentaService $reembolsos): JsonResponse
     {
         if ((int) $venta->add_user !== (int) $request->user()->id) {
             return response()->json([
@@ -489,7 +490,7 @@ class VentaController extends Controller
 
         $userId = (int) $request->user()->id;
 
-        DB::transaction(function () use ($venta, $userId): void {
+        DB::transaction(function () use ($venta, $userId, $reembolsos): void {
             $venta = Venta::query()
                 ->with([
                     'detalles:id,venta_id,producto_id,cantidad,precio_unitario,subtotal',
@@ -497,6 +498,12 @@ class VentaController extends Controller
                 ])
                 ->lockForUpdate()
                 ->findOrFail($venta->id);
+
+            if ($venta->estado !== 'activo' || ! Carbon::parse((string) $venta->fecha_venta)->isSameDay(Carbon::today())) {
+                throw ValidationException::withMessages([
+                    'venta' => ['Solo se pueden anular ventas activas del mismo día.'],
+                ]);
+            }
 
             $credito = VentaCredito::query()
                 ->where('venta_id', $venta->id)
@@ -644,15 +651,7 @@ class VentaController extends Controller
             }
 
             if ($venta->metodo_pago === 'efectivo') {
-                registrarMovimientoCajaAutomatico(
-                    $userId,
-                    'anulacion_venta',
-                    toMoney(-1 * (float) $venta->total, 4),
-                    'Anulacion de venta '.$venta->numero,
-                    now()->toDateTimeString(),
-                    'venta',
-                    $venta->id
-                );
+                $reembolsos->anularVenta($venta, $userId);
             }
         });
 

@@ -8,13 +8,14 @@ use App\Models\DetalleDevolucion;
 use App\Models\Devolucion;
 use App\Models\InventarioLote;
 use App\Models\InventarioMovimiento;
-use App\Models\MovimientoCaja;
 use App\Models\Producto;
 use App\Models\ProveedorCuentaPorPagar;
 use App\Models\Venta;
 use App\Models\VentaCredito;
 use App\Models\VentaCreditoMovimiento;
 use App\Models\VentaDetalle;
+use App\Services\Ventas\ImporteDevolucionService;
+use App\Services\Ventas\ReembolsoVentaService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -113,14 +114,16 @@ class DevolucionController extends Controller
         ]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, ImporteDevolucionService $importes, ReembolsoVentaService $reembolsos): JsonResponse
     {
         $validated = $request->validate([
             'venta_id' => ['required', Rule::exists('ventas', 'id')],
             'items' => ['required', 'array', 'min:1'],
-            'items.*.venta_detalle_id' => ['required', Rule::exists('venta_detalles', 'id')],
+            'items.*.venta_detalle_id' => ['required', Rule::exists('venta_detalles', 'id'), 'distinct'],
             'items.*.cantidad' => ['required', 'integer', 'min:1'],
             'items.*.motivo' => ['nullable', 'string', 'max:255'],
+        ], [
+            'items.*.venta_detalle_id.distinct' => 'Seleccione cada producto de la venta una sola vez en la devolución.',
         ]);
 
         $user = $request->user()->loadMissing('role:id,code');
@@ -129,7 +132,7 @@ class DevolucionController extends Controller
         $limiteMinutosCajero = $limiteDiasCajero * 24 * 60;
         $fechaDevolucion = now()->toDateString();
 
-        $devolucion = DB::transaction(function () use ($validated, $userId, $user, $limiteMinutosCajero, $limiteDiasCajero, $fechaDevolucion) {
+        $devolucion = DB::transaction(function () use ($validated, $userId, $user, $limiteMinutosCajero, $limiteDiasCajero, $fechaDevolucion, $importes, $reembolsos) {
             $venta = Venta::query()
                 ->with('detalles.producto:id,nombre,stock_actual,costo_promedio,control_vencimiento')
                 ->lockForUpdate()
@@ -159,6 +162,18 @@ class DevolucionController extends Controller
             }
 
             $detallesVenta = $venta->detalles->keyBy('id');
+            $netosPorDetalle = $importes->distribuirNetoPorDetalle($venta);
+            $netoVenta = $importes->centavos($venta->total);
+            $devueltoVenta = $venta->devoluciones()
+                ->where('estado', 'activo')
+                ->get(['total'])
+                ->sum(fn (Devolucion $anterior) => $importes->centavos($anterior->total));
+
+            if ($devueltoVenta > $netoVenta) {
+                throw ValidationException::withMessages([
+                    'venta_id' => ['Las devoluciones anteriores superan el total neto de la venta. Revise el historial antes de continuar.'],
+                ]);
+            }
 
             $devolucion = Devolucion::query()->create([
                 'venta_id' => $venta->id,
@@ -168,7 +183,7 @@ class DevolucionController extends Controller
                 'total' => 0,
             ]);
 
-            $total = 0.0;
+            $totalCentavos = 0;
 
             foreach ($validated['items'] as $item) {
                 $detalleVenta = $detallesVenta->get((int) $item['venta_detalle_id']);
@@ -179,10 +194,12 @@ class DevolucionController extends Controller
                     ]);
                 }
 
-                $yaDevuelto = (float) DetalleDevolucion::query()
+                $devolucionesAnteriores = DetalleDevolucion::query()
                     ->where('venta_detalle_id', $detalleVenta->id)
                     ->whereHas('devolucion', fn ($q) => $q->where('estado', 'activo'))
-                    ->sum('cantidad');
+                    ->get(['cantidad', 'subtotal']);
+                $yaDevuelto = (int) $devolucionesAnteriores->sum('cantidad');
+                $importeDevuelto = $devolucionesAnteriores->sum(fn (DetalleDevolucion $anterior) => $importes->centavos($anterior->subtotal));
 
                 $cantidad = toMoney((int) $item['cantidad'], 4);
                 $disponible = toMoney((float) $detalleVenta->cantidad - $yaDevuelto, 4);
@@ -194,14 +211,29 @@ class DevolucionController extends Controller
                 }
 
                 $precio = toMoney($detalleVenta->precio_unitario, 4);
-                $subtotal = toMoney($cantidad * $precio, 4);
+                $subtotalCentavos = $importes->calcularParcial(
+                    $netosPorDetalle[$detalleVenta->id],
+                    (int) $detalleVenta->cantidad,
+                    $yaDevuelto,
+                    $importeDevuelto,
+                    (int) $cantidad,
+                );
+                $totalCentavos += $subtotalCentavos;
+
+                if ($devueltoVenta + $totalCentavos > $netoVenta) {
+                    throw ValidationException::withMessages([
+                        'items' => ['La devolución supera el importe neto pendiente de devolver de la venta.'],
+                    ]);
+                }
+
+                $subtotal = $subtotalCentavos / 100;
 
                 $detalleDevolucion = DetalleDevolucion::query()->create([
                     'devolucion_id' => $devolucion->id,
                     'venta_detalle_id' => $detalleVenta->id,
                     'producto_id' => $detalleVenta->producto_id,
                     'cantidad' => $cantidad,
-                    'precio' => $precio,
+                    'precio' => $precio, // Precio original; el subtotal incluye el descuento y su redondeo.
                     'subtotal' => $subtotal,
                     'motivo' => $item['motivo'] ?? null,
                 ]);
@@ -282,6 +314,7 @@ class DevolucionController extends Controller
                         'producto_id' => $producto->id,
                         'venta_id' => $venta->id,
                         'venta_detalle_id' => $detalleDevolucion->venta_detalle_id,
+                        'devolucion_id' => $devolucion->id,
                         'lote_id' => (int) $movSalida->lote_id,
                         'tipo' => 'devolucion_venta',
                         'cantidad' => $usar,
@@ -324,6 +357,7 @@ class DevolucionController extends Controller
                         'producto_id' => $producto->id,
                         'venta_id' => $venta->id,
                         'venta_detalle_id' => $detalleDevolucion->venta_detalle_id,
+                        'devolucion_id' => $devolucion->id,
                         'lote_id' => $loteCreadoId,
                         'tipo' => 'devolucion_venta',
                         'cantidad' => $cantidad,
@@ -342,11 +376,9 @@ class DevolucionController extends Controller
                     'stock_actual' => toMoney($stockCursor, 4),
                     'mod_user' => $userId,
                 ]);
-
-                $total += $subtotal;
             }
 
-            $total = toMoney($total, 4);
+            $total = $totalCentavos / 100;
             $montoAplicadoCredito = 0.0;
             $montoReembolsoEfectivo = $total;
             $movimientoCreditoId = null;
@@ -390,24 +422,11 @@ class DevolucionController extends Controller
             }
 
             $movimientoCajaId = null;
+            $movimientoCapitalId = null;
             if ($montoReembolsoEfectivo > 0) {
-                $movimientoCaja = registrarMovimientoCajaAutomatico(
-                    $userId,
-                    'devolucion_venta',
-                    -$montoReembolsoEfectivo,
-                    'Reembolso por devolución DEV-'.$devolucion->id.' de venta '.$venta->numero,
-                    now()->toDateTimeString(),
-                    'devolucion',
-                    $devolucion->id,
-                );
-
-                if (! $movimientoCaja) {
-                    throw ValidationException::withMessages([
-                        'caja' => ['Debe tener una caja abierta para registrar el reembolso en efectivo.'],
-                    ]);
-                }
-
-                $movimientoCajaId = $movimientoCaja->id;
+                $movimientos = $reembolsos->devolver($venta, $devolucion, $montoReembolsoEfectivo, $userId);
+                $movimientoCajaId = $movimientos['caja']?->id;
+                $movimientoCapitalId = $movimientos['capital']?->id;
             }
 
             $devolucion->update([
@@ -418,6 +437,7 @@ class DevolucionController extends Controller
                 'monto_reembolso_efectivo' => $montoReembolsoEfectivo,
                 'monto_aplicado_credito' => $montoAplicadoCredito,
                 'movimiento_caja_id' => $movimientoCajaId,
+                'movimiento_capital_id' => $movimientoCapitalId,
                 'venta_credito_movimiento_id' => $movimientoCreditoId,
             ]);
 
@@ -441,7 +461,7 @@ class DevolucionController extends Controller
         return max(2, $valor);
     }
 
-    private function revertirImpactoFinanciero(Devolucion $devolucion, int $userId): void
+    private function revertirImpactoFinanciero(Devolucion $devolucion, int $userId, ReembolsoVentaService $reembolsos): void
     {
         $montoCredito = toMoney($devolucion->monto_aplicado_credito ?? 0, 4);
         if ($montoCredito > 0) {
@@ -493,43 +513,82 @@ class DevolucionController extends Controller
             $devolucion->venta_credito_movimiento_reversion_id = $movimientoReversion->id;
         }
 
-        $montoEfectivo = toMoney($devolucion->monto_reembolso_efectivo ?? 0, 4);
-        if ($montoEfectivo > 0) {
-            if (! $devolucion->movimiento_caja_id) {
-                throw ValidationException::withMessages([
-                    'devolucion' => ['La devolución no tiene trazabilidad del reembolso en efectivo.'],
-                ]);
-            }
-
-            $movimientoOriginal = MovimientoCaja::query()
-                ->with('caja:id,usuario_id,estado')
-                ->lockForUpdate()
-                ->findOrFail($devolucion->movimiento_caja_id);
-
-            if (! $movimientoOriginal->caja || $movimientoOriginal->caja->estado !== 'abierta' || (int) $movimientoOriginal->caja->usuario_id !== $userId) {
-                throw ValidationException::withMessages([
-                    'caja' => ['Solo puede anular el reembolso desde la misma caja abierta por el usuario que lo realizó.'],
-                ]);
-            }
-
-            $movimientoReversion = MovimientoCaja::query()->create([
-                'caja_id' => $movimientoOriginal->caja_id,
-                'tipo' => 'anulacion_devolucion_venta',
-                'monto' => $montoEfectivo,
-                'descripcion' => 'Anulación de reembolso por devolución DEV-'.$devolucion->id,
-                'referencia_tipo' => 'devolucion',
-                'referencia_id' => $devolucion->id,
-                'fecha' => now(),
-                'usuario_id' => $userId,
-            ]);
-
-            $devolucion->movimiento_caja_reversion_id = $movimientoReversion->id;
-        }
-
+        $reembolsos->revertirDevolucion($devolucion, $userId);
         $devolucion->save();
     }
 
-    public function anular(Request $request, Devolucion $devolucion): JsonResponse
+    private function validarRestitucionCargosConsignacion(Devolucion $devolucion): void
+    {
+        $movimientos = InventarioMovimiento::query()
+            ->where('devolucion_id', $devolucion->id)
+            ->where('tipo', 'devolucion_venta')
+            ->whereNotNull('lote_id')
+            ->lockForUpdate()
+            ->get(['id', 'venta_id', 'venta_detalle_id', 'lote_id']);
+
+        foreach ($movimientos as $movimiento) {
+            $cargo = $this->cargoConsignacionOriginal($movimiento);
+            if (! $cargo) {
+                continue;
+            }
+
+            $pagoPosterior = $cargo->aplicaciones()->lockForUpdate()->first();
+            if ($pagoPosterior) {
+                throw ValidationException::withMessages([
+                    'devolucion' => [
+                        'No se puede anular esta devolución porque la deuda consignada ya tiene un pago aplicado al proveedor.',
+                    ],
+                ]);
+            }
+
+            if (abs((float) $cargo->saldo_pendiente - (float) $cargo->monto_original) > 0.0001) {
+                throw ValidationException::withMessages([
+                    'devolucion' => [
+                        'La deuda consignada no conserva su saldo completo. Revise sus movimientos antes de anular la devolución.',
+                    ],
+                ]);
+            }
+        }
+    }
+
+    private function restituirCargoConsignacion(InventarioMovimiento $movimientoDevolucion, float $cantidad): void
+    {
+        $cargo = $this->cargoConsignacionOriginal($movimientoDevolucion);
+        if (! $cargo) {
+            return;
+        }
+
+        $monto = toMoney($cantidad * (float) $movimientoDevolucion->costo_unitario, 4);
+        $cargo->update([
+            'cantidad' => toMoney((float) $cargo->cantidad + $cantidad, 4),
+            'monto_original' => toMoney((float) $cargo->monto_original + $monto, 4),
+            'saldo_pendiente' => toMoney((float) $cargo->saldo_pendiente + $monto, 4),
+            'estado' => 'pendiente',
+        ]);
+    }
+
+    private function cargoConsignacionOriginal(InventarioMovimiento $movimientoDevolucion): ?ProveedorCuentaPorPagar
+    {
+        $salida = InventarioMovimiento::query()
+            ->where('tipo', 'salida_venta')
+            ->where('venta_id', $movimientoDevolucion->venta_id)
+            ->where('venta_detalle_id', $movimientoDevolucion->venta_detalle_id)
+            ->where('lote_id', $movimientoDevolucion->lote_id)
+            ->lockForUpdate()
+            ->first(['id']);
+
+        if (! $salida) {
+            return null;
+        }
+
+        return ProveedorCuentaPorPagar::query()
+            ->where('origen', 'consignacion_venta')
+            ->where('inventario_movimiento_id', $salida->id)
+            ->lockForUpdate()
+            ->first();
+    }
+
+    public function anular(Request $request, Devolucion $devolucion, ReembolsoVentaService $reembolsos): JsonResponse
     {
         if ($devolucion->estado !== 'activo') {
             return response()->json([
@@ -539,7 +598,7 @@ class DevolucionController extends Controller
 
         $userId = (int) $request->user()->id;
 
-        DB::transaction(function () use ($devolucion, $userId): void {
+        DB::transaction(function () use ($devolucion, $userId, $reembolsos): void {
             $devolucion = Devolucion::query()
                 ->with(['detalles:id,devolucion_id,venta_detalle_id,producto_id,cantidad'])
                 ->lockForUpdate()
@@ -551,7 +610,8 @@ class DevolucionController extends Controller
                 ]);
             }
 
-            $this->revertirImpactoFinanciero($devolucion, $userId);
+            $this->validarRestitucionCargosConsignacion($devolucion);
+            $this->revertirImpactoFinanciero($devolucion, $userId, $reembolsos);
 
             foreach ($devolucion->detalles as $detalle) {
                 $producto = Producto::query()->lockForUpdate()->findOrFail($detalle->producto_id);
@@ -568,11 +628,11 @@ class DevolucionController extends Controller
 
                 $movimientosDevolucion = InventarioMovimiento::query()
                     ->where('tipo', 'devolucion_venta')
-                    ->where('referencia', 'DEV-'.$devolucion->id)
+                    ->where('devolucion_id', $devolucion->id)
                     ->where('venta_detalle_id', $detalle->venta_detalle_id)
                     ->whereNotNull('lote_id')
                     ->orderBy('id')
-                    ->get(['lote_id', 'cantidad', 'costo_unitario']);
+                    ->get(['id', 'venta_id', 'venta_detalle_id', 'lote_id', 'cantidad', 'costo_unitario']);
 
                 $devolucionTrazada = (float) $movimientosDevolucion->sum(fn ($mov) => abs((float) $mov->cantidad));
                 $usarTrazabilidadLote = $movimientosDevolucion->isNotEmpty() && abs($devolucionTrazada - (float) $cantidad) <= 0.0001;
@@ -606,12 +666,15 @@ class DevolucionController extends Controller
                             'cantidad_disponible' => toMoney($disponible - $cantidadRevertir, 4),
                         ]);
 
+                        $this->restituirCargoConsignacion($movDevolucion, $cantidadRevertir);
+
                         $stockDespues = toMoney($stockCursor - $cantidadRevertir, 4);
 
                         InventarioMovimiento::query()->create([
                             'producto_id' => $producto->id,
                             'venta_id' => $devolucion->venta_id,
                             'venta_detalle_id' => $detalle->venta_detalle_id,
+                            'devolucion_id' => $devolucion->id,
                             'lote_id' => (int) $movDevolucion->lote_id,
                             'tipo' => 'anulacion_devolucion',
                             'cantidad' => toMoney(-1 * $cantidadRevertir, 4),
@@ -668,6 +731,7 @@ class DevolucionController extends Controller
                         'producto_id' => $producto->id,
                         'venta_id' => $devolucion->venta_id,
                         'venta_detalle_id' => $detalle->venta_detalle_id,
+                        'devolucion_id' => $devolucion->id,
                         'tipo' => 'anulacion_devolucion',
                         'cantidad' => toMoney(-1 * $cantidad, 4),
                         'stock_anterior' => $stockAnterior,

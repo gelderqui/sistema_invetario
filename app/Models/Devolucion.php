@@ -20,8 +20,10 @@ class Devolucion extends Model
         'monto_reembolso_efectivo',
         'monto_aplicado_credito',
         'movimiento_caja_id',
+        'movimiento_capital_id',
         'venta_credito_movimiento_id',
         'movimiento_caja_reversion_id',
+        'movimiento_capital_reversion_id',
         'venta_credito_movimiento_reversion_id',
     ];
 

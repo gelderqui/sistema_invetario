@@ -36,49 +36,76 @@ if (! function_exists('getFechaHora')) {
     }
 }
 
-if (! function_exists('parseMoney')) {
+if (! function_exists('parseMoneyOrNull')) {
     /**
-     * Normaliza importes escritos con punto o coma decimal y separadores de miles.
-     * Ejemplos válidos: 18.75, 18,75, 190,234.34 y 190.234,34.
+     * Interpreta un importe válido sin convertir texto inválido en cero.
+     *
+     * El formato canónico es coma para miles y punto para decimales. Se conserva
+     * compatibilidad con coma decimal y con el formato europeo completo cuando no
+     * existe ambigüedad. Un único punto siempre representa decimales: "1.255" es
+     * 1.255, no 1,255.
      */
-    function parseMoney(float|int|string|null $value): float
+    function parseMoneyOrNull(float|int|string|null $value): ?float
     {
         if (is_int($value) || is_float($value)) {
-            return (float) $value;
+            $number = (float) $value;
+
+            return is_finite($number) ? $number : null;
         }
 
         $raw = trim(str_replace([' ', "\u{00A0}"], '', (string) ($value ?? '')));
         if ($raw === '') {
-            return 0.0;
+            return null;
         }
 
-        $lastComma = strrpos($raw, ',');
-        $lastDot = strrpos($raw, '.');
-        $normalized = $raw;
+        if (preg_match('/^[+-]?\d+$/', $raw) === 1) {
+            return (float) $raw;
+        }
 
-        if ($lastComma !== false && $lastDot !== false) {
-            $decimalSeparator = $lastComma > $lastDot ? ',' : '.';
-            $thousandsSeparator = $decimalSeparator === ',' ? '.' : ',';
+        // Formato canónico: 1,234.56 o 1234.56. Un punto único es decimal.
+        if (preg_match('/^[+-]?(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?$/', $raw) === 1) {
+            return (float) str_replace(',', '', $raw);
+        }
 
-            $normalized = str_replace($thousandsSeparator, '', $raw);
-            if ($decimalSeparator === ',') {
-                $normalized = str_replace(',', '.', $normalized);
+        // Compatibilidad regional explícita: 1.234,56.
+        if (str_contains($raw, '.') && str_contains($raw, ',')
+            && preg_match('/^[+-]?(?:\d+|\d{1,3}(?:\.\d{3})+),\d+$/', $raw) === 1) {
+            return (float) str_replace(',', '.', str_replace('.', '', $raw));
+        }
+
+        // Compatibilidad con coma decimal simple: 18,75. Cuando hay tres dígitos
+        // y agrupación válida, la coma conserva su significado canónico de miles.
+        if (! str_contains($raw, '.') && substr_count($raw, ',') === 1) {
+            if (preg_match('/^[+-]?\d{1,3},\d{3}$/', $raw) === 1) {
+                return (float) str_replace(',', '', $raw);
             }
-        } elseif ($lastComma !== false) {
-            $commaCount = substr_count($raw, ',');
-            $decimalLength = strlen($raw) - $lastComma - 1;
-            $normalized = $commaCount > 1 || $decimalLength === 3
-                ? str_replace(',', '', $raw)
-                : str_replace(',', '.', $raw);
-        } elseif ($lastDot !== false) {
-            $dotCount = substr_count($raw, '.');
-            $decimalLength = strlen($raw) - $lastDot - 1;
-            if ($dotCount > 1 || $decimalLength === 3) {
-                $normalized = str_replace('.', '', $raw);
+
+            if (preg_match('/^[+-]?\d+,\d+$/', $raw) === 1) {
+                return (float) str_replace(',', '.', $raw);
             }
         }
 
-        return is_numeric($normalized) ? (float) $normalized : 0.0;
+        // Miles sin decimales en formatos canónico o europeo.
+        if (preg_match('/^[+-]?\d{1,3}(?:,\d{3}){2,}$/', $raw) === 1) {
+            return (float) str_replace(',', '', $raw);
+        }
+
+        if (preg_match('/^[+-]?\d{1,3}(?:\.\d{3}){2,}$/', $raw) === 1) {
+            return (float) str_replace('.', '', $raw);
+        }
+
+        return null;
+    }
+}
+
+if (! function_exists('parseMoney')) {
+    /**
+     * Versión compatible para cálculos internos. Para validar entradas del usuario,
+     * usar parseMoneyOrNull() y distinguir null de un cero válido.
+     */
+    function parseMoney(float|int|string|null $value): float
+    {
+        return parseMoneyOrNull($value) ?? 0.0;
     }
 }
 

@@ -20,8 +20,8 @@ class CheckPermission
 
         $user->loadMissing('role.permissions');
 
-        if (! $user->activo || ! $user->role) {
-            abort(403, 'Usuario inactivo o sin rol asignado.');
+        if (! $user->activo || ! $user->role || ! $user->role->activo) {
+            abort(403, 'Usuario o rol inactivo, o sin rol asignado.');
         }
 
         // El rol admin siempre tiene acceso total.

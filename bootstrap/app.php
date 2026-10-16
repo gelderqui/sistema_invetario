@@ -3,6 +3,7 @@
 require_once __DIR__.'/../app/Support/helpers.php';
 
 use App\Http\Middleware\CheckPermission;
+use App\Http\Middleware\EnsureActiveAccount;
 use App\Http\Middleware\EnsureAjaxRequest;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
@@ -19,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'permission' => CheckPermission::class,
+            'active.account' => EnsureActiveAccount::class,
             'ajax'       => EnsureAjaxRequest::class,
         ]);
     })

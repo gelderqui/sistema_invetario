@@ -802,7 +802,8 @@ async function save() {
         validationErrors.push('Seleccione un proveedor válido de la lista.');
     }
 
-    if (form.value.tipo_compra === 'contado' && !['caja_general', 'banco'].includes(String(form.value.metodo_pago || ''))) {
+    const metodosPagoAutorizados = (catalogs.value.metodos_pago ?? []).map(option => String(option.value));
+    if (form.value.tipo_compra === 'contado' && !metodosPagoAutorizados.includes(String(form.value.metodo_pago || ''))) {
         validationErrors.push('Seleccione un metodo de pago valido.');
     }
 
@@ -908,7 +909,7 @@ function purchaseTypeBadge(compra) {
 function purchaseTypeHelp(type) {
     if (type === 'credito_proveedor') return 'La deuda se registra al recibir la mercancía.';
     if (type === 'consignacion') return 'Se liquida con el proveedor según las unidades vendidas; puede registrar la factura recibida.';
-    return 'El importe se descuenta de Caja general o Banco al guardar.';
+    return 'El importe se descuenta del método seleccionado al guardar: Caja general, Banco o tu caja POS abierta.';
 }
 
 function openAnularCompra(compra) {

@@ -67,16 +67,20 @@ Estado funcional actual:
 - Un abono solo se puede anular si es el último abono vigente y la misma caja del abono sigue abierta para el usuario que lo recibió; la anulación restituye la deuda y crea la salida de caja compensatoria.
 - Una cuenta activa con saldo puede marcarse como `incobrable`; se cierra el saldo y su pérdida se descuenta de la utilidad del período.
 - En ventas nuevas, el precio unitario se toma siempre del producto en backend (no se acepta override por request). Para clientes mayoristas usa `productos.precio_mayorista` solo si es mayor que cero; vacío, `null` o `0` usan `productos.precio_venta`. Al crear o editar un producto, esos valores opcionales se guardan como `null`; omitir el campo al editar conserva el precio mayorista existente.
+- En el modal Nueva venta, la etiqueta del selector muestra `Cliente mayorista` solo si el cliente seleccionado tiene `tipo_cliente = mayorista`; en los demás casos muestra `Cliente`.
 - El descuento en UI se habilita manualmente por checkbox.
 - En historial de ventas, `admin` puede ver todas las ventas y filtrar por usuario; los demas roles solo ven sus propios registros.
 - Cuando una venta consume un lote consignado, crea un cargo al proveedor por el costo de las unidades consumidas.
-- Una devolución o anulación reduce el cargo de consignación solamente si todavía no tiene pagos aplicados; si ya fue pagado, se bloquea para conservar trazabilidad.
+- Una devolución reduce cantidad, monto y saldo del cargo de consignación solamente si no tiene pagos aplicados. Al anular esa devolución, la cadena `devolución -> movimiento de inventario -> salida original -> cargo` permite restituir los tres valores y su estado. Si después de devolver se aplicó un pago al cargo, la anulación se bloquea completa.
+- Las devoluciones usan el total neto original de la venta, incluido su descuento. `ImporteDevolucionService` reparte ese total proporcionalmente entre los detalles en centavos exactos; cada parcial se calcula sobre el dinero y las unidades pendientes de ese detalle. Solo cuentan devoluciones activas, por lo que anular una libera nuevamente cantidad e importe. La suma activa nunca puede superar el total neto de la venta.
+- En `detalle_devoluciones`, `precio` conserva el precio unitario original vendido y `subtotal` registra el importe neto efectivamente devuelto. El saldo de centavos se completa al devolver las unidades restantes. Las devoluciones históricas excesivas no se corrigen automáticamente: se bloquean nuevos reembolsos y se pide revisar su historial.
 
 ### Compras, crédito de proveedor y consignación
 
 - En Compras, `tipo_compra` define `contado`, `credito_proveedor` o `consignacion`; por defecto es contado.
 - Una compra normal descuenta Caja general o Banco según su método de pago.
 - Una compra de contado también puede pagarse con la caja POS abierta del mismo usuario. Para usarla, el usuario debe tener acceso a Compras y Ventas, y una caja propia abierta. La compra conserva `caja_id` y crea un movimiento negativo `compra` en esa caja, sin descontar Caja general directamente.
+- Antes de registrar una compra desde caja POS, backend bloquea la caja y sus movimientos y comprueba que el saldo cubra el total. Dos compras concurrentes no pueden consumir el mismo efectivo y un rechazo no crea registros parciales.
 - Al anular una compra pagada desde caja POS abierta, el inventario se revierte y se crea el movimiento positivo `anulacion_compra` en la misma caja. Si esa caja ya fue cerrada, no se altera su histórico: el reintegro entra a Caja general mediante un movimiento de capital `anulacion_compra`.
 - Una compra a crédito entra como inventario propio, no descuenta capital al recibirla y crea una cuenta por pagar por el total de la compra.
 - La consignación es opcional y se habilita con `habilitar_consignacion = 1`.
@@ -104,22 +108,24 @@ Compensaciones:
 
 - Anulacion de venta:
   - Inventario: movimiento `anulacion_venta` (+stock)
-  - Caja (si fue efectivo): movimiento `anulacion_venta` (egreso)
+  - Si fue en efectivo y la caja original sigue abierta: movimiento `anulacion_venta` (egreso) en esa caja.
+  - Si la caja original cerró: egreso `anulacion_venta` de Caja general; el cierre y los movimientos de la caja cerrada no se alteran. Solo se anulan ventas activas del mismo día y la operación se revierte entera si no puede pagarse el reembolso.
 - Anulacion de compra:
   - Inventario: movimiento `anulacion_compra` (-stock), con validacion de lotes no consumidos
 - Anulacion de devolucion:
   - Inventario: movimiento `anulacion_devolucion` (-stock)
   - Crédito: restituye la deuda que la devolución había reducido.
-  - Caja: si hubo reembolso, crea el ingreso compensatorio en la misma caja abierta.
+  - Si el reembolso salió de caja POS aún abierta, crea el ingreso compensatorio allí; si esa caja cerró o el reembolso salió de Caja general, registra el ingreso en Caja general.
 
 Devoluciones financieras:
 
 - Cualquier usuario con permiso `devoluciones` puede procesar devoluciones de ventas anteriores.
 - La fecha la asigna el servidor al día actual; una venta del mismo día se anula, no se devuelve.
-- Venta en efectivo: la devolución crea un egreso `devolucion_venta` desde la caja abierta del usuario.
+- Venta en efectivo: si la caja de la venta sigue abierta, la devolución crea un egreso `devolucion_venta` desde la caja abierta del usuario; si ya cerró, lo registra en Caja general, aun cuando exista una caja nueva abierta.
 - Venta a crédito: primero reduce el saldo pendiente; solo si el total devuelto supera la deuda vigente, el excedente se reembolsa en efectivo.
+- Si los abonos vigentes de una venta a crédito provienen de alguna caja cerrada, el excedente en efectivo sale de Caja general. Sin abonos, una devolución que solo disminuye deuda no mueve efectivo.
 - No se permiten devoluciones de cuentas anuladas o incobrables.
-- La devolución conserva los enlaces a sus movimientos de caja y crédito; al anularla se revierten ambos efectos, con la caja original aún abierta.
+- La devolución conserva los enlaces a sus movimientos de caja POS, capital y crédito; al anularla se revierten todos los efectos. `devoluciones.movimiento_capital_id` y `movimiento_capital_reversion_id` trazan los movimientos en Caja general.
 
 ### Recibos PDF
 
@@ -136,17 +142,20 @@ Devoluciones financieras:
 ### Reportes
 
 - Existe un modulo `Reportes` con cinco bloques: estado general, ventas a crédito y cobros, utilidad, flujo de caja e inventario valorizado.
+- Los cobros de ventas a crédito se presentan como abonos recibidos, anulaciones y cobro neto según la fecha propia de cada movimiento; una anulación no permanece contabilizada como efectivo cobrado.
 - Estado general del negocio:
   - Caja POS abierta: suma de movimientos de cajas en estado abierta
   - Caja general y banco: saldos actuales de cuentas de capital
   - Inversion inicial: primer movimiento `ingreso_capital` (por fecha/id)
   - Total negocio: `efectivo_total + cuentas_por_cobrar + inventario_valorizado - cuentas_por_pagar_proveedores`
   - Resultado: `total_negocio - inversion_inicial`
+- El inventario valorizado representa únicamente mercancía propia. Los lotes con `es_consignacion = 1` se muestran aparte como mercancía en custodia y no aumentan el patrimonio. Para conservar inventario histórico sin lote, se considera propio el remanente positivo entre `productos.stock_actual` y el total disponible identificado en lotes.
 - Utilidad del periodo:
   - Ventas brutas: `ventas.total` activas en rango
   - Devoluciones: `devoluciones.total` activas en rango
-  - Costo de ventas: `inventario_movimientos` tipo `salida_venta`
-  - Reversion de costo por devoluciones: `inventario_movimientos` tipo `devolucion_venta`
+  - Costo de ventas: salidas de inventario ligadas a ventas activas cuya `fecha_venta` está en el rango. Una venta anulada conserva el kardex, pero deja de aportar ingreso y costo.
+  - Reversión de costo por devoluciones: movimientos ligados mediante `inventario_movimientos.devolucion_id` a devoluciones activas cuya fecha está en el rango. Una devolución anulada conserva su historial, pero deja de afectar ingreso y costo.
+  - `CostoVentasService` aplica el mismo cálculo neto en Reportes y Dashboard; para usuarios no administradores, Dashboard limita ventas y devoluciones a las ventas registradas por ese usuario.
   - Perdidas de inventario: ajustes negativos desde `inventario_movimientos` tipo `ajuste_inventario`
   - Pérdidas por incobrables: movimientos de crédito tipo `incobrable`
 - Flujo de caja:
@@ -171,6 +180,7 @@ Devoluciones financieras:
 - Usuarios eliminados/inactivos no pueden iniciar sesion.
 - En edicion de usuario, `username` se muestra como lectura en UI.
 - Cambio de contrasena de un usuario desde admin cierra solo las sesiones de ese usuario (no de otros).
+- Cada petición autenticada vuelve a comprobar que usuario y rol estén activos. Si alguno se desactiva, la sesión existente se invalida con HTTP 401 antes de ejecutar operaciones y frontend muestra el motivo en el login.
 - El modulo `Manual` es solo de visualizacion y usa la misma pantalla para todos los roles con contenido diferenciado por rol:
   - admin: manual completo
   - operador/cajero: manual operativo resumido
@@ -195,11 +205,11 @@ Codigos base:
 - `porcentaje_utilidad_compra`: entero (%)
 - `caja_aperturas_maximas_por_dia`: entero (aperturas por usuario por dia)
 - `habilitar_consignacion`: entero booleano (`0` u `1`)
-- `nit_empresa`: texto; NIT usado para identificar facturas emitidas a nombre del negocio.
+- `nit_empresa`: texto numérico opcional; NIT usado para identificar facturas emitidas a nombre del negocio. Puede vaciarse sin alterar el NIT histórico guardado en compras.
 
 Reglas:
 
-- `nombre_empresa` y `nit_empresa` aceptan texto.
+- `nombre_empresa` es obligatorio; `nit_empresa` acepta números o vacío.
 - Las demas configuraciones aceptan entero.
 - Enteros: minimo `0`.
 - Excepcion: `devolucion_limite_dias_cajero` minimo `2`.

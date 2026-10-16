@@ -112,11 +112,36 @@ Este documento describe flujos operativos punta a punta que impactan dinero, inv
 1. Se valida politica por fecha y estado.
 2. No se borra historico; se marca/anula y compensa.
 3. Se repone inventario con trazabilidad de los lotes originales.
-4. Venta al contado: se crea un egreso de caja por el reembolso.
-5. Venta a crédito: se reduce primero la deuda; si el retorno excede el saldo, el excedente se reembolsa desde caja.
-6. La devolución conserva los vínculos a sus movimientos financieros.
-7. Al anularla, se retira de nuevo el inventario y se revierten deuda y/o caja. Si hubo efectivo, la caja original debe seguir abierta y pertenecer al usuario que hizo el reembolso.
-8. Si la venta contiene mercancía consignada sin pagos aplicados al proveedor, la devolución o anulación reduce o anula el cargo respectivo. Si ya se aplicó un pago, el sistema bloquea la operación para conservar la trazabilidad.
+4. Venta al contado: el reembolso sale de la caja POS del usuario si la caja original de la venta sigue abierta; si esta cerró, sale de Caja general.
+5. Venta a crédito: se reduce primero la deuda; si el retorno excede el saldo, el excedente se reembolsa desde caja POS o Caja general si los abonos vigentes ya pasaron por una caja cerrada.
+6. La devolución conserva los vínculos a sus movimientos de caja POS, capital y crédito.
+7. Al anularla, se retira de nuevo el inventario y se revierten deuda y reembolso. Una caja POS cerrada no se modifica: el reintegro va a Caja general. Si la caja del reembolso sigue abierta, la reversión queda en esa misma caja y la realiza su usuario.
+8. Si la venta contiene mercancía consignada sin pagos aplicados al proveedor, la devolución reduce o anula el cargo respectivo. Al anular la devolución se restituyen cantidad, monto, saldo y estado de cada cargo afectado. Si después se aplicó cualquier pago, toda la reversión se bloquea para conservar caja, inventario y deuda coordinados.
+
+### 5.1 Importe neto de una devolución con descuento
+
+1. Se bloquea la venta durante la operación y se toman sus detalles y total neto originales, sin usar el precio actual del producto ni importes enviados por frontend.
+2. `ImporteDevolucionService` reparte el total neto proporcionalmente entre los subtotales originales, usando centavos enteros y asignación determinista de los residuos.
+3. Para cada detalle se descuentan las cantidades y subtotales de devoluciones activas anteriores. La devolución parcial se calcula proporcionalmente sobre el saldo restante; la última cantidad completa los centavos pendientes.
+4. Se valida el límite del detalle y el de toda la venta antes de confirmar. Se rechazan detalles repetidos, cantidades excesivas y nuevos reembolsos sobre un historial que ya excedió su importe neto.
+5. El subtotal neto calculado se aplica a la caja o a la deuda y su excedente, siguiendo el flujo financiero habitual. El costo del lote y la reposición de inventario no se calculan desde el precio de devolución.
+6. Anular la devolución conserva el registro, revierte su efecto financiero y hace que sus unidades e importe vuelvan a estar disponibles para otra devolución.
+
+Ejemplo: tres unidades a Q20 menos Q15 de descuento equivalen a Q45 netos. Una devolución completa vale Q45, y tres devoluciones de una unidad valen Q15 cada una. Si Q1.00 neto debe repartirse entre tres unidades, las parciales pueden ser Q0.33, Q0.33 y Q0.34, sin exceder Q1.00.
+
+### 5.2 Anulación de venta en efectivo después del cierre
+
+1. Solo el usuario que registró la venta puede anularla si está activa y es del mismo día.
+2. Se bloquea la venta y se comprueba el ingreso original en caja. Si su caja sigue abierta, la salida se asienta en esa misma caja; si cerró, se debita Caja general mediante un movimiento `anulacion_venta` ligado a la venta.
+3. Si no existe ingreso trazable, Caja general activa o saldo suficiente, falla toda la transacción: inventario, estado, cuentas y dinero permanecen sin cambios.
+4. El arqueo, el cierre y los movimientos de la caja cerrada siguen intactos; una segunda solicitud no crea otra salida.
+
+### 5.3 Costos en Reportes y Dashboard
+
+1. El ingreso y costo de una venta se incluyen únicamente mientras la venta está activa, usando `fecha_venta` para el rango consultado.
+2. El ingreso revertido y costo recuperado de una devolución se incluyen únicamente mientras la devolución está activa, usando la fecha de la devolución.
+3. Los movimientos históricos de inventario no se borran. `inventario_movimientos.devolucion_id` permite identificar qué devolución produjo cada reposición o reversión.
+4. Anular una venta o crear y después anular una devolución deja la utilidad del periodo como estaba antes de esa operación. El servicio compartido evita diferencias entre Reportes y Dashboard.
 
 ## 6. Flujo de hora del sistema
 

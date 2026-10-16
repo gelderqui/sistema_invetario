@@ -133,12 +133,15 @@ Este documento describe las tablas actuales y sus relaciones principales.
 - `devoluciones.venta_id -> ventas.id` (M:1)
 - `devoluciones.usuario_id -> users.id` (M:1)
 - `devoluciones.movimiento_caja_id -> movimientos_caja.id` (M:1, opcional; reembolso)
+- `devoluciones.movimiento_capital_id -> capital_movimientos.id` (M:1, opcional; reembolso desde Caja general cuando la caja original cerró)
 - `devoluciones.venta_credito_movimiento_id -> ventas_credito_movimientos.id` (M:1, opcional; reducción de deuda)
 - `devoluciones.movimiento_caja_reversion_id -> movimientos_caja.id` (M:1, opcional; anulación de reembolso)
+- `devoluciones.movimiento_capital_reversion_id -> capital_movimientos.id` (M:1, opcional; reintegro a Caja general al anular la devolución)
 - `devoluciones.venta_credito_movimiento_reversion_id -> ventas_credito_movimientos.id` (M:1, opcional; anulación de reducción de deuda)
 - `detalle_devoluciones.devolucion_id -> devoluciones.id` (1:N)
 - `detalle_devoluciones.venta_detalle_id -> venta_detalles.id` (M:1)
 - `detalle_devoluciones.producto_id -> productos.id` (M:1)
+- `inventario_movimientos.devolucion_id -> devoluciones.id` (M:1, opcional). Identifica directamente los movimientos `devolucion_venta` y `anulacion_devolucion`; la migración nueva enlaza también los históricos que usan referencia `DEV-{id}`.
 
 ## 2.6 Caja
 

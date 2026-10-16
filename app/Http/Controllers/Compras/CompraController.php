@@ -294,6 +294,34 @@ class CompraController extends Controller
                         'metodo_pago' => ['Debe tener una caja POS abierta para pagar esta compra con efectivo de caja.'],
                     ]);
                 }
+
+                // La fila de caja permanece bloqueada durante toda la compra. Los
+                // movimientos también se leen con bloqueo para que dos solicitudes
+                // concurrentes no puedan gastar el mismo efectivo disponible.
+                $saldoCajaPos = toMoney(
+                    (float) MovimientoCaja::query()
+                        ->where('caja_id', $cajaPos->id)
+                        ->lockForUpdate()
+                        ->get(['id', 'monto'])
+                        ->sum(fn (MovimientoCaja $movimiento): float => (float) $movimiento->monto),
+                    4
+                );
+                $totalCompraSolicitado = toMoney(
+                    collect($validated['items'])->sum(fn (array $item): float => toMoney(
+                        (int) $item['cantidad'] * toMoney($item['costo_unitario'])
+                    )),
+                    4
+                );
+
+                if ($saldoCajaPos < $totalCompraSolicitado) {
+                    throw ValidationException::withMessages([
+                        'metodo_pago' => [sprintf(
+                            'Efectivo insuficiente en su caja POS. Disponible: Q %s. Total de la compra: Q %s.',
+                            number_format($saldoCajaPos, 2, '.', ','),
+                            number_format($totalCompraSolicitado, 2, '.', ',')
+                        )],
+                    ]);
+                }
             }
 
             $numeroCompra = sprintf(
@@ -581,6 +609,74 @@ class CompraController extends Controller
         ]);
     }
 
+    /**
+     * Recalcula únicamente costos derivados del inventario vigente. Los precios
+     * de venta normal, mayorista y promedio se conservan para no sobrescribir
+     * decisiones comerciales o cambios manuales posteriores a la compra.
+     *
+     * @return array{costo_promedio: float, costo_ultimo: float}
+     */
+    private function recalcularCostosProductoTrasAnulacion(
+        Producto $producto,
+        Compra $compra,
+        CompraDetalle $detalle,
+        float $stockAnterior,
+        float $stockNuevo
+    ): array {
+        $lotesVigentes = InventarioLote::query()
+            ->where('producto_id', $producto->id)
+            ->where('cantidad_disponible', '>', 0)
+            ->lockForUpdate()
+            ->get(['id', 'cantidad_disponible', 'costo_unitario', 'fecha_entrada']);
+
+        $stockEnLotes = (float) $lotesVigentes->sum(
+            fn (InventarioLote $lote): float => (float) $lote->cantidad_disponible
+        );
+        $valorEnLotes = (float) $lotesVigentes->sum(
+            fn (InventarioLote $lote): float => (float) $lote->cantidad_disponible * (float) $lote->costo_unitario
+        );
+
+        // Compatibilidad con existencias antiguas que todavía no tienen lote.
+        $stockSinLote = max($stockNuevo - $stockEnLotes, 0);
+        $valorEstimadoRestante = max(
+            ($stockAnterior * (float) $producto->costo_promedio)
+                - ((float) $detalle->cantidad * (float) $detalle->costo_unitario),
+            0
+        );
+        $valorSinLote = $stockSinLote > 0
+            ? max($valorEstimadoRestante - $valorEnLotes, 0)
+            : 0;
+        $costoPromedio = $stockNuevo > 0
+            ? toMoney(($valorEnLotes + $valorSinLote) / $stockNuevo, 4)
+            : 0.0;
+
+        $ultimoCostoCompraVigente = CompraDetalle::query()
+            ->join('compras', 'compras.id', '=', 'compra_detalles.compra_id')
+            ->where('compra_detalles.producto_id', $producto->id)
+            ->where('compras.estado', 'activo')
+            ->where('compras.id', '!=', $compra->id)
+            ->orderByDesc('compras.fecha_compra')
+            ->orderByDesc('compras.id')
+            ->orderByDesc('compra_detalles.id')
+            ->value('compra_detalles.costo_unitario');
+
+        $ultimoCostoLoteVigente = $lotesVigentes
+            ->sortByDesc(fn (InventarioLote $lote): string => sprintf(
+                '%s-%020d',
+                (string) $lote->fecha_entrada,
+                (int) $lote->id
+            ))
+            ->first()?->costo_unitario;
+
+        return [
+            'costo_promedio' => $costoPromedio,
+            'costo_ultimo' => toMoney(
+                $ultimoCostoCompraVigente ?? $ultimoCostoLoteVigente ?? $costoPromedio,
+                4
+            ),
+        ];
+    }
+
     public function anular(Request $request, Compra $compra): JsonResponse
     {
         $userId = (int) $request->user()->id;
@@ -633,8 +729,18 @@ class CompraController extends Controller
                     'cantidad_disponible' => toMoney($disponibleLote - $cantidadDetalle, 4),
                 ]);
 
+                $costosRecalculados = $this->recalcularCostosProductoTrasAnulacion(
+                    $producto,
+                    $compra,
+                    $detalle,
+                    $stockAnterior,
+                    $stockNuevo
+                );
+
                 $producto->update([
                     'stock_actual' => $stockNuevo,
+                    'costo_promedio' => $costosRecalculados['costo_promedio'],
+                    'costo_ultimo' => $costosRecalculados['costo_ultimo'],
                     'mod_user' => $userId,
                 ]);
 

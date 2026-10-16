@@ -15,6 +15,7 @@ use App\Models\ProveedorCuentaPorPagar;
 use App\Models\Venta;
 use App\Models\VentaCredito;
 use App\Models\VentaCreditoMovimiento;
+use App\Services\Reportes\CostoVentasService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,7 +23,7 @@ use Illuminate\Support\Facades\DB;
 
 class ReporteController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, CostoVentasService $costos): JsonResponse
     {
         $validated = $request->validate([
             'desde' => ['nullable', 'date'],
@@ -54,19 +55,10 @@ class ReporteController extends Controller
 
         $ventasNetas = toMoney($ventasBrutas - $devoluciones, 4);
 
-        $costoVentas = (float) InventarioMovimiento::query()
-            ->where('tipo', 'salida_venta')
-            ->whereBetween('created_at', [$desde, $hasta])
-            ->selectRaw('COALESCE(SUM(ABS(cantidad) * costo_unitario), 0) as total')
-            ->value('total');
-
-        $costoDevoluciones = (float) InventarioMovimiento::query()
-            ->where('tipo', 'devolucion_venta')
-            ->whereBetween('created_at', [$desde, $hasta])
-            ->selectRaw('COALESCE(SUM(ABS(cantidad) * costo_unitario), 0) as total')
-            ->value('total');
-
-        $costoVentasNeto = toMoney($costoVentas - $costoDevoluciones, 4);
+        $resumenCostos = $costos->resumen($desde, $hasta);
+        $costoVentas = $resumenCostos['ventas'];
+        $costoDevoluciones = $resumenCostos['devoluciones'];
+        $costoVentasNeto = $resumenCostos['neto'];
         $gananciaBruta = toMoney($ventasNetas - $costoVentasNeto, 4);
 
         $gastos = (float) Gasto::query()
@@ -112,10 +104,15 @@ class ReporteController extends Controller
         $flujoEgresos = (float) $flujoRows->sum('egresos');
         $flujoNeto = toMoney($flujoIngresos - $flujoEgresos, 4);
 
-        $cobrosCredito = (float) MovimientoCaja::query()
+        $cobrosCreditoBrutos = (float) MovimientoCaja::query()
             ->where('tipo', 'abono_venta_credito')
             ->whereBetween('fecha', [$desde, $hasta])
             ->sum('monto');
+        $reversionesCobrosCredito = abs((float) MovimientoCaja::query()
+            ->where('tipo', 'anulacion_abono_venta_credito')
+            ->whereBetween('fecha', [$desde, $hasta])
+            ->sum('monto'));
+        $cobrosCreditoNetos = toMoney($cobrosCreditoBrutos - $reversionesCobrosCredito, 4);
 
         $creditosActivos = VentaCredito::query()->where('estado', 'activa');
         $saldoPorCobrar = (float) (clone $creditosActivos)->sum('saldo_pendiente');
@@ -140,9 +137,9 @@ class ReporteController extends Controller
 
         $lotesPorProducto = InventarioLote::query()
             ->where('cantidad_disponible', '>', 0)
-            ->where('es_consignacion', false)
-            ->selectRaw('producto_id, COALESCE(SUM(cantidad_disponible), 0) as stock_lotes')
-            ->selectRaw('COALESCE(SUM(cantidad_disponible * costo_unitario), 0) as valor_lotes')
+            ->selectRaw('producto_id, COALESCE(SUM(cantidad_disponible), 0) as stock_lotes_total')
+            ->selectRaw('COALESCE(SUM(CASE WHEN es_consignacion = 0 THEN cantidad_disponible ELSE 0 END), 0) as stock_lotes_propios')
+            ->selectRaw('COALESCE(SUM(CASE WHEN es_consignacion = 0 THEN cantidad_disponible * costo_unitario ELSE 0 END), 0) as valor_lotes_propios')
             ->groupBy('producto_id')
             ->get()
             ->keyBy('producto_id');
@@ -151,17 +148,29 @@ class ReporteController extends Controller
             ->map(function (Producto $producto) use ($lotesPorProducto): array {
                 $resumenLotes = $lotesPorProducto->get($producto->id);
 
-                $stockLotes = (float) ($resumenLotes->stock_lotes ?? 0);
-                $valorLotes = (float) ($resumenLotes->valor_lotes ?? 0);
+                $stockActual = (float) $producto->stock_actual;
+                $stockLotesTotal = (float) ($resumenLotes->stock_lotes_total ?? 0);
+                $stockLotesPropios = (float) ($resumenLotes->stock_lotes_propios ?? 0);
+                $valorLotesPropios = (float) ($resumenLotes->valor_lotes_propios ?? 0);
 
-                $usaLotes = $stockLotes > 0;
-                $stockValorizado = $usaLotes ? toMoney($stockLotes, 4) : toMoney((float) $producto->stock_actual, 4);
-                $valor = $usaLotes
-                    ? toMoney($valorLotes, 4)
-                    : toMoney((float) $producto->stock_actual * (float) $producto->costo_promedio, 4);
+                // El stock previo a la trazabilidad por lotes no tiene lote asociado,
+                // pero sí pertenece al negocio. La consignación siempre tiene lote y
+                // nunca debe entrar en este remanente ni valorizarse como patrimonio.
+                $stockAntiguoSinLote = max($stockActual - $stockLotesTotal, 0);
+                $stockValorizado = toMoney($stockLotesPropios + $stockAntiguoSinLote, 4);
+                $valor = toMoney(
+                    $valorLotesPropios + ($stockAntiguoSinLote * (float) $producto->costo_promedio),
+                    4
+                );
                 $costoUnitarioValorizacion = $stockValorizado > 0
                     ? toMoney($valor / $stockValorizado, 4)
                     : 0.0;
+
+                $metodoValorizacion = match (true) {
+                    $stockAntiguoSinLote > 0 && $stockLotesPropios > 0 => 'lotes_y_fallback_promedio',
+                    $stockAntiguoSinLote > 0 => 'fallback_promedio',
+                    default => 'lotes',
+                };
 
                 return [
                     'id' => $producto->id,
@@ -172,9 +181,10 @@ class ReporteController extends Controller
                     'costo_unitario_valorizacion' => (float) $costoUnitarioValorizacion,
                     'valor_total' => $valor,
                     'activo' => (bool) $producto->activo,
-                    'metodo_valorizacion' => $usaLotes ? 'lotes' : 'fallback_promedio',
+                    'metodo_valorizacion' => $metodoValorizacion,
                 ];
             })
+            ->filter(fn (array $producto): bool => $producto['stock_actual'] > 0)
             ->sortByDesc('valor_total')
             ->values();
 
@@ -240,7 +250,9 @@ class ReporteController extends Controller
                 'creditos' => [
                     'ventas_efectivo_periodo' => (float) toMoney($ventasEfectivo, 4),
                     'ventas_credito_periodo' => (float) toMoney($ventasCredito, 4),
-                    'cobros_recibidos_periodo' => (float) toMoney($cobrosCredito, 4),
+                    'cobros_recibidos_periodo' => (float) toMoney($cobrosCreditoBrutos, 4),
+                    'reversiones_cobros_periodo' => (float) toMoney($reversionesCobrosCredito, 4),
+                    'cobros_netos_periodo' => (float) $cobrosCreditoNetos,
                     'cuentas_activas' => $cuentasActivas,
                     'saldo_pendiente_actual' => (float) toMoney($saldoPorCobrar, 4),
                     'saldo_vencido_actual' => (float) toMoney($saldoVencido, 4),

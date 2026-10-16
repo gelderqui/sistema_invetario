@@ -22,6 +22,11 @@
                         <span>Tu sesión venció. Inicia sesión nuevamente.</span>
                     </div>
 
+                    <div v-if="accountInactive" class="alert alert-warning d-flex gap-2" role="status">
+                        <FontAwesomeIcon icon="fa-solid fa-user-lock" class="mt-1" />
+                        <span>Tu sesión fue cerrada porque tu usuario o rol está inactivo. Contacta al administrador.</span>
+                    </div>
+
                     <form class="d-grid gap-3" novalidate @submit.prevent="submit">
 
                         <div>
@@ -109,6 +114,7 @@ const showPassword = ref(false);
 const nombreSistema = ref('Sistema POS e Inventario');
 const loading = ref(false);
 const sessionExpired = computed(() => route.query.session_expired === '1');
+const accountInactive = computed(() => route.query.account_inactive === '1');
 
 onMounted(async () => {
     try {

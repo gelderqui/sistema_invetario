@@ -55,7 +55,10 @@ class ConfiguracionController extends Controller
         $validated = $request->validate([
             'codigo' => ['required', 'string', 'max:120', 'alpha_dash', 'unique:configuraciones,codigo'],
             'descripcion' => ['nullable', 'string', 'max:255'],
-            'value' => ['required'],
+            // La obligatoriedad depende del código y se valida en el
+            // normalizador. Solo nit_empresa admite vacío; los demás códigos
+            // conservan sus reglas obligatorias.
+            'value' => ['present', 'nullable'],
             'activo' => ['sometimes', 'boolean'],
         ]);
 
@@ -82,7 +85,9 @@ class ConfiguracionController extends Controller
     public function update(Request $request, Configuracion $configuracion): JsonResponse
     {
         $validated = $request->validate([
-            'value' => ['required'],
+            'value' => $configuracion->codigo === 'nit_empresa'
+                ? ['present', 'nullable']
+                : ['required'],
         ]);
 
         $valueNormalizado = $this->normalizarValorSegunCodigo($configuracion->codigo, $validated['value']);
@@ -140,9 +145,13 @@ class ConfiguracionController extends Controller
         if ($codigo === 'nit_empresa') {
             $nit = preg_replace('/\D+/', '', $valorTexto) ?? '';
 
-            if ($nit === '' || strlen($nit) > 30) {
+            if ($nit === '') {
+                return '';
+            }
+
+            if (strlen($nit) > 30) {
                 throw ValidationException::withMessages([
-                    'value' => ['El NIT de empresa debe contener entre 1 y 30 números.'],
+                    'value' => ['El NIT de empresa no puede superar 30 números.'],
                 ]);
             }
 

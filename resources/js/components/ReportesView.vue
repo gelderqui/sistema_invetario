@@ -96,7 +96,9 @@
                             <tbody>
                                 <tr><td>Ventas al contado del período</td><td class="text-end">Q {{ formatMoney(report.creditos.ventas_efectivo_periodo) }}</td></tr>
                                 <tr><td>Ventas a crédito del período</td><td class="text-end">Q {{ formatMoney(report.creditos.ventas_credito_periodo) }}</td></tr>
-                                <tr><td>Cobros recibidos del período</td><td class="text-end text-success">Q {{ formatMoney(report.creditos.cobros_recibidos_periodo) }}</td></tr>
+                                <tr><td>Abonos recibidos del período</td><td class="text-end text-success">Q {{ formatMoney(report.creditos.cobros_recibidos_periodo) }}</td></tr>
+                                <tr><td>Anulaciones de abonos del período</td><td class="text-end text-danger">Q {{ formatMoney(report.creditos.reversiones_cobros_periodo) }}</td></tr>
+                                <tr><td>Cobros netos del período</td><td class="text-end fw-semibold" :class="numberTone(report.creditos.cobros_netos_periodo)">Q {{ formatMoney(report.creditos.cobros_netos_periodo) }}</td></tr>
                                 <tr><td>Cuentas activas</td><td class="text-end">{{ report.creditos.cuentas_activas }}</td></tr>
                                 <tr><td>Saldo pendiente actual</td><td class="text-end fw-semibold">Q {{ formatMoney(report.creditos.saldo_pendiente_actual) }}</td></tr>
                                 <tr><td>Saldo vencido actual</td><td class="text-end fw-semibold" :class="Number(report.creditos.saldo_vencido_actual) > 0 ? 'text-danger' : ''">Q {{ formatMoney(report.creditos.saldo_vencido_actual) }}</td></tr>
@@ -200,13 +202,13 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white">
                     <h6 class="mb-1">Inventario valorizado</h6>
-                    <small class="text-body-secondary">Valorizado por lotes disponibles (cantidad remanente por costo unitario).</small>
+                    <small class="text-body-secondary">El inventario propio forma parte del negocio; la consignación se muestra aparte como mercancía en custodia.</small>
                 </div>
                 <div class="card-body">
                     <div class="row g-3 mb-4">
                         <div class="col-12 col-md-6">
                             <div class="report-stat h-100">
-                                <div class="report-stat-label">Inventario total</div>
+                                <div class="report-stat-label">Inventario propio</div>
                                 <div class="report-stat-value">Q {{ formatMoney(report.inventario_valorizado.total) }}</div>
                             </div>
                         </div>
@@ -218,7 +220,7 @@
                         </div>
                         <div class="col-12 col-md-6">
                             <div class="report-stat h-100">
-                                <div class="report-stat-label">Productos con stock</div>
+                                <div class="report-stat-label">Productos con stock propio</div>
                                 <div class="report-stat-value">{{ report.inventario_valorizado.productos }}</div>
                             </div>
                         </div>
@@ -329,7 +331,7 @@ const utilidadCards = computed(() => [
 const creditoCards = computed(() => [
     { label: 'Ventas al contado', value: report.value.creditos.ventas_efectivo_periodo, className: '' },
     { label: 'Ventas a crédito', value: report.value.creditos.ventas_credito_periodo, className: '' },
-    { label: 'Cobros recibidos', value: report.value.creditos.cobros_recibidos_periodo, className: 'text-success' },
+    { label: 'Cobros netos', value: report.value.creditos.cobros_netos_periodo, className: numberTone(report.value.creditos.cobros_netos_periodo) },
     { label: 'Saldo pendiente', value: report.value.creditos.saldo_pendiente_actual, className: '' },
 ]);
 const inventarioCategoriasOrdenadas = computed(() => {
@@ -411,6 +413,8 @@ function emptyReport() {
             ventas_efectivo_periodo: 0,
             ventas_credito_periodo: 0,
             cobros_recibidos_periodo: 0,
+            reversiones_cobros_periodo: 0,
+            cobros_netos_periodo: 0,
             cuentas_activas: 0,
             saldo_pendiente_actual: 0,
             saldo_vencido_actual: 0,

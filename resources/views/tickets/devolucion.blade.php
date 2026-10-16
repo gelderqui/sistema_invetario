@@ -45,8 +45,8 @@
                 <tr>
                     <th>Descripcion</th>
                     <th class="num">Cant</th>
-                    <th class="num">Precio</th>
-                    <th class="num">Subt</th>
+                    <th class="num">Precio venta</th>
+                    <th class="num">Neto</th>
                 </tr>
             </thead>
             <tbody>
@@ -69,6 +69,7 @@
 
     <div class="section totals">
         <div class="line strong"><span>Total devuelto</span><span>Q {{ number_format((float) $devolucion->total, 2) }}</span></div>
+        <div class="muted">Importes netos según el descuento de la venta y el redondeo pendiente.</div>
     </div>
 
     <div class="footer">

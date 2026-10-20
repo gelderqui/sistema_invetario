@@ -14,6 +14,7 @@ Estado funcional actual:
   - Dashboard
   - Agente BI
   - Caja Rural
+  - Consulta de precios
   - Caja
   - Ventas
   - Compras
@@ -74,6 +75,13 @@ Estado funcional actual:
 - Una devolución reduce cantidad, monto y saldo del cargo de consignación solamente si no tiene pagos aplicados. Al anular esa devolución, la cadena `devolución -> movimiento de inventario -> salida original -> cargo` permite restituir los tres valores y su estado. Si después de devolver se aplicó un pago al cargo, la anulación se bloquea completa.
 - Las devoluciones usan el total neto original de la venta, incluido su descuento. `ImporteDevolucionService` reparte ese total proporcionalmente entre los detalles en centavos exactos; cada parcial se calcula sobre el dinero y las unidades pendientes de ese detalle. Solo cuentan devoluciones activas, por lo que anular una libera nuevamente cantidad e importe. La suma activa nunca puede superar el total neto de la venta.
 - En `detalle_devoluciones`, `precio` conserva el precio unitario original vendido y `subtotal` registra el importe neto efectivamente devuelto. El saldo de centavos se completa al devolver las unidades restantes. Las devoluciones históricas excesivas no se corrigen automáticamente: se bloquean nuevos reembolsos y se pide revisar su historial.
+
+### Consulta de precios
+
+- `Consulta de precios` es una opción principal, independiente de Caja y POS; permite atender una consulta sin abrir caja ni registrar una venta.
+- Busca únicamente productos activos por nombre, código de barra o palabras clave y muestra precio normal, unidad y existencia actual.
+- Es estrictamente de lectura: no expone costos, no modifica inventario y no permite agregar productos a una venta.
+- Su permiso es `consulta_precios`; puede asignarse por sí solo a personal que ordena mercadería o atiende consultas.
 
 ### Compras, crédito de proveedor y consignación
 
@@ -192,7 +200,7 @@ Devoluciones financieras:
 - Orden esperado en listado: Administrador, Operador, Cajero.
 - El campo `permissions.activo` controla visibilidad del menú para todos los roles: en `0` la opción no aparece.
 - Para roles distintos de admin, un permiso inactivo también bloquea sus rutas SPA y APIs aunque el permiso siga asignado al rol.
-- El admin mantiene acceso directo a rutas y APIs de permisos inactivos para administración o diagnóstico, pero tampoco los ve en el menú.
+- El admin mantiene acceso directo a rutas SPA y APIs incluso cuando un permiso está inactivo o no se le asignó en `permission_role`; esto sirve para administración y diagnóstico. El menú no hace ese bypass: solo muestra permisos activos que sí estén asignados al rol admin.
 
 ## 3) Configuraciones (tipos y reglas)
 

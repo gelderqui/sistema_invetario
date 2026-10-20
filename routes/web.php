@@ -17,6 +17,7 @@ use App\Http\Controllers\Catalogos\ProductoController;
 use App\Http\Controllers\Compras\CompraController;
 use App\Http\Controllers\Compras\ProveedorCuentaPorPagarController;
 use App\Http\Controllers\ConfiguracionController;
+use App\Http\Controllers\ConsultaPreciosController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Gastos\GastoController;
 use App\Http\Controllers\Inventario\InventarioController;
@@ -204,6 +205,10 @@ Route::prefix('api')->group(function (): void {
                 Route::post('/store', [DevolucionController::class, 'store'])->middleware('permission:devoluciones');
                 Route::patch('/anular/{devolucion}', [DevolucionController::class, 'anular'])->middleware('permission:devoluciones|historial_ventas');
             });
+        });
+
+        Route::prefix('consulta-precios')->middleware('permission:consulta_precios')->group(function (): void {
+            Route::get('/get', [ConsultaPreciosController::class, 'index']);
         });
 
         Route::prefix('gastos')->group(function (): void {

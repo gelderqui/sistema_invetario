@@ -14,7 +14,7 @@ Este documento define reglas de negocio que no deben romperse. Cualquier cambio 
 - Toda petición autenticada debe volver a comprobar que el usuario y su rol continúan activos. Si alguno fue desactivado después del inicio de sesión, la petición se rechaza con HTTP 401 y la sesión se invalida antes de ejecutar cualquier operación.
 - Un permiso con `activo = 0` no se muestra en el menú de ningún rol.
 - Para roles no administradores, un permiso inactivo no autoriza rutas ni APIs.
-- El administrador conserva acceso directo a las rutas y APIs inactivas, aunque estas no aparezcan en su menú.
+- El administrador conserva acceso directo a las rutas y APIs, incluso si el permiso está inactivo o no está asignado al rol. El menú, en cambio, solo muestra permisos activos que estén asignados al rol administrador.
 
 ## 2. Ventas
 

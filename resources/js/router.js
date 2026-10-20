@@ -12,6 +12,7 @@ import CapitalView from '@/components/CapitalView.vue';
 import CategoriasView from '@/components/CategoriasView.vue';
 import ClientesView from '@/components/ClientesView.vue';
 import ComprasView from '@/components/ComprasView.vue';
+import ConsultaPreciosView from '@/components/ConsultaPreciosView.vue';
 import ConfiguracionesView from '@/components/ConfiguracionesView.vue';
 import DevolucionesView from '@/components/DevolucionesView.vue';
 import DashboardView from '@/components/DashboardView.vue';
@@ -185,6 +186,14 @@ const routes = [
         path: '/caja-rural',
         name: 'caja-rural',
         component: CajaRuralView,
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
+        path: '/consulta-precios',
+        name: 'consulta-precios',
+        component: ConsultaPreciosView,
         meta: {
             requiresAuth: true,
         },

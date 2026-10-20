@@ -70,6 +70,18 @@ Al guardar una venta a crédito debes seleccionar un cliente. El sistema crea la
 - Reportes muestra por separado los abonos recibidos, sus anulaciones y el cobro neto dentro del período seleccionado. Si abono y anulación están en fechas distintas, cada uno aparece en el período que le corresponde.
 - Si una deuda ya no se recuperará, se puede marcar como **incobrable** indicando el motivo. Esto cierra su saldo y se refleja como pérdida en Reportes.
 
+### 2.5 Consulta de precios
+
+Ruta: `Consulta de precios`.
+
+Use esta pantalla cuando un cliente solo necesita confirmar un precio. Es independiente del POS, por lo que no requiere abrir caja ni crea una venta.
+
+1. Escriba al menos tres caracteres o escanee el código de barra; también puede buscar por nombre o palabras clave.
+2. La búsqueda se ejecuta automáticamente después de una pausa breve. Puede presionar **Buscar** o Enter si desea buscar antes.
+3. Revise el precio normal, la unidad y la existencia mostrados para cada producto encontrado.
+
+La consulta no muestra costos ni permite modificar productos. Si desea vender, abra el POS y siga el flujo normal de caja.
+
 ---
 
 ## 3. Proceso de compras

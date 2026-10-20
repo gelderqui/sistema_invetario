@@ -387,7 +387,7 @@ function resetFormsAfterCierre() {
     formArqueo.value.monto_contado = null;
     formCierre.value.monto_contado = null;
 
-    billetes.value = billetes.value.map((row) => ({
+    denominaciones.value = denominaciones.value.map((row) => ({
         ...row,
         cantidad: 0,
     }));

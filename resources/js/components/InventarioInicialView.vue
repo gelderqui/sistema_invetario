@@ -13,12 +13,25 @@
             <div class="card-body row g-3 align-items-end">
                 <div class="col-12 col-md-4">
                     <label class="form-label fw-semibold">Producto</label>
-                    <select v-model="form.producto_id" class="form-select">
-                        <option :value="null">Seleccione</option>
-                        <option v-for="p in productos" :key="p.id" :value="p.id">
-                            {{ p.nombre }} (Stock: {{ Number(p.stock_actual || 0).toFixed(0) }})
-                        </option>
-                    </select>
+                    <Multiselect
+                        v-model="selectedProductoOption"
+                        :options="productos"
+                        :custom-label="productOptionLabel"
+                        track-by="id"
+                        placeholder="Escriba nombre o código de barra..."
+                        :searchable="true"
+                        :allow-empty="true"
+                        :close-on-select="true"
+                        :show-labels="false"
+                        :options-limit="100"
+                        select-label="Seleccionar"
+                        selected-label="Seleccionado"
+                        deselect-label="Quitar"
+                    >
+                        <template #noResult>
+                            No se encontró un producto con ese nombre o código.
+                        </template>
+                    </Multiselect>
                 </div>
                 <div class="col-12 col-md-2">
                     <label class="form-label fw-semibold">Cantidad</label>
@@ -96,6 +109,8 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue';
+import Multiselect from 'vue-multiselect';
+import 'vue-multiselect/dist/vue-multiselect.css';
 import axios from '@/bootstrap';
 import TablePagination from '@/components/components_ui/TablePagination.vue';
 import { formatMoney } from '@/utils/formatters';
@@ -110,6 +125,12 @@ const perPageInicial = ref(10);
 const form = ref(emptyForm());
 
 const selectedProducto = computed(() => productos.value.find((p) => p.id === form.value.producto_id) ?? null);
+const selectedProductoOption = computed({
+    get: () => selectedProducto.value,
+    set: (producto) => {
+        form.value.producto_id = producto?.id ?? null;
+    },
+});
 const totalMovimientosIniciales = computed(() => movimientos.value.length);
 const totalPagesInicial = computed(() => Math.max(1, Math.ceil(totalMovimientosIniciales.value / perPageInicial.value)));
 const safePageInicial = computed(() => Math.min(Math.max(pageInicial.value, 1), totalPagesInicial.value));
@@ -171,6 +192,15 @@ function emptyForm() {
         fecha_vencimiento: null,
         observacion: '',
     };
+}
+
+function productOptionLabel(producto) {
+    if (!producto) return '';
+
+    const codigo = producto.codigo_barra ? ` · ${producto.codigo_barra}` : '';
+    const stock = Number(producto.stock_actual || 0).toFixed(0);
+
+    return `${producto.nombre}${codigo} · Stock: ${stock}`;
 }
 
 function fmtDateTime(value) {

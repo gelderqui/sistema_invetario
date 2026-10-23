@@ -51,6 +51,8 @@ class InventarioInicialController extends Controller
                 'id',
                 'categoria_id',
                 'nombre',
+                'codigo_barra',
+                'palabras_clave',
                 'stock_actual',
                 'costo_promedio',
                 'precio_venta',

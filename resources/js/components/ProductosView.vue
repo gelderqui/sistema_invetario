@@ -367,7 +367,7 @@ const emptyForm = () => ({
     unidad_medida_id: medidasActivas.value.find(m => m.nombre.toLowerCase() === 'unidad')?.id ?? medidasActivas.value[0]?.id ?? null,
     stock_minimo: null,
     control_vencimiento: false,
-    dias_alerta_vencimiento: 15,
+    dias_alerta_vencimiento: 90,
     activo: true,
 });
 
@@ -500,7 +500,7 @@ function openEdit(prod) {
         unidad_medida_id:     prod.unidad_medida_id ?? null,
         stock_minimo:             Math.max(1, Math.trunc(Number(prod.stock_minimo ?? 1))),
         control_vencimiento:      prod.control_vencimiento ?? false,
-        dias_alerta_vencimiento:  prod.dias_alerta_vencimiento ?? 15,
+        dias_alerta_vencimiento:  prod.dias_alerta_vencimiento ?? 90,
         activo:                   prod.activo,
     };
     barcodePreviewError.value = '';

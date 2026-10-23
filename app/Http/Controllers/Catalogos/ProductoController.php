@@ -107,7 +107,7 @@ class ProductoController extends Controller
             'stock_actual'    => 0,
             'stock_minimo'    => $validated['stock_minimo'] ?? 0,
             'control_vencimiento' => (bool) ($validated['control_vencimiento'] ?? false),
-            'dias_alerta_vencimiento' => $validated['dias_alerta_vencimiento'] ?? 15,
+            'dias_alerta_vencimiento' => $validated['dias_alerta_vencimiento'] ?? 90,
             'activo'          => (bool) ($validated['activo'] ?? true),
             'add_user'        => $request->user()->id,
         ]);
@@ -136,6 +136,7 @@ class ProductoController extends Controller
             'stock_minimo'  => ['required', 'integer', 'min:1'],
             'unidad_medida_id'  => ['required', Rule::exists('productos_unidad_medida', 'id')->where(fn ($q) => $q->where('activo', true))],
             'control_vencimiento' => ['sometimes', 'boolean'],
+            'dias_alerta_vencimiento' => ['nullable', 'integer', 'min:1', 'max:365'],
             'peso_referencial' => ['nullable', 'numeric', 'gte:0'],
             'activo'        => ['required', 'boolean'],
         ], [

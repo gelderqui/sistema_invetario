@@ -258,7 +258,7 @@ class InventarioController extends Controller
             $productosQuery->where('categoria_id', (int) $validated['categoria_id']);
         }
 
-        $productos = $productosQuery->get(['id', 'nombre']);
+        $productos = $productosQuery->get(['id', 'nombre', 'codigo_barra']);
 
         return response()->json([
             'data' => $movimientos,

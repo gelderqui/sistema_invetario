@@ -285,7 +285,29 @@
                                     </div>
                                     <div class="col-12 col-lg-6 col-xl-4">
                                         <label class="form-label fw-semibold">NIT del proveedor <span v-if="form.factura_receptor === 'nit_empresa'">*</span></label>
-                                        <input v-model.trim="form.nit_proveedor" type="text" class="form-control" placeholder="NIT emisor">
+                                        <template v-if="form.proveedor">
+                                            <div v-if="providerHasRegisteredNit" class="form-control-plaintext fw-semibold">
+                                                {{ form.nit_proveedor }}
+                                            </div>
+                                            <input
+                                                v-else
+                                                v-model.trim="form.nit_proveedor"
+                                                type="text"
+                                                inputmode="numeric"
+                                                class="form-control"
+                                                placeholder="NIT no registrado"
+                                                @input="sanitizeSupplierNit"
+                                            >
+                                            <div class="form-text">
+                                                <template v-if="providerHasRegisteredNit">
+                                                    NIT registrado en la ficha del proveedor.
+                                                </template>
+                                                <template v-else>
+                                                    NIT no registrado. Si lo ingresa, se guardará también en la ficha del proveedor al registrar la compra.
+                                                </template>
+                                            </div>
+                                        </template>
+                                        <div v-else class="form-control-plaintext text-body-secondary">Seleccione un proveedor.</div>
                                     </div>
                                     <div class="col-12 col-lg-6 col-xl-4">
                                         <label class="form-label fw-semibold">Serie de factura</label>
@@ -445,7 +467,7 @@
 
 <script setup>
 import { Modal } from 'bootstrap';
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import Multiselect from 'vue-multiselect';
 import 'vue-multiselect/dist/vue-multiselect.css';
 
@@ -503,7 +525,7 @@ const emptyForm = () => ({
     tipo_documento: 'sin_documento',
     numero_documento: '',
     factura_receptor: 'cf',
-    nit_proveedor: '',
+    nit_proveedor: normalizeSupplierNit(proveedorGeneral.value?.nit),
     serie_documento: '',
     items: [emptyItem()],
 });
@@ -511,6 +533,7 @@ const emptyForm = () => ({
 const form = ref(emptyForm());
 
 const totalCompra = computed(() => form.value.items.reduce((sum, item) => sum + itemSubtotal(item), 0));
+const providerHasRegisteredNit = computed(() => normalizeSupplierNit(form.value.proveedor?.nit) !== '');
 const actionLocked = computed(() => loading.value || saving.value);
 const anularMessage = computed(() => `¿Deseas anular la compra <strong>${selectedCompra.value?.numero ?? ''}</strong>?`);
 const comprasFiltradas = computed(() => compras.value.filter((compra) => {
@@ -540,6 +563,13 @@ onMounted(async () => {
     detailModal = new Modal(detailModalRef.value);
     await Promise.all([loadCompras(), loadCatalogs()]);
 });
+
+watch(
+    () => form.value.proveedor,
+    (proveedor) => {
+        form.value.nit_proveedor = normalizeSupplierNit(proveedor?.nit);
+    }
+);
 
 function itemSubtotal(item) {
     return Number(item.cantidad || 0) * Number(item.costo_unitario || 0);
@@ -606,6 +636,14 @@ function onDocumentFilterChange() {
     }
 
     resetComprasPage();
+}
+
+function normalizeSupplierNit(value) {
+    return String(value ?? '').replace(/\D+/g, '');
+}
+
+function sanitizeSupplierNit(event) {
+    form.value.nit_proveedor = normalizeSupplierNit(event?.target?.value);
 }
 
 function openCreate() {
@@ -859,6 +897,9 @@ async function save() {
         };
 
         const { data } = await axios.post('/compras/store', payload);
+        if (form.value.proveedor && !providerHasRegisteredNit.value && form.value.nit_proveedor) {
+            form.value.proveedor.nit = normalizeSupplierNit(form.value.nit_proveedor);
+        }
         compras.value.unshift(data.data);
         alerts.value = data.alerts ?? [];
         formModal.hide();

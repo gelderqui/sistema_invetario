@@ -99,7 +99,7 @@ Estado funcional actual:
 - Una factura puede emitirse como `CF` o al `nit_empresa` configurado en compras de contado, crédito de proveedor y consignación. Solo la segunda clasifica sus lotes como `con_factura`; CF se clasifica como `sin_factura`.
 - En ventas, los lotes `sin_factura` tienen prioridad antes de los lotes `con_factura`, conservando FIFO dentro de cada grupo.
 - Compras filtra por proveedor, tipo de documento y receptor de factura; Inventario filtra existencias por el documento de la compra que originó el lote. Ambos módulos exportan a PDF o Excel exactamente los resultados de los filtros aplicados.
-- `proveedores.nit` es opcional e identifica al proveedor en su catálogo; se normaliza a números y se puede buscar junto con el nombre. No reemplaza el `nit_proveedor` almacenado como evidencia de una factura de compra específica.
+- `proveedores.nit` es opcional e identifica al proveedor en su catálogo; se normaliza a números y se puede buscar junto con el nombre. En una compra con factura se precarga y protege el NIT ya registrado. Si el proveedor todavía no tiene NIT, el formulario permite ingresarlo y lo actualiza dentro de la misma transacción de la compra. No reemplaza el `nit_proveedor` almacenado como evidencia histórica de cada factura específica.
 
 ### Clientes
 

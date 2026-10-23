@@ -52,6 +52,7 @@ class AjusteInventarioController extends Controller
             ->get([
                 'id',
                 'nombre',
+                'codigo_barra',
                 'stock_actual',
                 'costo_promedio',
                 'control_vencimiento',

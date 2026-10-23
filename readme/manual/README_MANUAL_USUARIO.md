@@ -133,6 +133,8 @@ En toda compra seleccione el documento que le entregó el proveedor:
 
 Una factura a **Mi NIT** requiere que el NIT del negocio esté configurado en `Configuraciones`, además del NIT del proveedor. El sistema marca las unidades recibidas como **inventario con factura**. Una factura CF y los demás documentos se consideran inventario sin factura fiscal.
 
+Al seleccionar el proveedor, el formulario muestra automáticamente el NIT registrado en su ficha. Si todavía no tiene NIT, puede ingresarlo en la compra y el sistema lo guardará también en el proveedor al completar correctamente la operación. El NIT utilizado queda copiado en la compra para conservar el dato histórico de esa factura.
+
 Esta elección está disponible para pago inmediato, compra a crédito y consignación. El documento no cambia la forma de pago: una compra a crédito continúa pendiente de pago y una consignación continúa liquidándose según lo vendido.
 
 En la tabla de Compras puede filtrar por proveedor, documento y receptor de factura. Los botones **Exportar PDF** y **Exportar Excel** generan exactamente el listado filtrado. En `Inventario` se puede aplicar el mismo filtro para identificar productos con existencias provenientes de cada tipo de documento y exportar el resultado.

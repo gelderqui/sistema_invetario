@@ -137,12 +137,25 @@
                 </div>
                 <div class="col-12 col-md-3">
                     <label class="form-label fw-semibold">Producto</label>
-                    <select v-model="movProductoId" class="form-select">
-                        <option :value="null">Todos</option>
-                        <option v-for="producto in movProductos" :key="producto.id" :value="producto.id">
-                            {{ producto.nombre }}
-                        </option>
-                    </select>
+                    <Multiselect
+                        v-model="movProductoOption"
+                        :options="movProductos"
+                        :custom-label="movimientoProductOptionLabel"
+                        track-by="id"
+                        placeholder="Escriba nombre o código de barra..."
+                        :searchable="true"
+                        :allow-empty="true"
+                        :close-on-select="true"
+                        :show-labels="false"
+                        :options-limit="100"
+                        select-label="Seleccionar"
+                        selected-label="Seleccionado"
+                        deselect-label="Quitar"
+                    >
+                        <template #noResult>
+                            No se encontró un producto con ese nombre o código.
+                        </template>
+                    </Multiselect>
                 </div>
                 <div class="col-12 col-md-2 d-grid gap-2">
                     <button class="btn btn-brand" :disabled="loading" @click="loadMovimientos">Filtrar</button>
@@ -193,6 +206,8 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import Multiselect from 'vue-multiselect';
+import 'vue-multiselect/dist/vue-multiselect.css';
 
 import axios from '@/bootstrap';
 import TablePagination from '@/components/components_ui/TablePagination.vue';
@@ -231,6 +246,12 @@ const safePageMovimientos = computed(() => Math.min(Math.max(pageMovimientos.val
 const paginatedMovimientos = computed(() => {
     const start = (safePageMovimientos.value - 1) * perPageMovimientos.value;
     return movimientos.value.slice(start, start + perPageMovimientos.value);
+});
+const movProductoOption = computed({
+    get: () => movProductos.value.find((producto) => producto.id === movProductoId.value) ?? null,
+    set: (producto) => {
+        movProductoId.value = producto?.id ?? null;
+    },
 });
 
 onMounted(loadCurrentSection);
@@ -354,5 +375,13 @@ function formatDate(value) {
 function formatDateTime(value) {
     if (!value) return '-';
     return new Date(value).toLocaleString('es-GT');
+}
+
+function movimientoProductOptionLabel(producto) {
+    if (!producto) return '';
+
+    return producto.codigo_barra
+        ? `${producto.nombre} · ${producto.codigo_barra}`
+        : producto.nombre;
 }
 </script>

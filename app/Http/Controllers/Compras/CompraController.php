@@ -228,27 +228,10 @@ class CompraController extends Controller
             ]);
         }
 
-        if ($esFacturaFiscal && empty($validated['nit_proveedor'])) {
-            throw ValidationException::withMessages([
-                'nit_proveedor' => ['El NIT del proveedor es obligatorio para una factura emitida a su NIT.'],
-            ]);
-        }
-
         $nitEmpresa = trim((string) Configuracion::valor('nit_empresa', ''));
         if ($esFacturaFiscal && $nitEmpresa === '') {
             throw ValidationException::withMessages([
                 'factura_receptor' => ['Configure primero el NIT de la empresa en Configuraciones.'],
-            ]);
-        }
-
-        $proveedorActivo = Proveedor::query()
-            ->whereKey($validated['proveedor_id'])
-            ->where('activo', true)
-            ->exists();
-
-        if (! $proveedorActivo) {
-            throw ValidationException::withMessages([
-                'proveedor_id' => 'El proveedor seleccionado esta inactivo y no puede usarse en compras.',
             ]);
         }
 
@@ -280,6 +263,45 @@ class CompraController extends Controller
         $result = DB::transaction(function () use ($validated, $porcentajeUtilidadCompra, $userId, $tipoCompra, $esFacturaFiscal, $nitEmpresa, $pagaConCajaPos) {
             $esConsignacion = $tipoCompra === 'consignacion';
             $cajaPos = null;
+            $proveedor = Proveedor::query()
+                ->whereKey($validated['proveedor_id'])
+                ->where('activo', true)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $proveedor) {
+                throw ValidationException::withMessages([
+                    'proveedor_id' => 'El proveedor seleccionado esta inactivo y no puede usarse en compras.',
+                ]);
+            }
+
+            $nitProveedorRegistrado = preg_replace('/\D+/', '', (string) $proveedor->nit) ?? '';
+            $nitProveedorSolicitado = preg_replace('/\D+/', '', (string) ($validated['nit_proveedor'] ?? '')) ?? '';
+
+            if ($nitProveedorRegistrado !== ''
+                && $nitProveedorSolicitado !== ''
+                && $nitProveedorRegistrado !== $nitProveedorSolicitado) {
+                throw ValidationException::withMessages([
+                    'nit_proveedor' => ['El NIT ingresado no coincide con el registrado para el proveedor. Actualice la ficha del proveedor e intente nuevamente.'],
+                ]);
+            }
+
+            $nitProveedorFactura = $nitProveedorRegistrado !== ''
+                ? $nitProveedorRegistrado
+                : $nitProveedorSolicitado;
+
+            if ($esFacturaFiscal && $nitProveedorFactura === '') {
+                throw ValidationException::withMessages([
+                    'nit_proveedor' => ['El proveedor no tiene NIT registrado. Ingréselo para continuar con la factura emitida a su NIT.'],
+                ]);
+            }
+
+            if ($nitProveedorRegistrado === '' && $nitProveedorSolicitado !== '') {
+                $proveedor->update([
+                    'nit' => $nitProveedorSolicitado,
+                    'mod_user' => $userId,
+                ]);
+            }
 
             if ($pagaConCajaPos) {
                 $cajaPos = Caja::query()
@@ -344,7 +366,7 @@ class CompraController extends Controller
                 'numero_documento' => $validated['numero_documento'] ?? null,
                 'factura_receptor' => ($validated['tipo_documento'] ?? null) === 'factura' ? ($validated['factura_receptor'] ?? null) : null,
                 'nit_receptor' => $esFacturaFiscal ? $nitEmpresa : null,
-                'nit_proveedor' => ($validated['tipo_documento'] ?? null) === 'factura' ? ($validated['nit_proveedor'] ?? null) : null,
+                'nit_proveedor' => ($validated['tipo_documento'] ?? null) === 'factura' ? ($nitProveedorFactura ?: null) : null,
                 'serie_documento' => ($validated['tipo_documento'] ?? null) === 'factura' ? ($validated['serie_documento'] ?? null) : null,
                 'add_user' => $userId,
             ]);
